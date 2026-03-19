@@ -722,6 +722,7 @@ body { background: #e5e7eb; }
           swapFrames();
         }
         status.textContent = e.data.pages + " pages";
+        setupPreviewClick(previewFrame);
         setTimeout(scalePreview, 300);
         setTimeout(() => { scalePreview(); buildAnchors(); }, 1000);
         setupScrollSync();
@@ -802,6 +803,52 @@ body { background: #e5e7eb; }
       } catch(e) {}
     }
     cm.on("cursorActivity", highlightAtCursor);
+
+    // ── Click preview → focus editor ─────────────────────────────────────
+    function setupPreviewClick(frame) {
+      try {
+        const doc = frame.contentDocument;
+        if (!doc) return;
+        doc.addEventListener("click", e => {
+          // Walk up to find a block-level element
+          let el = e.target;
+          const blockTags = new Set(["H1","H2","H3","H4","P","LI","BLOCKQUOTE","PRE","TD","TH"]);
+          while (el && !blockTags.has(el.tagName)) el = el.parentElement;
+          if (!el) return;
+
+          const normalize = s => s.replace(/[#*_`>\-|]/g, "").replace(/\s+/g, " ").trim();
+          const needle = normalize(el.textContent || "").substring(0, 80);
+          if (needle.length < 4) return;
+
+          // Search editor lines for best match
+          const lineCount = cm.lineCount();
+          let bestLine = -1;
+          let bestScore = 0;
+          for (let i = 0; i < lineCount; i++) {
+            const lineText = normalize(cm.getLine(i));
+            if (!lineText) continue;
+            if (lineText.includes(needle) || needle.includes(lineText)) {
+              const score = Math.min(needle.length, lineText.length);
+              if (score > bestScore) { bestScore = score; bestLine = i; }
+            }
+          }
+
+          if (bestLine >= 0) {
+            cm.setCursor({ line: bestLine, ch: 0 });
+            cm.focus();
+            // Scroll editor to show the line
+            cm.scrollIntoView({ line: bestLine, ch: 0 }, cm.getScrollInfo().clientHeight / 3);
+          }
+        });
+      } catch(e) {}
+    }
+
+    // Re-attach click handler after each swap
+    const origSwap = swapFrames;
+    swapFrames = function() {
+      origSwap();
+      setupPreviewClick(previewFrame);
+    };
 
     // ── Scroll sync (heading-based content matching, h1-h4) ─────────────
     // Anchors: arrays of { ratio } where ratio = position / totalScrollable
