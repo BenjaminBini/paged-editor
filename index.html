@@ -469,6 +469,7 @@ body { background: #e5e7eb; }
   else{setTimeout(buildUnderlines,300)}
   // Expose for Paged.js post-processing
   window.applyColors=applyColors;
+  window.buildUnderlines=buildUnderlines;
   setTimeout(applyColors,500)
 })();`;
 
@@ -706,7 +707,8 @@ body { background: #e5e7eb; }
     })();
     const paged = new Paged.Previewer();
     await paged.preview();
-    // Re-apply section colors after Paged.js restructured the DOM
+    // Re-apply underlines and section colors after Paged.js restructured the DOM
+    if(typeof buildUnderlines==="function") buildUnderlines();
     if(typeof applyColors==="function") applyColors();
     window.parent.postMessage({ type: "paged-ready", pages: document.querySelectorAll(".pagedjs_page").length }, "*");
   <\/script>
