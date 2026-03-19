@@ -374,6 +374,11 @@ body { background: #e5e7eb; }
 .pagedjs_page .pdf-page-footer { position: absolute; bottom: 8mm; left: 18mm; }
 /* Hide the fixed gradient element — we use ::before on .pagedjs_page instead */
 .pdf-page-gradient { display: none; }
+/* Editor focus highlight */
+.paged-highlight {
+  outline: 2px solid rgba(51, 115, 179, 0.5); outline-offset: 2px;
+  border-radius: 4px; transition: outline-color 0.2s;
+}
 `;
 
     // ── Beorn underline JS ───────────────────────────────────────────────
@@ -735,6 +740,52 @@ body { background: #e5e7eb; }
       "Ctrl-Enter": () => { clearTimeout(renderTimeout); triggerRender(); },
       "Cmd-Enter": () => { clearTimeout(renderTimeout); triggerRender(); },
     });
+
+    // ── Highlight matching element in preview ──────────────────────────
+    let highlightEl = null;
+    function clearHighlight() {
+      if (highlightEl) { highlightEl.classList.remove("paged-highlight"); highlightEl = null; }
+    }
+    function highlightAtCursor() {
+      clearHighlight();
+      try {
+        const doc = previewFrame.contentDocument;
+        if (!doc) return;
+        const line = cm.getCursor().line;
+        const text = cm.getLine(line).trim();
+        if (!text) return;
+
+        // Build a map: for each block element in preview, find its text
+        const blocks = doc.querySelectorAll(
+          ".pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4, " +
+          ".pdf-content p, .pdf-content li, .pdf-content blockquote, " +
+          ".pdf-content pre, .pdf-content td, .pdf-content th"
+        );
+
+        // Normalize text for comparison: strip markdown syntax, collapse spaces
+        const normalize = s => s.replace(/[#*_`>\-|]/g, "").replace(/\s+/g, " ").trim().substring(0, 60);
+        const needle = normalize(text);
+        if (needle.length < 4) return; // too short to match reliably
+
+        let best = null;
+        let bestScore = 0;
+        blocks.forEach(el => {
+          const elText = normalize(el.textContent || "");
+          if (!elText) return;
+          // Check if needle is contained in element text or vice versa
+          if (elText.includes(needle) || needle.includes(elText)) {
+            const score = Math.min(needle.length, elText.length);
+            if (score > bestScore) { bestScore = score; best = el; }
+          }
+        });
+
+        if (best) {
+          best.classList.add("paged-highlight");
+          highlightEl = best;
+        }
+      } catch(e) {}
+    }
+    cm.on("cursorActivity", highlightAtCursor);
 
     // ── Scroll sync (heading-based content matching, h1-h4) ─────────────
     // Anchors: arrays of { ratio } where ratio = position / totalScrollable
