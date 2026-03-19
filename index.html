@@ -782,6 +782,22 @@ body { background: #e5e7eb; }
         if (best) {
           best.classList.add("paged-highlight");
           highlightEl = best;
+
+          // Scroll preview to make highlighted element visible
+          const pages = doc.querySelector(".pagedjs_pages");
+          if (pages) {
+            const elRect = best.getBoundingClientRect();
+            const pagesRect = pages.getBoundingClientRect();
+            const elTop = elRect.top - pagesRect.top;
+            const scale = parseFloat(previewFrame.style.transform.replace(/[^0-9.]/g, "")) || 1;
+            const scaledTop = elTop * scale;
+            const containerH = previewContainer.clientHeight;
+            const scrollTop = previewContainer.scrollTop;
+            // If element is outside visible area, scroll to center it
+            if (scaledTop < scrollTop || scaledTop > scrollTop + containerH - 50) {
+              previewContainer.scrollTo({ top: Math.max(0, scaledTop - containerH / 3), behavior: "smooth" });
+            }
+          }
         }
       } catch(e) {}
     }
