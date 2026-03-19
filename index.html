@@ -385,6 +385,9 @@ body { background: #e5e7eb; }
 .pdf-page-gradient { display: none; }
 .pdf-running-header { display: none; }
 .pagedjs_page .pdf-running-header { display: flex; }
+/* Hide watermark + header on cover pages (named page "cover") */
+.pagedjs_named_page::after { display: none; }
+.pagedjs_named_page .pdf-running-header { display: none; }
 /* Beorn logo watermark bottom-left on every page */
 .pagedjs_page::after {
   content: ""; position: absolute; bottom: 10mm; left: 18mm;
