@@ -383,8 +383,14 @@ body { background: #e5e7eb; }
 }
 /* Editor focus highlight */
 .paged-highlight {
-  outline: 2px solid rgba(51, 115, 179, 0.5); outline-offset: 2px;
-  border-radius: 4px; transition: outline-color 0.2s;
+  outline: 1px solid rgba(51, 115, 179, 0.25); outline-offset: 2px;
+  border-radius: 4px; background: rgba(51, 115, 179, 0.03);
+}
+.paged-highlight-flash {
+  outline: 2px solid rgba(51, 115, 179, 0.8); outline-offset: 2px;
+  border-radius: 4px; background: rgba(51, 115, 179, 0.12);
+  box-shadow: 0 0 16px rgba(51, 115, 179, 0.3);
+  transition: outline-color 0.6s ease-out, background 0.6s ease-out, box-shadow 0.6s ease-out;
 }
 `;
 
@@ -767,8 +773,13 @@ body { background: #e5e7eb; }
 
     // ── Highlight matching element in preview ──────────────────────────
     let highlightEl = null;
+    let flashTimer = null;
     function clearHighlight() {
-      if (highlightEl) { highlightEl.classList.remove("paged-highlight"); highlightEl = null; }
+      if (flashTimer) { clearTimeout(flashTimer); flashTimer = null; }
+      if (highlightEl) {
+        highlightEl.classList.remove("paged-highlight", "paged-highlight-flash");
+        highlightEl = null;
+      }
     }
     function highlightAtCursor() {
       clearHighlight();
@@ -804,8 +815,13 @@ body { background: #e5e7eb; }
         });
 
         if (best) {
-          best.classList.add("paged-highlight");
+          best.classList.add("paged-highlight-flash");
           highlightEl = best;
+          // Flash then fade to subtle
+          flashTimer = setTimeout(() => {
+            best.classList.remove("paged-highlight-flash");
+            best.classList.add("paged-highlight");
+          }, 50);
 
           // Scroll preview to make highlighted element visible
           const pages = doc.querySelector(".pagedjs_pages");
