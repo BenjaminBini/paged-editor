@@ -362,8 +362,8 @@ a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 7.5pt; color: 
 
     const PAGED_CSS = `
 body { background: #e5e7eb; }
-.pagedjs_pages { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 0; }
-.pagedjs_page { background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.12); position: relative; overflow: hidden; }
+.pagedjs_pages { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 32px 0; }
+.pagedjs_page { background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.12); position: relative; overflow: hidden; border-radius: 8px; }
 .pagedjs_page::before {
   content: ""; position: absolute; top: 0; left: 0; right: 0; height: 6px; z-index: 100;
   background: linear-gradient(90deg, #3373b3 0%, #0096ae 35%, #493a8b 65%, #b82775 100%);
@@ -374,6 +374,13 @@ body { background: #e5e7eb; }
 .pagedjs_page .pdf-page-footer { position: absolute; bottom: 8mm; left: 18mm; }
 /* Hide the fixed gradient element — we use ::before on .pagedjs_page instead */
 .pdf-page-gradient { display: none; }
+/* Beorn logo watermark bottom-left on every page */
+.pagedjs_page::after {
+  content: ""; position: absolute; bottom: 10mm; left: 18mm;
+  width: 80px; height: 30px; z-index: 50; opacity: 0.6;
+  background-size: contain; background-repeat: no-repeat; background-position: left center;
+  filter: grayscale(1);
+}
 /* Editor focus highlight */
 .paged-highlight {
   outline: 2px solid rgba(51, 115, 179, 0.5); outline-offset: 2px;
@@ -640,6 +647,7 @@ body { background: #e5e7eb; }
   <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>${PDF_CSS}</style>
   <style>${PAGED_CSS}</style>
+  ${BEORN_LOGO_DATA_URI ? '<style>.pagedjs_page::after { background-image: url(' + BEORN_LOGO_DATA_URI + '); }</style>' : ''}
   <script>window.PagedConfig = { auto: false };<\/script>
   <script src="${PAGED_JS_BLOB_URL}"><\/script>
   <script type="module">
