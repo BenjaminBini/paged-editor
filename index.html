@@ -452,8 +452,8 @@ body { background: #e5e7eb; }
     var allEls=document.querySelectorAll("h1,h2,h3,h4,p,ul,ol,li,blockquote,table,pre,section");
     var currentPair=null;
     allEls.forEach(function(el){
-      if(el.tagName==="H1"){
-        var ci=el.getAttribute("data-color-index");
+      var ci=el.getAttribute("data-color-index");
+      if(el.tagName==="H1"||ci!=null){
         var idx=ci!=null?parseInt(ci,10):0;
         currentPair=colorPairs[idx%colorPairs.length];
       }
