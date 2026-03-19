@@ -430,11 +430,26 @@ body { background: #e5e7eb; }
   else{setTimeout(buildUnderlines,300)}
 })();`;
 
-    // ── Preload external scripts for iframe injection ──────────────────
+    // ── Preload external assets for iframe injection ───────────────────
     let PAGED_JS_BLOB_URL = "";
-    const pagedReady = fetch("assets/paged.polyfill.js")
-      .then(r => r.blob())
-      .then(b => { PAGED_JS_BLOB_URL = URL.createObjectURL(b); });
+    let BEORN_LOGO_DATA_URI = "";
+    let LUMAPPS_LOGO_DATA_URI = "";
+
+    async function toDataUri(url, mime) {
+      try {
+        const r = await fetch(url);
+        if (!r.ok) return "";
+        const buf = await r.arrayBuffer();
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        return "data:" + mime + ";base64," + b64;
+      } catch(e) { return ""; }
+    }
+
+    const pagedReady = Promise.all([
+      fetch("assets/paged.polyfill.js").then(r => r.blob()).then(b => { PAGED_JS_BLOB_URL = URL.createObjectURL(b); }),
+      toDataUri("assets/beorn-logo.png", "image/png").then(u => { BEORN_LOGO_DATA_URI = u; }),
+      toDataUri("assets/lumapps-logo.svg", "image/svg+xml").then(u => { LUMAPPS_LOGO_DATA_URI = u; }),
+    ]);
 
     // ── State ────────────────────────────────────────────────────────────
     const cm = CodeMirror.fromTextArea(document.getElementById("editor-textarea"), {
@@ -565,12 +580,13 @@ body { background: #e5e7eb; }
         escapeHtml(t) + '</span></div>').join("\n");
 
       // Cover HTML (2 pages: hero+info, sommaire)
-      const logoSrc = "assets/beorn-logo.png";
       const coverHtml = `
     <div class="beorn-cover beorn-cover-hero">
       <div class="beorn-cover-body">
         <div class="beorn-cover-logos">
-          <img class="beorn-cover-logo" src="${logoSrc}" alt="BEORN Technologies" onerror="this.style.display='none'" />
+          ${BEORN_LOGO_DATA_URI ? '<img class="beorn-cover-logo" src="' + BEORN_LOGO_DATA_URI + '" alt="BEORN Technologies" />' : ''}
+          ${BEORN_LOGO_DATA_URI && LUMAPPS_LOGO_DATA_URI ? '<div class="beorn-cover-logo-separator"></div>' : ''}
+          ${LUMAPPS_LOGO_DATA_URI ? '<img class="beorn-cover-logo-lumapps" src="' + LUMAPPS_LOGO_DATA_URI + '" alt="LumApps" />' : ''}
         </div>
         <div class="beorn-cover-doctype">${escapeHtml(doctype)}</div>
         <div class="beorn-cover-title">${escapeHtml(projectName)}</div>
@@ -605,7 +621,7 @@ body { background: #e5e7eb; }
     <div class="beorn-cover beorn-cover-sommaire">
       <div class="beorn-cover-body">
         <div class="beorn-cover-logos">
-          <img class="beorn-cover-logo" src="${logoSrc}" alt="BEORN Technologies" style="max-width:120px;" onerror="this.style.display='none'" />
+          ${BEORN_LOGO_DATA_URI ? '<img class="beorn-cover-logo" src="' + BEORN_LOGO_DATA_URI + '" alt="BEORN Technologies" style="max-width:120px;" />' : ''}
         </div>
         <div class="beorn-cover-doctype">Sommaire</div>
         <div class="beorn-cover-underline" style="margin-bottom:2.5rem;">
