@@ -878,11 +878,38 @@ body { background: #e5e7eb; }
       }
     });
 
+    // ── IndexedDB helpers (persist FileSystemDirectoryHandle) ───────────
+    const IDB_NAME = "paged-editor";
+    const IDB_STORE = "state";
+    function idbOpen() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function idbSet(key, val) {
+      const db = await idbOpen();
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      tx.objectStore(IDB_STORE).put(val, key);
+      return new Promise(r => { tx.oncomplete = r; });
+    }
+    async function idbGet(key) {
+      const db = await idbOpen();
+      const tx = db.transaction(IDB_STORE, "readonly");
+      const req = tx.objectStore(IDB_STORE).get(key);
+      return new Promise(r => { req.onsuccess = () => r(req.result); });
+    }
+
     // ── File System Access API ───────────────────────────────────────────
     let dirHandle = null;       // DirectoryHandle for the opened folder
     let fileHandles = [];       // [{name, handle}] sorted
     let activeFileIdx = -1;     // index in fileHandles
+    let activeFileName = "";    // name of active file (for restore after reload)
     let savedContent = "";      // content at last save/load (for dirty detection)
+
+    function isDirty() { return activeFileIdx >= 0 && cm.getValue() !== savedContent; }
 
     const fileSidebar = document.getElementById("fileSidebar");
     const fileList = document.getElementById("fileList");
@@ -895,15 +922,27 @@ body { background: #e5e7eb; }
         dirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
       } catch(e) { return; } // user cancelled
 
+      await activateFolder();
+    }
+
+    async function activateFolder(restoreFile) {
       folderNameEl.textContent = dirHandle.name;
       fileSidebar.classList.add("open");
       btnSave.style.display = "";
-      cm.refresh(); // editor pane resized
+      cm.refresh();
+
+      // Persist handle for reload
+      await idbSet("dirHandle", dirHandle);
 
       await refreshFileList();
 
-      // Auto-open first file
-      if (fileHandles.length > 0) await openFile(0);
+      // Restore previously active file, or open first
+      let idx = 0;
+      if (restoreFile) {
+        const found = fileHandles.findIndex(f => f.name === restoreFile);
+        if (found >= 0) idx = found;
+      }
+      if (fileHandles.length > 0) await openFile(idx);
     }
 
     async function refreshFileList() {
@@ -922,7 +961,7 @@ body { background: #e5e7eb; }
       fileHandles.forEach((f, i) => {
         const el = document.createElement("div");
         el.className = "file-item" + (i === activeFileIdx ? " active" : "");
-        if (i === activeFileIdx && cm.getValue() !== savedContent) el.classList.add("dirty");
+        if (i === activeFileIdx && isDirty()) el.classList.add("dirty");
         el.innerHTML = '<span class="file-icon">📄</span>' + escapeHtml(f.name);
         el.onclick = () => openFile(i);
         fileList.appendChild(el);
@@ -931,12 +970,11 @@ body { background: #e5e7eb; }
 
     async function openFile(idx) {
       // Save current if dirty
-      if (activeFileIdx >= 0 && cm.getValue() !== savedContent) {
-        await doSave();
-      }
+      if (isDirty()) await doSave();
 
       activeFileIdx = idx;
       const fh = fileHandles[idx];
+      activeFileName = fh.name;
       const file = await fh.handle.getFile();
       const text = await file.text();
       savedContent = text;
@@ -946,6 +984,9 @@ body { background: #e5e7eb; }
       document.title = fh.name + " — Paged.js Editor";
       renderFileList();
       triggerRender();
+
+      // Remember active file for reload
+      await idbSet("activeFile", fh.name);
     }
 
     async function doSave() {
@@ -980,8 +1021,33 @@ body { background: #e5e7eb; }
       }
     });
 
+    // ── Warn before closing with unsaved changes ─────────────────────────
+    window.addEventListener("beforeunload", e => {
+      if (isDirty()) {
+        e.preventDefault();
+        e.returnValue = "";
+      }
+    });
+
+    // ── Restore folder on page load ──────────────────────────────────────
+    async function tryRestore() {
+      try {
+        const stored = await idbGet("dirHandle");
+        if (!stored) return;
+        // Verify permission (may prompt user)
+        const perm = await stored.requestPermission({ mode: "readwrite" });
+        if (perm !== "granted") return;
+        dirHandle = stored;
+        const restoreFile = await idbGet("activeFile");
+        await activateFolder(restoreFile || null);
+      } catch(e) { /* no stored handle or permission denied */ }
+    }
+
     // ── Initial render (wait for Paged.js to be loaded) ────────────────
-    pagedReady.then(() => setTimeout(triggerRender, 100));
+    pagedReady.then(async () => {
+      await tryRestore();
+      if (activeFileIdx < 0) setTimeout(triggerRender, 100);
+    });
   </script>
 </body>
 </html>
