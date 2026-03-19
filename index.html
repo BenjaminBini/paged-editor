@@ -442,12 +442,12 @@ body { background: #e5e7eb; }
       });
       h1.appendChild(container);colorNumbering(h1,pair[0]);
       h1.style.setProperty("--section-color",pair[0]);h1.style.setProperty("--section-color-light",pair[1]);
-      var sibling=h1.nextElementSibling;
-      while(sibling&&sibling.tagName!=="H1"){
-        sibling.style.setProperty("--section-color",pair[0]);sibling.style.setProperty("--section-color-light",pair[1]);
-        sibling.querySelectorAll("h2,h3,h4").forEach(function(sub){sub.style.color=pair[0];colorNumbering(sub,pair[0])});
-        if(sibling.tagName==="H2"||sibling.tagName==="H3"||sibling.tagName==="H4"){sibling.style.color=pair[0];colorNumbering(sibling,pair[0])}
-        sibling=sibling.nextElementSibling;
+      // Apply color to entire section (works after Paged.js restructures DOM)
+      var section=h1.closest("section.level2")||h1.parentElement;
+      if(section){
+        section.style.setProperty("--section-color",pair[0]);section.style.setProperty("--section-color-light",pair[1]);
+        section.querySelectorAll("h2,h3,h4").forEach(function(sub){sub.style.color=pair[0];colorNumbering(sub,pair[0])});
+        section.querySelectorAll("p,ul,ol,blockquote,table,pre").forEach(function(el){el.style.setProperty("--section-color",pair[0]);el.style.setProperty("--section-color-light",pair[1])});
       }
     });
   }
