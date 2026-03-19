@@ -289,6 +289,15 @@ body { font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe 
 .beorn-toc-title { font-family: "Hanken Grotesk", sans-serif; font-size: 10.5pt; font-weight: 500;
   color: var(--navy); }
 
+/* ── Running header (document title on every page) ── */
+.pdf-running-header {
+  position: fixed; top: 0; left: 0; right: 0; height: 20mm;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "Montserrat", sans-serif; font-size: 6.5pt; font-weight: 600;
+  color: #c0c8d4; text-transform: uppercase; letter-spacing: 0.35em;
+  padding: 0 18mm; z-index: 50;
+}
+
 /* ── Top gradient (every page) ── */
 .pdf-page-gradient { position: fixed; top: 0; left: 0; right: 0; height: 6px;
   background: linear-gradient(90deg, var(--blue) 0%, var(--teal) 35%, var(--purple) 65%, var(--magenta) 100%);
@@ -372,8 +381,10 @@ body { background: #e5e7eb; }
   font-family: "Hanken Grotesk", sans-serif; font-size: 8pt; color: #718096; }
 .pdf-page-footer { position: static; padding: 0; }
 .pagedjs_page .pdf-page-footer { position: absolute; bottom: 8mm; left: 18mm; }
-/* Hide the fixed gradient element — we use ::before on .pagedjs_page instead */
+/* Hide fixed elements — we use ::before on .pagedjs_page for gradient instead */
 .pdf-page-gradient { display: none; }
+.pdf-running-header { display: none; }
+.pagedjs_page .pdf-running-header { display: flex; }
 /* Beorn logo watermark bottom-left on every page */
 .pagedjs_page::after {
   content: ""; position: absolute; bottom: 10mm; left: 18mm;
@@ -681,6 +692,7 @@ body { background: #e5e7eb; }
 </head>
 <body>
   <div class="pdf-page-gradient"></div>
+  <div class="pdf-running-header">${escapeHtml(title)}</div>
   ${coverHtml}
   <div class="pdf-content">
     ${sectionsHtml}
