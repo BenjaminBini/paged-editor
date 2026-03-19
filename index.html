@@ -1,0 +1,987 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Markdown → Paged.js Editor</title>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/codemirror@5/mode/markdown/markdown.min.js"></script>
+  <style>
+    /* ── Layout ─────────────────────────────────────────────── */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; font-family: "Hanken Grotesk", sans-serif; }
+
+    .toolbar {
+      height: 42px; background: #1e293b; color: #e2e8f0;
+      display: flex; align-items: center; gap: 12px; padding: 0 16px;
+      font-size: 13px; font-weight: 500; flex-shrink: 0;
+    }
+    .toolbar .logo { font-family: "Montserrat", sans-serif; font-weight: 700; font-size: 14px; color: #fff; }
+    .toolbar .sep { width: 1px; height: 20px; background: #475569; }
+    .toolbar button {
+      background: #334155; color: #e2e8f0; border: none; border-radius: 6px;
+      padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .toolbar button:hover { background: #475569; }
+    .toolbar button.primary { background: #3373b3; color: #fff; }
+    .toolbar button.primary:hover { background: #2a5fa0; }
+    .toolbar .status { margin-left: auto; font-size: 11px; color: #94a3b8; }
+
+    .container { display: flex; height: calc(100% - 42px); }
+
+    /* ── File sidebar ─────────────────────────────────────── */
+    .file-sidebar {
+      width: 200px; background: #171726; border-right: 1px solid #2d2d3f;
+      display: none; flex-direction: column; flex-shrink: 0;
+    }
+    .file-sidebar.open { display: flex; }
+    .file-sidebar .sidebar-header {
+      height: 32px; background: #1e1e2e; color: #a0a0c0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 10px; font-size: 11px; font-weight: 600;
+      text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0;
+      border-bottom: 1px solid #2d2d3f;
+    }
+    .file-sidebar .sidebar-header .folder-name {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      text-transform: none; letter-spacing: 0; color: #cdd6f4;
+    }
+    .file-list {
+      flex: 1; overflow-y: auto; padding: 4px 0;
+    }
+    .file-list .file-item {
+      display: flex; align-items: center; gap: 6px;
+      padding: 5px 10px; cursor: pointer; font-size: 12px;
+      color: #8888aa; transition: all 0.1s; border-left: 2px solid transparent;
+    }
+    .file-list .file-item:hover { background: #1e1e2e; color: #cdd6f4; }
+    .file-list .file-item.active {
+      background: #1e1e2e; color: #cdd6f4; border-left-color: #3373b3;
+      font-weight: 600;
+    }
+    .file-list .file-item.dirty::after {
+      content: ""; width: 6px; height: 6px; border-radius: 50%;
+      background: #f0a840; flex-shrink: 0; margin-left: auto;
+    }
+    .file-list .file-icon { font-size: 11px; opacity: 0.5; }
+
+    /* ── Editor pane ───────────────────────────────────────── */
+    .editor-pane {
+      flex: 1; min-width: 0; display: flex; flex-direction: column;
+      border-right: 1px solid #e2e8f0; background: #1e1e2e;
+    }
+    .editor-pane .pane-header {
+      height: 32px; background: #2d2d3f; color: #a0a0c0;
+      display: flex; align-items: center; padding: 0 12px;
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; flex-shrink: 0;
+    }
+    #editor-wrapper {
+      flex: 1; overflow: hidden;
+    }
+    /* CodeMirror theme overrides to match dark editor */
+    .editor-pane .CodeMirror {
+      height: 100% !important; background: #1e1e2e !important; color: #cdd6f4 !important;
+      font-family: "JetBrains Mono", "SF Mono", monospace !important;
+      font-size: 13px !important; line-height: 1.7 !important;
+    }
+    .editor-pane .CodeMirror-gutters { background: #1e1e2e !important; border-right: 1px solid #2d2d3f !important; }
+    .editor-pane .CodeMirror-linenumber { color: #4a4a6a !important; }
+    .editor-pane .CodeMirror-cursor { border-left-color: #cdd6f4 !important; }
+    .editor-pane .CodeMirror-selected { background: #364a6e !important; }
+    .editor-pane .CodeMirror-focused .CodeMirror-selected { background: #364a6e !important; }
+    .editor-pane .CodeMirror .CodeMirror-matchingbracket { color: #89dceb !important; }
+    /* Markdown syntax colors */
+    .editor-pane .cm-header { color: #f0a840 !important; font-weight: 700 !important; }
+    .editor-pane .cm-header-1 { font-size: 1.2em !important; color: #f0a840 !important; }
+    .editor-pane .cm-header-2 { font-size: 1.1em !important; color: #e0c070 !important; }
+    .editor-pane .cm-header-3 { color: #c8d880 !important; }
+    .editor-pane .cm-strong { color: #f9e2af !important; font-weight: 700 !important; }
+    .editor-pane .cm-em { color: #cba6f7 !important; font-style: italic !important; }
+    .editor-pane .cm-link { color: #89b4fa !important; }
+    .editor-pane .cm-url { color: #6c7086 !important; }
+    .editor-pane .cm-quote { color: #a6adc8 !important; font-style: italic !important; }
+    .editor-pane .cm-comment { color: #6c7086 !important; }
+    .editor-pane .cm-keyword { color: #cba6f7 !important; }
+    .editor-pane .cm-atom { color: #fab387 !important; }
+    .editor-pane .cm-string { color: #a6e3a1 !important; }
+    .editor-pane .cm-hr { color: #585b70 !important; }
+    .editor-pane .cm-tag { color: #f38ba8 !important; }
+    .editor-pane .cm-attribute { color: #89b4fa !important; }
+    .editor-pane .cm-def { color: #89dceb !important; }
+
+    /* ── Preview pane ──────────────────────────────────────── */
+    .preview-pane {
+      flex: 1; min-width: 0; display: flex; flex-direction: column; background: #e5e7eb;
+    }
+    .preview-pane .pane-header {
+      height: 32px; background: #f1f5f9; color: #64748b;
+      display: flex; align-items: center; padding: 0 12px;
+      font-size: 11px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.05em; flex-shrink: 0;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    #preview-container {
+      flex: 1; overflow-y: auto; padding: 20px;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    #preview-wrapper {
+      flex-shrink: 0;
+      margin: 0 auto;
+    }
+    #preview-frame {
+      border: none; background: transparent;
+      /* A4 at 96dpi = ~794px wide; scaled down via JS transform */
+      width: 794px;
+      height: 20000px; /* large initial height so Paged.js can render before we measure */
+      transform-origin: top left;
+    }
+
+    /* ── Resize handle ─────────────────────────────────────── */
+    .resize-handle {
+      width: 5px; cursor: col-resize; background: #cbd5e1;
+      transition: background 0.15s; flex-shrink: 0;
+    }
+    .resize-handle:hover, .resize-handle.active { background: #3373b3; }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <span class="logo">BEORN</span>
+    <span class="sep"></span>
+    <span>Paged.js Editor</span>
+    <span class="sep"></span>
+    <button onclick="openFolder()">Open Folder</button>
+    <button onclick="saveCurrentFile()" id="btnSave" style="display:none">Save (Ctrl+S)</button>
+    <span class="sep"></span>
+    <button onclick="triggerRender()">Render (Ctrl+Enter)</button>
+    <button class="primary" onclick="openPreviewTab()">Open in new tab</button>
+    <span class="status" id="status">Ready</span>
+  </div>
+
+  <div class="container">
+    <div class="file-sidebar" id="fileSidebar">
+      <div class="sidebar-header">
+        <span class="folder-name" id="folderName">Files</span>
+      </div>
+      <div class="file-list" id="fileList"></div>
+    </div>
+    <div class="editor-pane" id="editorPane">
+      <div class="pane-header"><span id="paneFileName">Markdown</span></div>
+      <div id="editor-wrapper"><textarea id="editor-textarea">---
+title: "Document Title"
+subtitle: "Subtitle here"
+language: fr
+---
+
+# Section 1
+
+## 1.1 Introduction
+
+Lorem ipsum dolor sit amet, **consectetur** adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+- Premier point important
+- Deuxième point avec **emphase**
+- Troisième point
+
+## 1.2 Details
+
+Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+| Colonne A | Colonne B | Colonne C |
+|---|---|---|
+| Valeur 1 | Valeur 2 | Valeur 3 |
+| Valeur 4 | Valeur 5 | Valeur 6 |
+
+# Section 2
+
+## 2.1 Architecture
+
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+> Important : Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+## 2.2 Implementation
+
+Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.
+</textarea></div>
+    </div>
+
+    <div class="resize-handle" id="resizeHandle"></div>
+
+    <div class="preview-pane" id="previewPane">
+      <div class="pane-header">Preview (Paged.js)</div>
+      <div id="preview-container">
+        <div id="preview-wrapper">
+          <iframe id="preview-frame"></iframe>
+          <iframe id="preview-frame-back" style="position:absolute;left:-9999px;visibility:hidden;width:794px;height:20000px;transform-origin:top left;border:none;background:transparent;"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ── Beorn Design System CSS (synced from pdf.css + paged.css) ───────
+    const PDF_CSS = `
+:root {
+  --navy: #193658; --blue: #3373b3; --purple: #493a8b;
+  --magenta: #b82775; --orange: #eb9126; --teal: #0096ae;
+  --light-bg: #f8f9fc; --border: #e2e8f0; --text: #2d3748;
+  --text-light: #718096;
+  --space-xs: 0.25rem; --space-sm: 0.5rem; --space-md: 1rem;
+  --space-lg: 1.5rem; --space-xl: 2rem; --space-2xl: 3rem;
+}
+@page { size: A4; margin: 20mm 18mm 25mm 18mm;
+  @bottom-center { content: counter(page); font-family: "Hanken Grotesk", sans-serif; font-size: 8pt; color: #718096; }
+}
+@page cover { margin: 0; @bottom-center { content: none; } }
+@page :first { margin: 0; @bottom-center { content: none; } }
+* { margin: 0; padding: 0; box-sizing: border-box;
+  -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+body { font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 10.5pt; line-height: 1.6; color: var(--text); background: #fff; }
+
+/* ── Cover (2 pages: hero+info, sommaire) ── */
+.beorn-cover {
+  width: 100%; break-after: page; page-break-after: always; background: #fff; page: cover;
+}
+.beorn-cover-body { padding: 4rem 3.5rem 0; box-sizing: border-box; }
+.beorn-cover-logos { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 3rem; }
+.beorn-cover-logo { height: auto !important; max-width: 180px; }
+.beorn-cover-logo-separator { width: 1px; height: 28px; background: #d1d5db; }
+.beorn-cover-logo-lumapps { height: 24px !important; width: auto; background: #FEEC40; padding: 6px 10px; }
+.beorn-cover-doctype {
+  font-family: "Montserrat", sans-serif; font-size: 10pt; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase; color: var(--blue); margin-bottom: 1rem;
+}
+.beorn-cover-title {
+  font-family: "Montserrat", sans-serif; font-size: 26pt; font-weight: 800;
+  color: var(--navy); line-height: 1.15; letter-spacing: -0.02em;
+  margin-bottom: 1.5rem; max-width: 90%;
+}
+.beorn-cover-underline { display: flex; align-items: center; gap: 5px; margin-bottom: 2rem; }
+.beorn-cover-underline .solid { width: 80px; height: 4px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--blue), var(--teal)); }
+.beorn-cover-underline .chunk { height: 4px; border-radius: 2px; background: var(--teal); }
+.beorn-cover-ref { font-size: 11pt; color: var(--text-light); margin-bottom: 0.3rem; }
+.beorn-cover-bottom-section { margin-top: 90mm; }
+.beorn-cover-confidential { font-size: 7.5pt; color: var(--text-light); font-style: italic;
+  text-align: center; margin-top: 3rem; }
+.beorn-cover-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
+  padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.beorn-cover-info-label { font-size: 7pt; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--text-light); margin-bottom: 0.3rem; }
+.beorn-cover-info-value { font-size: 9.5pt; color: var(--navy); line-height: 1.5; }
+.beorn-cover-info-value strong { font-weight: 700; }
+
+/* ── Cover: Sommaire ── */
+.beorn-cover-sommaire .beorn-cover-body { padding-top: 3.5rem; }
+.beorn-toc { display: flex; flex-direction: column; gap: 0; }
+.beorn-toc-entry { display: flex; align-items: baseline; gap: 1rem;
+  padding: 0.65rem 0; border-bottom: 1px solid var(--border); }
+.beorn-toc-entry:first-child { border-top: 1px solid var(--border); }
+.beorn-toc-num { font-family: "Montserrat", sans-serif; font-size: 10pt; font-weight: 800;
+  color: var(--blue); min-width: 2rem; }
+.beorn-toc-title { font-family: "Hanken Grotesk", sans-serif; font-size: 10.5pt; font-weight: 500;
+  color: var(--navy); }
+
+/* ── Top gradient (every page) ── */
+.pdf-page-gradient { position: fixed; top: 0; left: 0; right: 0; height: 6px;
+  background: linear-gradient(90deg, var(--blue) 0%, var(--teal) 35%, var(--purple) 65%, var(--magenta) 100%);
+  z-index: 100; }
+
+/* ── Page footer ── */
+.pdf-page-footer { position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; align-items: center; justify-content: flex-start; padding: 0; z-index: 100; }
+.pdf-page-footer-logo { height: 22px; width: auto; opacity: 0.15; }
+
+.pdf-content { max-width: 100%; padding: 0; }
+h1, h2, h3, h4, h5, h6 { font-family: "Montserrat", sans-serif; }
+h1 { font-size: 16pt; color: var(--navy); font-weight: 700; margin: 0 0 var(--space-lg); line-height: 1.2;
+  padding-bottom: 0.4rem; position: relative; width: fit-content; max-width: 100%; }
+h1 .beorn-underline, h2 .beorn-underline { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; display: flex; align-items: center; gap: 4px; }
+h1 .beorn-underline .beorn-solid, h2 .beorn-underline .beorn-solid { height: 3.5px; border-radius: 1.75px; flex-shrink: 0; }
+h1 .beorn-underline .beorn-chunk, h2 .beorn-underline .beorn-chunk { height: 3.5px; border-radius: 1.75px; flex-shrink: 0; }
+h2 { font-size: 13pt; color: var(--navy); font-weight: 600; margin: 0 0 var(--space-xs); padding-bottom: 0.3rem;
+  line-height: 1.25; position: relative; width: fit-content; max-width: 100%; border-bottom: none; }
+h3 { font-size: 11pt; color: var(--navy); font-weight: 700; margin: var(--space-md) 0 var(--space-sm); line-height: 1.3; }
+h4 { font-size: 9pt; color: var(--navy); font-weight: 700; margin: var(--space-lg) 0 var(--space-sm); line-height: 1.35; }
+p { margin-bottom: var(--space-md); }
+strong { font-weight: 700; color: var(--navy); }
+
+.pdf-content ul { list-style: none; display: grid; gap: var(--space-sm); margin: var(--space-xs) 0 var(--space-md); padding-left: 0; }
+.pdf-content ul li { position: relative; padding-left: 1.4rem; margin: 0; }
+.pdf-content ul li::before { content: "\\203A"; position: absolute; left: 0; font-size: 1.3rem; font-weight: 700;
+  color: var(--section-color, var(--blue)); line-height: 1; top: 0.15rem; }
+.pdf-content ul ul { margin: var(--space-xs) 0 0; }
+.pdf-content ul ul li::before { content: "\\2013"; font-size: 0.9rem; color: color-mix(in srgb, var(--section-color, var(--blue)) 60%, white); }
+ol { margin: var(--space-xs) 0 var(--space-md) 1.35rem; }
+ol li + li { margin-top: var(--space-sm); }
+
+table { width: 100%; border-collapse: collapse; margin: var(--space-lg) 0; font-size: 9pt;
+  border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+thead th { background: var(--section-color, var(--navy)); color: #fff; padding: 0.35rem 0.7rem;
+  text-align: left; font-weight: 700; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em;
+  border: 1px solid rgba(255,255,255,0.15); }
+tbody td { padding: 0.3rem 0.7rem; border: 1px solid var(--border); background: transparent; }
+tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--section-color, var(--blue)) 5%, white); }
+
+code { background: #edf2f7; padding: 0.12em 0.35em; border-radius: 4px; font-size: 0.85em; color: var(--purple);
+  font-family: "SF Mono", "Fira Code", Consolas, monospace; }
+pre { background: #1e293b; color: #e2e8f0; padding: 1rem 1.2rem; border-radius: 10px; overflow-x: auto;
+  margin: var(--space-lg) 0; font-size: 8.5pt; line-height: 1.6; font-family: "SF Mono", "Fira Code", Consolas, monospace; }
+pre code { background: none; color: inherit; padding: 0; }
+
+blockquote { border-left: 4px solid var(--section-color, var(--blue));
+  background: color-mix(in srgb, var(--section-color, var(--blue)) 8%, transparent);
+  padding: 0.8rem 1rem; border-radius: 0 8px 8px 0; margin: var(--space-lg) 0; color: var(--text); }
+hr { border: 0; border-top: 1px solid var(--border); margin: var(--space-xl) 0; }
+.mermaid-diagram { background: #fff; border: 1px solid rgba(25,54,88,0.08); border-radius: 12px; padding: 1.25rem;
+  margin: var(--space-lg) 0; overflow-x: auto; box-shadow: 0 2px 8px rgba(25,54,88,0.04); }
+.mermaid-diagram svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+img { max-width: 100%; height: auto; }
+
+/* ── Pagination ── */
+.pdf-content > section.level2:first-of-type { break-before: auto !important; page-break-before: auto !important; }
+.pdf-content > section.level2 ~ section.level2 { break-before: page; page-break-before: always; }
+h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; break-inside: avoid; orphans: 3; widows: 3; }
+p { break-inside: avoid; page-break-inside: avoid; orphans: 3; widows: 3; }
+table { break-inside: avoid; page-break-inside: avoid; }
+pre { break-inside: avoid; page-break-inside: avoid; }
+blockquote { break-inside: avoid; page-break-inside: avoid; }
+figure, .mermaid-diagram { break-inside: avoid; page-break-inside: avoid; }
+.pdf-content ul, .pdf-content ol { break-inside: auto; page-break-inside: auto; }
+p + ul, p + ol { break-before: avoid; page-break-before: avoid; }
+.pdf-content ul li::before { box-shadow: none; }
+a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 7.5pt; color: var(--text-light); font-weight: 400; }
+`;
+
+    const PAGED_CSS = `
+body { background: #e5e7eb; }
+.pagedjs_pages { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 24px 0; }
+.pagedjs_page { background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.12); position: relative; overflow: hidden; }
+.pagedjs_page::before {
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 6px; z-index: 100;
+  background: linear-gradient(90deg, #3373b3 0%, #0096ae 35%, #493a8b 65%, #b82775 100%);
+}
+.pagedjs_margin-bottom-center > .pagedjs_margin-content::after {
+  font-family: "Hanken Grotesk", sans-serif; font-size: 8pt; color: #718096; }
+.pdf-page-footer { position: static; padding: 0; }
+.pagedjs_page .pdf-page-footer { position: absolute; bottom: 8mm; left: 18mm; }
+/* Hide the fixed gradient element — we use ::before on .pagedjs_page instead */
+.pdf-page-gradient { display: none; }
+`;
+
+    // ── Beorn underline JS ───────────────────────────────────────────────
+    const BEORN_JS = `(function(){
+  var colorPairs=[["#2a5fa0","#4a8fd4"],["#3d2f78","#6a5aaf"],["#9e1f63","#d44a9a"],["#cc7a1a","#f0a840"],["#007a92","#20b8d0"]];
+  function rand(a,b){return a+Math.random()*(b-a)}
+  function colorNumbering(el,color){
+    var existing=el.querySelector(".beorn-num");
+    if(existing){existing.parentNode.replaceChild(document.createTextNode(existing.textContent),existing);el.normalize()}
+    var firstText=null;
+    for(var i=0;i<el.childNodes.length;i++){if(el.childNodes[i].nodeType===3&&el.childNodes[i].textContent.trim()){firstText=el.childNodes[i];break}}
+    if(!firstText)return;
+    var text=firstText.textContent,match=text.match(/^(\\d+(?:\\.\\d+)*\\.?\\s)/);
+    if(!match)return;
+    var span=document.createElement("span");span.className="beorn-num";span.style.color=color;span.textContent=match[1];
+    firstText.textContent=text.slice(match[1].length);el.insertBefore(span,firstText);
+    var numWidth=span.getBoundingClientRect().width;el.style.paddingLeft=numWidth+"px";el.style.textIndent="-"+numWidth+"px";
+  }
+  function buildUnderlines(){
+    document.querySelectorAll("h1 .beorn-underline").forEach(function(el){el.remove()});
+    document.querySelectorAll("h1").forEach(function(h1,idx){
+      var ci=h1.getAttribute("data-color-index");
+      var pair=ci!=null?colorPairs[parseInt(ci,10)%colorPairs.length]:colorPairs[idx%colorPairs.length];
+      var rect=h1.getBoundingClientRect(),w=rect.width;if(w<=0)return;
+      var main=h1.closest(".pdf-content"),maxW=main?main.getBoundingClientRect().right-rect.left:Infinity;
+      var container=document.createElement("span");container.className="beorn-underline";
+      var gap=4,chunkSizes=[rand(45,60),rand(28,38),rand(14,22),rand(6,10),Math.max(3.5,rand(3.5,5)),3.5];
+      var solidW=w-gap-chunkSizes[0];
+      var solid=document.createElement("span");solid.className="beorn-solid";
+      solid.style.width=solidW+"px";solid.style.background="linear-gradient(90deg,"+pair[0]+","+pair[1]+")";
+      container.appendChild(solid);
+      chunkSizes.forEach(function(size,i){
+        var chunk=document.createElement("span");chunk.className="beorn-chunk";
+        chunk.style.width=size+"px";chunk.style.background=pair[1];chunk.style.opacity=1-i*0.12;
+        container.appendChild(chunk);
+      });
+      h1.appendChild(container);colorNumbering(h1,pair[0]);
+      h1.style.setProperty("--section-color",pair[0]);h1.style.setProperty("--section-color-light",pair[1]);
+      var sibling=h1.nextElementSibling;
+      while(sibling&&sibling.tagName!=="H1"){
+        sibling.style.setProperty("--section-color",pair[0]);sibling.style.setProperty("--section-color-light",pair[1]);
+        sibling.querySelectorAll("h2,h3,h4").forEach(function(sub){sub.style.color=pair[0];colorNumbering(sub,pair[0])});
+        if(sibling.tagName==="H2"||sibling.tagName==="H3"||sibling.tagName==="H4"){sibling.style.color=pair[0];colorNumbering(sibling,pair[0])}
+        sibling=sibling.nextElementSibling;
+      }
+    });
+  }
+  if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){setTimeout(buildUnderlines,100)})}
+  else{setTimeout(buildUnderlines,300)}
+})();`;
+
+    // ── Preload external scripts for iframe injection ──────────────────
+    let PAGED_JS_BLOB_URL = "";
+    const pagedReady = fetch("assets/paged.polyfill.js")
+      .then(r => r.blob())
+      .then(b => { PAGED_JS_BLOB_URL = URL.createObjectURL(b); });
+
+    // ── State ────────────────────────────────────────────────────────────
+    const cm = CodeMirror.fromTextArea(document.getElementById("editor-textarea"), {
+      mode: "markdown",
+      lineNumbers: true,
+      lineWrapping: true,
+      tabSize: 2,
+      indentWithTabs: false,
+      theme: "default",
+    });
+    // Compatibility shim: editor.value / editor.scrollTop etc.
+    const editor = {
+      get value() { return cm.getValue(); },
+      set value(v) { cm.setValue(v); },
+      get scrollTop() { return cm.getScrollInfo().top; },
+      set scrollTop(v) { cm.scrollTo(null, v); },
+      get scrollHeight() { return cm.getScrollInfo().height; },
+      get clientHeight() { return cm.getScrollInfo().clientHeight; },
+    };
+    const status = document.getElementById("status");
+    let previewFrame = document.getElementById("preview-frame");
+    const previewContainer = document.getElementById("preview-container");
+    let renderTimeout = null;
+    let lastRenderedHtml = "";
+
+    // ── Scale preview to fit container width ──────────────────────────
+    const A4_WIDTH_PX = 794; // 210mm at 96dpi
+    const previewWrapper = document.getElementById("preview-wrapper");
+    let scaleRetryTimer = null;
+    function scalePreview() {
+      const containerW = previewContainer.clientWidth - 40; // subtract padding
+      const scale = Math.min(1, containerW / A4_WIDTH_PX);
+      previewFrame.style.transform = `scale(${scale})`;
+      previewFrame.style.width = A4_WIDTH_PX + "px";
+      try {
+        const iframeDoc = previewFrame.contentDocument || previewFrame.contentWindow.document;
+        // Look for .pagedjs_pages first — most reliable height source after Paged.js renders
+        const pagedPages = iframeDoc.querySelector(".pagedjs_pages");
+        const h = pagedPages
+          ? pagedPages.scrollHeight
+          : Math.max(iframeDoc.documentElement.scrollHeight, iframeDoc.body.scrollHeight);
+        if (h > 300) {
+          // Valid measurement
+          previewFrame.style.height = h + "px";
+          previewWrapper.style.width = (A4_WIDTH_PX * scale) + "px";
+          previewWrapper.style.height = (h * scale) + "px";
+          previewWrapper.style.overflow = "hidden";
+        } else {
+          // Too small — Paged.js probably hasn't finished, retry
+          clearTimeout(scaleRetryTimer);
+          scaleRetryTimer = setTimeout(scalePreview, 500);
+        }
+      } catch(e) {
+        // Cross-origin or not loaded yet — retry
+        clearTimeout(scaleRetryTimer);
+        scaleRetryTimer = setTimeout(scalePreview, 500);
+      }
+    }
+    window.addEventListener("resize", scalePreview);
+
+    // ── Parse frontmatter ────────────────────────────────────────────────
+    function parseFrontmatter(text) {
+      const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
+      if (!m) return { fm: {}, body: text };
+      const fm = {};
+      m[1].split("\n").forEach(line => {
+        const kv = line.match(/^(\w+)\s*:\s*"?(.+?)"?\s*$/);
+        if (kv) fm[kv[1]] = kv[2];
+      });
+      return { fm, body: text.slice(m[0].length) };
+    }
+
+    // ── Build HTML ───────────────────────────────────────────────────────
+    function buildPagedHtml(md) {
+      const { fm, body } = parseFrontmatter(md);
+      const title = fm.title || "Document";
+      const subtitle = fm.subtitle || "";
+      const aoRef = fm.ao_ref || "";
+      const acheteur = fm.acheteur || "";
+      const doctype = fm.doctype || "Mémoire technique";
+
+      // Parse markdown
+      const htmlBody = marked.parse(body);
+
+      // Split on <h1> for sections, skip "Page de garde"
+      const parts = htmlBody.split(/(?=<h1[^>]*>)/);
+      let sectionsHtml = "";
+      let colorIdx = 0;
+      let isFirst = true;
+      parts.forEach((sec) => {
+        const s = sec.trim();
+        if (!s) return;
+        if (/^<h1/.test(s)) {
+          // Skip "Page de garde" section
+          if (s.match(/<h1[^>]*>Page de garde<\/h1>/i)) return;
+          const brk = isFirst ? "" : " section-break";
+          isFirst = false;
+          sectionsHtml += '<section class="level2' + brk + '" data-color-index="' + (colorIdx % 5) + '">\n' + s + '\n</section>\n';
+          colorIdx++;
+        } else {
+          sectionsHtml += s;
+        }
+      });
+
+      // French typography
+      sectionsHtml = sectionsHtml
+        .replace(/(\w) :/g, "$1\u00a0:")
+        .replace(/(\w) ;/g, "$1\u00a0;")
+        .replace(/(\w) !/g, "$1\u00a0!")
+        .replace(/(\w) \?/g, "$1\u00a0?");
+
+      // Extract project name from title (after "—" or use full title)
+      const titleParts = title.split(/\s*[—–]\s*/);
+      const projectName = titleParts.length > 1 ? titleParts.slice(1).join(" — ") : title;
+
+      // Build TOC from sections (skip "Page de garde")
+      const tocEntries = [];
+      parts.forEach(s => {
+        const m = s.match(/<h1[^>]*>(.*?)<\/h1>/);
+        if (m) {
+          const t = m[1].replace(/<[^>]+>/g, "");
+          if (!/^page de garde$/i.test(t.trim())) tocEntries.push(t);
+        }
+      });
+      const tocHtml = tocEntries.map((t, i) =>
+        '<div class="beorn-toc-entry"><span class="beorn-toc-num">' +
+        String(i + 1).padStart(2, "0") + '</span><span class="beorn-toc-title">' +
+        escapeHtml(t) + '</span></div>').join("\n");
+
+      // Cover HTML (2 pages: hero+info, sommaire)
+      const logoSrc = "assets/beorn-logo.png";
+      const coverHtml = `
+    <div class="beorn-cover beorn-cover-hero">
+      <div class="beorn-cover-body">
+        <div class="beorn-cover-logos">
+          <img class="beorn-cover-logo" src="${logoSrc}" alt="BEORN Technologies" onerror="this.style.display='none'" />
+        </div>
+        <div class="beorn-cover-doctype">${escapeHtml(doctype)}</div>
+        <div class="beorn-cover-title">${escapeHtml(projectName)}</div>
+        <div class="beorn-cover-underline">
+          <span class="solid"></span>
+          <span class="chunk" style="width:40px;"></span>
+          <span class="chunk" style="width:24px; opacity:0.7;"></span>
+          <span class="chunk" style="width:14px; opacity:0.45;"></span>
+          <span class="chunk" style="width:6px; opacity:0.25;"></span>
+          <span class="chunk" style="width:4px; height:4px; border-radius:50%; opacity:0.15;"></span>
+        </div>
+        ${aoRef ? '<div class="beorn-cover-ref">Consultation n\u00b0 ' + escapeHtml(aoRef) + '</div>' : ''}
+        <div class="beorn-cover-bottom-section">
+          <div class="beorn-cover-info-grid">
+            <div class="beorn-cover-info-block">
+              <div class="beorn-cover-info-label">Candidat</div>
+              <div class="beorn-cover-info-value">
+                <strong>BEORN TECHNOLOGIES</strong><br>
+                12 rue Louis Courtois de Vi\u00e7ose<br>
+                Portes Sud \u2014 B\u00e2timent 3<br>
+                31100 Toulouse<br>
+                T\u00e9l\u00a0: +33 (0)531 983 168<br>
+                www.beorntech.com
+              </div>
+            </div>
+            ${acheteur ? '<div class="beorn-cover-info-block"><div class="beorn-cover-info-label">Acheteur</div><div class="beorn-cover-info-value"><strong>' + escapeHtml(acheteur) + '</strong></div></div>' : ''}
+          </div>
+          <div class="beorn-cover-confidential">Document confidentiel \u2014 Reproduction interdite</div>
+        </div>
+      </div>
+    </div>
+    <div class="beorn-cover beorn-cover-sommaire">
+      <div class="beorn-cover-body">
+        <div class="beorn-cover-logos">
+          <img class="beorn-cover-logo" src="${logoSrc}" alt="BEORN Technologies" style="max-width:120px;" onerror="this.style.display='none'" />
+        </div>
+        <div class="beorn-cover-doctype">Sommaire</div>
+        <div class="beorn-cover-underline" style="margin-bottom:2.5rem;">
+          <span class="solid"></span>
+          <span class="chunk" style="width:40px;"></span>
+          <span class="chunk" style="width:24px; opacity:0.7;"></span>
+        </div>
+        <div class="beorn-toc">${tocHtml}</div>
+      </div>
+    </div>`;
+
+      return `<!doctype html>
+<html lang="${fm.language || 'fr'}">
+<head>
+  <meta charset="UTF-8" />
+  <title>${escapeHtml(title)}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>${PDF_CSS}</style>
+  <style>${PAGED_CSS}</style>
+  <script>window.PagedConfig = { auto: false };<\/script>
+  <script src="${PAGED_JS_BLOB_URL}"><\/script>
+  <script type="module">
+    // Wrap h2/h3/h4 + next sibling to prevent orphaned headings
+    (function() {
+      var headings = document.querySelectorAll('.pdf-content h2, .pdf-content h3, .pdf-content h4');
+      var wrapped = new Set();
+      headings.forEach(function(h) {
+        if (wrapped.has(h)) return;
+        var els = [h];
+        var next = h.nextElementSibling;
+        while (next && /^H[2-6]$/.test(next.tagName)) { els.push(next); wrapped.add(next); next = next.nextElementSibling; }
+        if (next && !/^H[1-6]$/.test(next.tagName)) els.push(next);
+        if (els.length < 2) return;
+        var wrapper = document.createElement('div');
+        wrapper.style.breakInside = 'avoid';
+        wrapper.style.pageBreakInside = 'avoid';
+        h.parentNode.insertBefore(wrapper, h);
+        els.forEach(function(el) { wrapper.appendChild(el); });
+      });
+    })();
+    const paged = new Paged.Previewer();
+    await paged.preview();
+    window.parent.postMessage({ type: "paged-ready", pages: document.querySelectorAll(".pagedjs_page").length }, "*");
+  <\/script>
+</head>
+<body>
+  <div class="pdf-page-gradient"></div>
+  ${coverHtml}
+  <div class="pdf-content">
+    ${sectionsHtml}
+  </div>
+  <script>${BEORN_JS}<\/script>
+</body>
+</html>`;
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    // ── Render (double-buffered to prevent flicker) ────────────────────
+    const frames = [
+      document.getElementById("preview-frame"),
+      document.getElementById("preview-frame-back"),
+    ];
+    let frontIdx = 0; // frames[frontIdx] is visible, frames[1-frontIdx] is back
+    let pendingSwap = false;
+
+    function getFront() { return frames[frontIdx]; }
+    function getBack() { return frames[1 - frontIdx]; }
+
+    function triggerRender() {
+      const md = editor.value;
+      status.textContent = "Rendering...";
+      const html = buildPagedHtml(md);
+      if (html === lastRenderedHtml) { status.textContent = "No changes"; return; }
+      lastRenderedHtml = html;
+      pendingSwap = true;
+      const blob = new Blob([html], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const back = getBack();
+      back.style.width = getFront().style.width || "794px";
+      back.style.height = getFront().style.height || "20000px";
+      back.style.transform = getFront().style.transform;
+      back.style.transformOrigin = "top left";
+      back.src = url;
+    }
+
+    function swapFrames() {
+      const scrollTop = previewContainer.scrollTop;
+      const oldFront = getFront();
+      const newFront = getBack();
+
+      // Show new front
+      newFront.style.position = "";
+      newFront.style.left = "";
+      newFront.style.visibility = "";
+
+      // Hide old front
+      oldFront.style.position = "absolute";
+      oldFront.style.left = "-9999px";
+      oldFront.style.visibility = "hidden";
+
+      frontIdx = 1 - frontIdx;
+      previewFrame = getFront();
+      previewContainer.scrollTop = scrollTop;
+    }
+
+    // Listen for paged-ready from iframe
+    window.addEventListener("message", e => {
+      if (e.data && e.data.type === "paged-ready") {
+        if (pendingSwap) {
+          pendingSwap = false;
+          swapFrames();
+        }
+        status.textContent = e.data.pages + " pages";
+        setTimeout(scalePreview, 300);
+        setTimeout(() => { scalePreview(); buildAnchors(); }, 1000);
+        setupScrollSync();
+      }
+    });
+
+    // ── Auto-render on pause ─────────────────────────────────────────────
+    cm.on("change", () => {
+      clearTimeout(renderTimeout);
+      status.textContent = "Typing...";
+      renderTimeout = setTimeout(triggerRender, 800);
+    });
+
+    // Ctrl+Enter to render immediately
+    cm.setOption("extraKeys", {
+      "Ctrl-Enter": () => { clearTimeout(renderTimeout); triggerRender(); },
+      "Cmd-Enter": () => { clearTimeout(renderTimeout); triggerRender(); },
+    });
+
+    // ── Scroll sync (heading-based content matching, h1-h4) ─────────────
+    // Anchors: arrays of { ratio } where ratio = position / totalScrollable
+    let syncAnchors = null; // { ed: [...], pv: [...] }
+
+    function buildAnchors() {
+      // ── Editor anchors: line-based ──
+      const lines = cm.getValue().split("\n");
+      const totalLines = lines.length;
+      const ed = [0]; // start
+      for (let i = 0; i < totalLines; i++) {
+        if (/^#{1,4}\s/.test(lines[i])) ed.push(i / totalLines);
+      }
+      ed.push(1); // end
+
+      // ── Preview anchors: pixel-based from iframe ──
+      const pv = [0]; // start
+      try {
+        const doc = previewFrame.contentDocument;
+        if (!doc) { syncAnchors = null; return; }
+        const pages = doc.querySelector(".pagedjs_pages");
+        if (!pages) { syncAnchors = null; return; }
+        const totalH = pages.scrollHeight;
+        if (totalH < 100) { syncAnchors = null; return; }
+        const pagesTop = pages.getBoundingClientRect().top;
+        doc.querySelectorAll(".pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4")
+          .forEach(h => {
+            const off = h.getBoundingClientRect().top - pagesTop;
+            pv.push(off / totalH);
+          });
+      } catch(e) { syncAnchors = null; return; }
+      pv.push(1); // end
+
+      syncAnchors = { ed, pv };
+    }
+
+    function mapRatio(from, to, r) {
+      // Find segment in 'from' that contains r, interpolate to 'to'
+      let i = 1;
+      while (i < from.length - 1 && from[i] <= r) i++;
+      i--; // i = index of segment start
+      const f0 = from[i], f1 = from[Math.min(i + 1, from.length - 1)];
+      const t = (f1 - f0) > 0 ? (r - f0) / (f1 - f0) : 0;
+      const j = Math.min(i, to.length - 2);
+      return to[j] + t * (to[j + 1] - to[j]);
+    }
+
+    function setupScrollSync() {
+      buildAnchors();
+      if (setupScrollSync._done) return;
+      setupScrollSync._done = true;
+
+      const container = previewContainer;
+      let syncing = false;
+
+      cm.on("scroll", () => {
+        if (syncing || !syncAnchors) return;
+        syncing = true;
+        const info = cm.getScrollInfo();
+        const maxEd = info.height - info.clientHeight;
+        if (maxEd > 0) {
+          const r = info.top / maxEd;
+          const pr = mapRatio(syncAnchors.ed, syncAnchors.pv, r);
+          const maxPv = container.scrollHeight - container.clientHeight;
+          container.scrollTop = pr * maxPv;
+        }
+        requestAnimationFrame(() => syncing = false);
+      });
+
+      container.addEventListener("scroll", () => {
+        if (syncing || !syncAnchors) return;
+        syncing = true;
+        const maxPv = container.scrollHeight - container.clientHeight;
+        if (maxPv > 0) {
+          const r = container.scrollTop / maxPv;
+          const er = mapRatio(syncAnchors.pv, syncAnchors.ed, r);
+          const info = cm.getScrollInfo();
+          cm.scrollTo(null, er * (info.height - info.clientHeight));
+        }
+        requestAnimationFrame(() => syncing = false);
+      });
+    }
+
+    // ── Resize handle ────────────────────────────────────────────────────
+    const handle = document.getElementById("resizeHandle");
+    const editorPane = document.getElementById("editorPane");
+    const previewPane = document.getElementById("previewPane");
+    let isResizing = false;
+
+    handle.addEventListener("mousedown", e => {
+      isResizing = true;
+      handle.classList.add("active");
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      // Block iframe from stealing mouse events during drag
+      previewFrame.style.pointerEvents = "none";
+      e.preventDefault();
+    });
+    document.addEventListener("mousemove", e => {
+      if (!isResizing) return;
+      const sidebarW = fileSidebar.classList.contains("open") ? fileSidebar.offsetWidth : 0;
+      const availW = editorPane.parentElement.offsetWidth - sidebarW;
+      const editorX = e.clientX - sidebarW;
+      const pct = (editorX / availW) * 100;
+      const clamped = Math.max(20, Math.min(80, pct));
+      editorPane.style.flex = "none";
+      previewPane.style.flex = "none";
+      editorPane.style.width = (clamped / 100 * availW) + "px";
+      previewPane.style.width = ((100 - clamped) / 100 * availW) + "px";
+    });
+    document.addEventListener("mouseup", () => {
+      if (isResizing) {
+        isResizing = false;
+        handle.classList.remove("active");
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        previewFrame.style.pointerEvents = "";
+        cm.refresh();
+        scalePreview();
+      }
+    });
+
+    // ── Open in new tab ──────────────────────────────────────────────────
+    function openPreviewTab() {
+      const html = buildPagedHtml(editor.value);
+      const blob = new Blob([html], { type: "text/html" });
+      window.open(URL.createObjectURL(blob), "_blank");
+    }
+
+    // ── Load file via drag & drop ────────────────────────────────────────
+    const cmEl = cm.getWrapperElement();
+    cmEl.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
+    cmEl.addEventListener("drop", e => {
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if (file && file.name.endsWith(".md")) {
+        e.preventDefault();
+        e.stopPropagation();
+        const reader = new FileReader();
+        reader.onload = ev => { cm.setValue(ev.target.result); triggerRender(); };
+        reader.readAsText(file);
+      }
+    });
+
+    // ── File System Access API ───────────────────────────────────────────
+    let dirHandle = null;       // DirectoryHandle for the opened folder
+    let fileHandles = [];       // [{name, handle}] sorted
+    let activeFileIdx = -1;     // index in fileHandles
+    let savedContent = "";      // content at last save/load (for dirty detection)
+
+    const fileSidebar = document.getElementById("fileSidebar");
+    const fileList = document.getElementById("fileList");
+    const folderNameEl = document.getElementById("folderName");
+    const paneFileName = document.getElementById("paneFileName");
+    const btnSave = document.getElementById("btnSave");
+
+    async function openFolder() {
+      try {
+        dirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
+      } catch(e) { return; } // user cancelled
+
+      folderNameEl.textContent = dirHandle.name;
+      fileSidebar.classList.add("open");
+      btnSave.style.display = "";
+      cm.refresh(); // editor pane resized
+
+      await refreshFileList();
+
+      // Auto-open first file
+      if (fileHandles.length > 0) await openFile(0);
+    }
+
+    async function refreshFileList() {
+      fileHandles = [];
+      for await (const [name, handle] of dirHandle.entries()) {
+        if (handle.kind === "file" && name.endsWith(".md")) {
+          fileHandles.push({ name, handle });
+        }
+      }
+      fileHandles.sort((a, b) => a.name.localeCompare(b.name));
+      renderFileList();
+    }
+
+    function renderFileList() {
+      fileList.innerHTML = "";
+      fileHandles.forEach((f, i) => {
+        const el = document.createElement("div");
+        el.className = "file-item" + (i === activeFileIdx ? " active" : "");
+        if (i === activeFileIdx && cm.getValue() !== savedContent) el.classList.add("dirty");
+        el.innerHTML = '<span class="file-icon">📄</span>' + escapeHtml(f.name);
+        el.onclick = () => openFile(i);
+        fileList.appendChild(el);
+      });
+    }
+
+    async function openFile(idx) {
+      // Save current if dirty
+      if (activeFileIdx >= 0 && cm.getValue() !== savedContent) {
+        await doSave();
+      }
+
+      activeFileIdx = idx;
+      const fh = fileHandles[idx];
+      const file = await fh.handle.getFile();
+      const text = await file.text();
+      savedContent = text;
+      cm.setValue(text);
+      cm.clearHistory();
+      paneFileName.textContent = fh.name;
+      document.title = fh.name + " — Paged.js Editor";
+      renderFileList();
+      triggerRender();
+    }
+
+    async function doSave() {
+      if (activeFileIdx < 0) return;
+      const fh = fileHandles[activeFileIdx];
+      try {
+        const writable = await fh.handle.createWritable();
+        await writable.write(cm.getValue());
+        await writable.close();
+        savedContent = cm.getValue();
+        status.textContent = "Saved " + fh.name;
+        renderFileList();
+      } catch(e) {
+        status.textContent = "Save failed: " + e.message;
+      }
+    }
+
+    async function saveCurrentFile() {
+      await doSave();
+    }
+
+    // Track dirty state
+    cm.on("change", () => {
+      if (activeFileIdx >= 0) renderFileList();
+    });
+
+    // Ctrl+S / Cmd+S to save
+    document.addEventListener("keydown", e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        if (activeFileIdx >= 0) doSave();
+      }
+    });
+
+    // ── Initial render (wait for Paged.js to be loaded) ────────────────
+    pagedReady.then(() => setTimeout(triggerRender, 100));
+  </script>
+</body>
+</html>
