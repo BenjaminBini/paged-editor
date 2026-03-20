@@ -635,7 +635,6 @@ body { background: #e5e7eb; }
       var ci=h1.getAttribute("data-color-index");
       var pair=ci!=null?colorPairs[parseInt(ci,10)%colorPairs.length]:colorPairs[idx%colorPairs.length];
       var rect=h1.getBoundingClientRect(),w=rect.width;if(w<=0)return;
-      var main=h1.closest(".pdf-content"),maxW=main?main.getBoundingClientRect().right-rect.left:Infinity;
       var container=document.createElement("span");container.className="beorn-underline";
       var gap=4,chunkSizes=[rand(45,60),rand(28,38),rand(14,22),rand(6,10),Math.max(3.5,rand(3.5,5)),3.5];
       var solidW=w-gap-chunkSizes[0];
@@ -734,8 +733,10 @@ body { background: #e5e7eb; }
     // Wrap cm.setValue to always refresh table widgets after content replacement
     const _cmSetValue = cm.setValue.bind(cm);
     cm.setValue = function(v) {
-      // Clear stale widget refs before replacing content
-      if (typeof tableWidgets !== "undefined") tableWidgets.clear();
+      // Destroy all stale widgets before replacing content
+      if (typeof tableWidgets !== "undefined") {
+        for (const tw of tableWidgets.values()) destroyTableWidget(tw);
+      }
       _cmSetValue(v);
       if (typeof refreshTableWidgets === "function") setTimeout(refreshTableWidgets, 50);
     };
@@ -826,9 +827,8 @@ body { background: #e5e7eb; }
         if (/^<h1/.test(s)) {
           // Skip "Page de garde" section
           if (s.match(/<h1[^>]*>Page de garde<\/h1>/i)) return;
-          const brk = isFirst ? "" : " section-break";
           isFirst = false;
-          sectionsHtml += '<section class="level2' + brk + '" data-color-index="' + (colorIdx % 5) + '">\n' + s + '\n</section>\n';
+          sectionsHtml += '<section class="level2" data-color-index="' + (colorIdx % 5) + '">\n' + s + '\n</section>\n';
           colorIdx++;
         } else {
           sectionsHtml += s;
@@ -927,7 +927,7 @@ body { background: #e5e7eb; }
   <script src="${PAGED_JS_BLOB_URL}"><\/script>
   <script type="module">
     // Render mermaid diagrams before Paged.js runs
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose',
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'strict',
       look: 'handDrawn',
       theme: 'base',
       themeVariables: {
@@ -1001,7 +1001,7 @@ body { background: #e5e7eb; }
     }
 
     function escapeHtml(s) {
-      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
     }
 
     // ── Render (double-buffered to prevent flicker) ────────────────────
@@ -1077,6 +1077,7 @@ body { background: #e5e7eb; }
     let twRefreshTimer = null;
     cm.on("change", () => {
       if (!restoreDone || twSyncing) return;
+      _tableRangesDirty = true;
       clearTimeout(renderTimeout);
       status.textContent = "Typing...";
       renderTimeout = setTimeout(triggerRender, 800);
@@ -1088,7 +1089,7 @@ body { background: #e5e7eb; }
     // ── Table editing helpers ─────────────────────────────────────────
 
     function isTableLine(line) { return /^\s*\|/.test(line); }
-    function isSeparatorLine(line) { return /^\s*\|[\s:|-]+\|\s*$/.test(line); }
+    function isSeparatorLine(line) { return /^\s*\|([\s:]*-[\s:-]*\|)+\s*$/.test(line); }
 
     // Find table range around a given line (or cursor)
     function getTableRangeAt(lineNum) {
@@ -1100,8 +1101,6 @@ body { background: #e5e7eb; }
       while (end < lastLine && isTableLine(cm.getLine(end + 1))) end++;
       return { start, end };
     }
-    function getTableRange() { return getTableRangeAt(cm.getCursor().line); }
-
     function parseTable(start, end) {
       const rows = [];
       for (let i = start; i <= end; i++) {
@@ -1113,30 +1112,18 @@ body { background: #e5e7eb; }
       return rows;
     }
 
-    function buildAlignedTable(rows, separatorIdx) {
-      if (rows.length === 0) return [];
-      const colCount = Math.max(...rows.map(r => r.length));
-      const widths = Array(colCount).fill(3);
-      rows.forEach((row, ri) => {
-        if (ri === separatorIdx) return;
-        row.forEach((cell, ci) => { widths[ci] = Math.max(widths[ci], cell.length); });
-      });
-      return rows.map((row, ri) => {
-        const cells = [];
-        for (let ci = 0; ci < colCount; ci++) {
-          if (ri === separatorIdx) cells.push("-".repeat(widths[ci]));
-          else cells.push((row[ci] || "").padEnd(widths[ci]));
-        }
-        return "| " + cells.join(" | ") + " |";
-      });
-    }
-
     // ── Table editor widgets (always visible, live-synced) ─────────────
 
-    const tableWidgets = new Map(); // startLine → { startLine, endLine, widget, wrapper }
+    const tableWidgets = new Map(); // startHandle → { startHandle, endHandle, widget, wrapper }
+    const twWrapperMap = new WeakMap(); // wrapper DOM element → tw object
     let twSyncing = false; // prevent cm.on("change") loops during writeback
 
+    // Cache for findAllTableRanges
+    let _tableRangesCache = null;
+    let _tableRangesDirty = true;
+
     function findAllTableRanges() {
+      if (!_tableRangesDirty && _tableRangesCache !== null) return _tableRangesCache;
       const ranges = [];
       const total = cm.lineCount();
       let i = 0;
@@ -1149,9 +1136,18 @@ body { background: #e5e7eb; }
           for (let j = start; j <= end; j++) {
             if (isSeparatorLine(cm.getLine(j))) { hasSep = true; break; }
           }
-          if (hasSep && end > start) ranges.push({ start, end });
+          if (hasSep && end > start) {
+            ranges.push({
+              start,
+              end,
+              startHandle: cm.getLineHandle(start),
+              endHandle: cm.getLineHandle(end),
+            });
+          }
         } else { i++; }
       }
+      _tableRangesCache = ranges;
+      _tableRangesDirty = false;
       return ranges;
     }
 
@@ -1186,18 +1182,24 @@ body { background: #e5e7eb; }
         const lines = widgetToMarkdown(tw);
         if (!lines) return;
         twSyncing = true;
-        cm.operation(() => {
-          const from = { line: tw.startLine, ch: 0 };
-          const to = { line: tw.endLine, ch: cm.getLine(tw.endLine).length };
-          cm.replaceRange(lines.join("\n"), from, to);
-          tw.endLine = tw.startLine + lines.length - 1;
-          // Re-hide any new lines
-          for (let i = tw.startLine; i <= tw.endLine; i++) {
-            cm.addLineClass(i, "text", "tw-hidden-text");
-            cm.addLineClass(i, "gutter", "tw-hidden-gutter");
-          }
-        });
-        twSyncing = false;
+        try {
+          cm.operation(() => {
+            const startLine = cm.getLineNumber(tw.startHandle);
+            const endLine = cm.getLineNumber(tw.endHandle);
+            if (startLine === null || endLine === null) return;
+            const from = { line: startLine, ch: 0 };
+            const to = { line: endLine, ch: cm.getLine(endLine).length };
+            cm.replaceRange(lines.join("\n"), from, to);
+            tw.endHandle = cm.getLineHandle(startLine + lines.length - 1);
+            // Re-hide any new lines
+            for (let i = startLine; i <= startLine + lines.length - 1; i++) {
+              cm.addLineClass(i, "text", "tw-hidden-text");
+              cm.addLineClass(i, "gutter", "tw-hidden-gutter");
+            }
+          });
+        } finally {
+          twSyncing = false;
+        }
       }, 300));
     }
 
@@ -1223,14 +1225,12 @@ body { background: #e5e7eb; }
     function findOwnerWidget(el) {
       const wrapper = el.closest(".table-widget");
       if (!wrapper) return null;
-      for (const tw of tableWidgets.values()) {
-        if (tw.wrapper === wrapper) return tw;
-      }
-      return null;
+      return twWrapperMap.get(wrapper) || null;
     }
 
     function createTableWidget(startLine, endLine) {
-      if (tableWidgets.has(startLine)) return;
+      const startHandle = cm.getLineHandle(startLine);
+      if (tableWidgets.has(startHandle)) return;
       const rows = parseTable(startLine, endLine);
       if (rows.length < 2) return;
       let sepIdx = -1;
@@ -1272,7 +1272,8 @@ body { background: #e5e7eb; }
       spacer.className = "tw-spacer";
       toolbar.appendChild(spacer);
 
-      const tw = { startLine, endLine, wrapper, widget: null };
+      const endHandle = cm.getLineHandle(endLine);
+      const tw = { startHandle, endHandle, wrapper, widget: null };
 
       for (const [label, fn] of [
         ["+ Row", () => { widgetAddRow(tw, tbody); syncWidgetToCM(tw); }],
@@ -1298,29 +1299,36 @@ body { background: #e5e7eb; }
         above: true, noHScroll: false, handleMouseEvents: false
       });
 
-      tableWidgets.set(startLine, tw);
+      tableWidgets.set(startHandle, tw);
+      twWrapperMap.set(wrapper, tw);
     }
 
     function destroyTableWidget(tw) {
+      clearTimeout(twSyncTimers.get(tw));
       if (tw.widget) { try { tw.widget.clear(); } catch(e) {} }
-      for (let i = tw.startLine; i <= tw.endLine; i++) {
-        try { cm.removeLineClass(i, "text", "tw-hidden-text"); } catch(e) {}
-        try { cm.removeLineClass(i, "gutter", "tw-hidden-gutter"); } catch(e) {}
+      const startLine = cm.getLineNumber(tw.startHandle);
+      const endLine = cm.getLineNumber(tw.endHandle);
+      if (startLine !== null && endLine !== null) {
+        for (let i = startLine; i <= endLine; i++) {
+          try { cm.removeLineClass(i, "text", "tw-hidden-text"); } catch(e) {}
+          try { cm.removeLineClass(i, "gutter", "tw-hidden-gutter"); } catch(e) {}
+        }
       }
-      tableWidgets.delete(tw.startLine);
+      twWrapperMap.delete(tw.wrapper);
+      tableWidgets.delete(tw.startHandle);
     }
 
     function refreshTableWidgets() {
       const ranges = findAllTableRanges();
-      const rangeByStart = new Map(ranges.map(r => [r.start, r]));
+      const rangeByStartHandle = new Map(ranges.map(r => [r.startHandle, r]));
 
       // Remove or rebuild stale/changed widgets
-      for (const [start, tw] of tableWidgets) {
-        const r = rangeByStart.get(start);
+      for (const [startHandle, tw] of tableWidgets) {
+        const r = rangeByStartHandle.get(startHandle);
         if (!r) {
           // Table no longer exists at this line
           destroyTableWidget(tw);
-        } else if (r.end !== tw.endLine || !widgetMatchesCM(tw)) {
+        } else if (r.endHandle !== tw.endHandle || !widgetMatchesCM(tw)) {
           // Table range changed or content differs (undo/redo) — rebuild
           destroyTableWidget(tw);
         }
@@ -1332,7 +1340,7 @@ body { background: #e5e7eb; }
       const vpBot = cm.lineAtHeight(scrollInfo.top + scrollInfo.clientHeight, "local");
       const margin = 50;
       for (const r of ranges) {
-        if (tableWidgets.has(r.start)) continue;
+        if (tableWidgets.has(r.startHandle)) continue;
         if (r.end < vpTop - margin || r.start > vpBot + margin) continue;
         createTableWidget(r.start, r.end);
       }
@@ -1340,7 +1348,10 @@ body { background: #e5e7eb; }
 
     // Check if widget DOM matches the CM text (detect undo/redo changes)
     function widgetMatchesCM(tw) {
-      const cmRows = parseTable(tw.startLine, tw.endLine);
+      const startLine = cm.getLineNumber(tw.startHandle);
+      const endLine = cm.getLineNumber(tw.endHandle);
+      if (startLine === null || endLine === null) return false;
+      const cmRows = parseTable(startLine, endLine);
       const table = tw.wrapper.querySelector("table");
       if (!table) return false;
       const wHeaders = Array.from(table.querySelectorAll("thead th")).map(th => th.textContent);
@@ -1349,8 +1360,8 @@ body { background: #e5e7eb; }
       );
       // Find separator in CM
       let sepIdx = -1;
-      for (let i = tw.startLine; i <= tw.endLine; i++) {
-        if (isSeparatorLine(cm.getLine(i))) { sepIdx = i - tw.startLine; break; }
+      for (let i = startLine; i <= endLine; i++) {
+        if (isSeparatorLine(cm.getLine(i))) { sepIdx = i - startLine; break; }
       }
       if (sepIdx < 0) return false;
       const cmHeaders = cmRows.slice(0, sepIdx).pop() || [];
@@ -1371,7 +1382,7 @@ body { background: #e5e7eb; }
       return true;
     }
 
-    // Lazy-load on scroll
+    // Lazy-load on scroll (reuses findAllTableRanges cache)
     let twScrollTimer = null;
     cm.on("scroll", () => {
       clearTimeout(twScrollTimer);
@@ -1382,7 +1393,7 @@ body { background: #e5e7eb; }
         const vpBot = cm.lineAtHeight(scrollInfo.top + scrollInfo.clientHeight, "local");
         const margin = 50;
         for (const r of ranges) {
-          if (tableWidgets.has(r.start)) continue;
+          if (tableWidgets.has(r.startHandle)) continue;
           if (r.end >= vpTop - margin && r.start <= vpBot + margin) createTableWidget(r.start, r.end);
         }
       }, 100);
@@ -1602,9 +1613,13 @@ body { background: #e5e7eb; }
         }, 50);
 
         centerPreviewOnEl(el); // sets toPreviewSync internally
-      } catch(e) {}
+      } catch(e) { console.warn("highlightAtCursor failed", e); }
     }
-    cm.on("cursorActivity", highlightAtCursor);
+    let _highlightDebTimer = null;
+    cm.on("cursorActivity", () => {
+      clearTimeout(_highlightDebTimer);
+      _highlightDebTimer = setTimeout(highlightAtCursor, 80);
+    });
 
     // ── Click preview → center both views ────────────────────────────────
     function setupPreviewClick(frame) {
@@ -1627,7 +1642,7 @@ body { background: #e5e7eb; }
             centerEditorOnLine(line); // instant, sets toEditorSync
           }
         });
-      } catch(e) {}
+      } catch(e) { console.warn("setupPreviewClick failed", e); }
     }
 
     // Re-attach click handler after each swap
@@ -1660,7 +1675,7 @@ body { background: #e5e7eb; }
             const el = findPreviewEl(text);
             if (el) centerPreviewOnEl(el);
           }
-        } catch(e) {}
+        } catch(e) { console.warn("scroll sync (editor) failed", e); }
       });
 
       // Preview scrolled by user → center matching line in editor
@@ -1672,7 +1687,7 @@ body { background: #e5e7eb; }
             const line = findEditorLine(el.textContent || "");
             if (line >= 0) centerEditorOnLine(line);
           }
-        } catch(e) {}
+        } catch(e) { console.warn("scroll sync (preview) failed", e); }
       });
     }
 
@@ -1717,9 +1732,11 @@ body { background: #e5e7eb; }
 
     // ── Open in new tab ──────────────────────────────────────────────────
     function openPreviewTab() {
-      const html = buildPagedHtml(editor.value);
+      const html = lastRenderedHtml || buildPagedHtml(editor.value);
       const blob = new Blob([html], { type: "text/html" });
-      window.open(URL.createObjectURL(blob), "_blank");
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 10000);
     }
 
     // ── Load file via drag & drop ────────────────────────────────────────
@@ -1765,10 +1782,11 @@ body { background: #e5e7eb; }
     let fileHandles = [];       // [{name, handle}] sorted
     let activeFileIdx = -1;     // index in fileHandles
     let activeFileName = "";    // name of active file (for restore after reload)
-    let savedContent = "";      // content at last save/load (for dirty detection)
+    let savedContent = "";      // content at last save/load (for conflict detection)
+    let dirtyFlag = false;      // true when content differs from last save/load
     let localFileModTime = 0;   // lastModified timestamp of file when loaded/saved
 
-    function isDirty() { return activeFileIdx >= 0 && cm.getValue() !== savedContent; }
+    function isDirty() { return activeFileIdx >= 0 && dirtyFlag; }
 
     const fileSidebar = document.getElementById("fileSidebar");
     const fileList = document.getElementById("fileList");
@@ -1853,6 +1871,7 @@ body { background: #e5e7eb; }
         text = await file.text();
       }
       savedContent = text;
+      dirtyFlag = false;
       localFileModTime = file.lastModified;
       cm.setValue(text);
       cm.clearHistory();
@@ -1888,6 +1907,7 @@ body { background: #e5e7eb; }
               if (action === "cancel") { status.textContent = "Save cancelled"; return; }
               if (action === "reload") {
                 savedContent = remoteText;
+                dirtyFlag = false;
                 localFileModTime = currentFile.lastModified;
                 cm.setValue(remoteText);
                 status.textContent = "Loaded disk version of " + fh.name;
@@ -1912,6 +1932,7 @@ body { background: #e5e7eb; }
         await writable.write(cm.getValue());
         await writable.close();
         savedContent = cm.getValue();
+        dirtyFlag = false;
         // Update mod time after save
         try {
           const freshFile = await (await dirHandle.getFileHandle(fh.name)).getFile();
@@ -1931,10 +1952,10 @@ body { background: #e5e7eb; }
     // Track dirty state — update only the active file's indicator, not the whole list
     cm.on("change", () => {
       if (activeFileIdx < 0) return;
+      dirtyFlag = true;
       const activeEl = fileList.children[activeFileIdx];
       if (!activeEl) return;
-      if (isDirty()) activeEl.classList.add("dirty");
-      else activeEl.classList.remove("dirty");
+      activeEl.classList.add("dirty");
     });
 
     // Ctrl+S / Cmd+S to save
@@ -2110,6 +2131,7 @@ body { background: #e5e7eb; }
       activeFileIdx = -1;
       activeFileName = "";
       savedContent = "";
+      dirtyFlag = false;
       storageMode = "local";
       dirHandle = null;
       gdFolderId = null;
@@ -2203,8 +2225,17 @@ body { background: #e5e7eb; }
     function computeDiff(oldLines, newLines) {
       // Simple LCS-based diff producing context, add, and del entries
       const n = oldLines.length, m = newLines.length;
-      // Build LCS table (optimize: only works well for files < ~5000 lines)
-      const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+      // Guard: for very large files the O(n*m) LCS table is too expensive.
+      // Fall back to treating the entire content as a single conflict block.
+      if (n > 5000 || m > 5000) {
+        const diff = [];
+        for (let i = 0; i < n; i++) diff.push({ type: "del", text: oldLines[i], oldLine: i + 1 });
+        for (let j = 0; j < m; j++) diff.push({ type: "add", text: newLines[j], newLine: j + 1 });
+        return diff;
+      }
+      // Build LCS table. Use Int32Array (not Uint16Array) to avoid overflow when
+      // the LCS length exceeds 65535.
+      const dp = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));
       for (let i = 1; i <= n; i++)
         for (let j = 1; j <= m; j++)
           dp[i][j] = oldLines[i-1] === newLines[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
@@ -2257,80 +2288,123 @@ body { background: #e5e7eb; }
     // ── Three-way merge ──────────────────────────────────────────────
     // base = savedContent (common ancestor), local = editor, remote = disk/Drive
     function threeWayMerge(baseText, localText, remoteText) {
-      const baseLines = baseText.split("\n");
-      const localLines = localText.split("\n");
-      const remoteLines = remoteText.split("\n");
+      // "".split("\n") yields [""] not [] — guard against that.
+      const splitLines = t => t === "" ? [] : t.split("\n");
+      const baseLines = splitLines(baseText);
+      const localLines = splitLines(localText);
+      const remoteLines = splitLines(remoteText);
 
       // Compute diffs: base→local and base→remote
-      const localDiff = diffToEditMap(baseLines, localLines);
-      const remoteDiff = diffToEditMap(baseLines, remoteLines);
+      const localEdits = diffToEditMap(baseLines, localLines);
+      const remoteEdits = diffToEditMap(baseLines, remoteLines);
 
       const result = [];
       let hasConflicts = false;
-      let bi = 0, li = 0, ri = 0;
+      // bi iterates 0..baseLines.length (inclusive) so that end-of-file
+      // pure insertions (keyed at baseLines.length) are processed.
+      let bi = 0;
 
-      while (bi < baseLines.length || li < localLines.length || ri < remoteLines.length) {
-        const localChanged = localDiff.has(bi);
-        const remoteChanged = remoteDiff.has(bi);
+      while (bi <= baseLines.length) {
+        const lEdit = localEdits.get(bi);
+        const rEdit = remoteEdits.get(bi);
 
-        if (bi >= baseLines.length) {
-          // Past base — append remaining local then remote additions
-          if (li < localLines.length) { result.push(localLines[li++]); continue; }
-          if (ri < remoteLines.length) { result.push(remoteLines[ri++]); continue; }
-          break;
+        // ── Step 1: pure insertions (oldCount === 0) at position bi ──
+        // These are new lines injected before base[bi] by one or both sides.
+        const lIns = (lEdit && lEdit.oldCount === 0) ? lEdit : null;
+        const rIns = (rEdit && rEdit.oldCount === 0) ? rEdit : null;
+        if (lIns || rIns) {
+          if (lIns && rIns) {
+            if (JSON.stringify(lIns.newLines) === JSON.stringify(rIns.newLines)) {
+              for (const line of lIns.newLines) result.push(line);
+            } else {
+              hasConflicts = true;
+              result.push("<<<<<<< LOCAL");
+              for (const line of lIns.newLines) result.push(line);
+              result.push("=======");
+              for (const line of rIns.newLines) result.push(line);
+              result.push(">>>>>>> REMOTE");
+            }
+          } else if (lIns) {
+            for (const line of lIns.newLines) result.push(line);
+          } else {
+            for (const line of rIns.newLines) result.push(line);
+          }
         }
 
-        if (!localChanged && !remoteChanged) {
-          // Both unchanged — take base line
+        // ── Step 2: stop once we're past the last base line ──
+        if (bi === baseLines.length) break;
+
+        // ── Step 3: handle the base line at bi (replacement/deletion or unchanged) ──
+        const lRepl = (lEdit && lEdit.oldCount > 0) ? lEdit : null;
+        const rRepl = (rEdit && rEdit.oldCount > 0) ? rEdit : null;
+
+        if (!lRepl && !rRepl) {
+          // Both sides left this line unchanged — emit it.
           result.push(baseLines[bi]);
-          bi++; li++; ri++;
-        } else if (localChanged && !remoteChanged) {
-          // Only local changed — take local edit
-          const edit = localDiff.get(bi);
-          for (const line of edit.newLines) result.push(line);
-          bi += edit.oldCount;
-          li += edit.newLines.length;
-          ri += edit.oldCount;
-        } else if (!localChanged && remoteChanged) {
-          // Only remote changed — take remote edit
-          const edit = remoteDiff.get(bi);
-          for (const line of edit.newLines) result.push(line);
-          bi += edit.oldCount;
-          li += edit.oldCount;
-          ri += edit.newLines.length;
+          bi++;
+        } else if (lRepl && !rRepl) {
+          // Only local changed — accept local edit.
+          for (const line of lRepl.newLines) result.push(line);
+          bi += lRepl.oldCount;
+        } else if (!lRepl && rRepl) {
+          // Only remote changed — accept remote edit.
+          for (const line of rRepl.newLines) result.push(line);
+          bi += rRepl.oldCount;
         } else {
-          // Both changed — conflict
-          const lEdit = localDiff.get(bi);
-          const rEdit = remoteDiff.get(bi);
-          // If both made the same change, take it
-          if (JSON.stringify(lEdit.newLines) === JSON.stringify(rEdit.newLines)) {
-            for (const line of lEdit.newLines) result.push(line);
+          // Both sides changed the same base region — conflict.
+          // Advance bi by max(oldCounts) to consume every base line that
+          // either side touched, preventing them being re-emitted later.
+          if (JSON.stringify(lRepl.newLines) === JSON.stringify(rRepl.newLines)) {
+            for (const line of lRepl.newLines) result.push(line);
           } else {
             hasConflicts = true;
             result.push("<<<<<<< LOCAL");
-            for (const line of lEdit.newLines) result.push(line);
+            for (const line of lRepl.newLines) result.push(line);
             result.push("=======");
-            for (const line of rEdit.newLines) result.push(line);
+            for (const line of rRepl.newLines) result.push(line);
             result.push(">>>>>>> REMOTE");
           }
-          bi += Math.max(lEdit.oldCount, rEdit.oldCount);
-          li += lEdit.newLines.length;
-          ri += rEdit.newLines.length;
+          bi += Math.max(lRepl.oldCount, rRepl.oldCount);
         }
       }
 
       return { text: result.join("\n"), hasConflicts };
     }
 
-    // Build a map: baseLineIndex → { oldCount, newLines[] } for each changed hunk
+    // Build a map: baseLineIndex → { oldCount, newLines[] } for each changed hunk.
+    //
+    // Keys are 0-based base-line indices.  Two kinds of entry are produced:
+    //   oldCount > 0  — the hunk replaces/deletes oldCount base lines starting at key
+    //   oldCount === 0 — pure insertion; new lines are injected before base[key]
+    //                    (key === baseLines.length means append at end of file)
+    //
+    // A mixed hunk (dels interleaved with adds) is always anchored by its first
+    // del, so the key reliably points to the first base line consumed.
     function diffToEditMap(baseLines, modifiedLines) {
-      const diff = computeDiff(baseLines, modifiedLines);
+      // "".split("\n") yields [""] — guard so empty files produce zero-length arrays.
+      const splitLines = t => t === "" ? [] : t.split("\n");
+      const bLines = baseLines.length > 0 ? baseLines : splitLines("");
+      const mLines = modifiedLines.length > 0 ? modifiedLines : splitLines("");
+      const diff = computeDiff(bLines, mLines);
       const edits = new Map();
       let i = 0;
       while (i < diff.length) {
         if (diff[i].type === "ctx") { i++; continue; }
-        // Collect contiguous change
-        const startBase = diff[i].type === "del" ? diff[i].oldLine - 1 : (i > 0 && diff[i-1].type === "ctx" ? diff[i-1].oldLine : 0);
+
+        // Determine where this hunk starts in the base (0-indexed).
+        // If the hunk opens with a del, use that del's 1-indexed oldLine - 1.
+        // If it opens with an add (pure insertion), use the preceding ctx line's
+        // 1-indexed oldLine as the key — that value equals the 0-indexed index of
+        // the next base line, which is exactly where the insertion belongs.
+        // At the very start of the file (no preceding ctx) the key is 0.
+        let startBase;
+        if (diff[i].type === "del") {
+          startBase = diff[i].oldLine - 1;
+        } else {
+          // pure add — find startBase from the preceding ctx entry (if any)
+          startBase = (i > 0 && diff[i - 1].type === "ctx") ? diff[i - 1].oldLine : 0;
+        }
+
         let oldCount = 0;
         const newLines = [];
         while (i < diff.length && diff[i].type !== "ctx") {
@@ -2338,7 +2412,9 @@ body { background: #e5e7eb; }
           if (diff[i].type === "add") newLines.push(diff[i].text);
           i++;
         }
-        edits.set(startBase, { oldCount: Math.max(oldCount, 1), newLines });
+        // Use the actual oldCount — do NOT coerce 0 to 1.
+        // oldCount === 0 signals a pure insertion to threeWayMerge.
+        edits.set(startBase, { oldCount, newLines });
       }
       return edits;
     }
@@ -2402,6 +2478,7 @@ body { background: #e5e7eb; }
           ]);
           gdModifiedTime = modTime;
           savedContent = text;
+          dirtyFlag = false;
           cm.setValue(text);
           cm.clearHistory();
           paneFileName.textContent = entry.name;
@@ -2444,6 +2521,7 @@ body { background: #e5e7eb; }
                 // Replace editor with remote version
                 gdModifiedTime = currentModTime;
                 savedContent = remoteText;
+                dirtyFlag = false;
                 cm.setValue(remoteText);
                 cm.clearHistory();
                 renderFileList();
@@ -2472,6 +2550,7 @@ body { background: #e5e7eb; }
           });
           if (!saveResp.ok) throw new Error("Drive API " + saveResp.status + ": " + (await saveResp.text()));
           savedContent = cm.getValue();
+          dirtyFlag = false;
           // Update modifiedTime after successful save
           gdModifiedTime = await getGdFileModifiedTime(entry.gdId);
           status.textContent = "Saved " + entry.name;
@@ -2565,6 +2644,12 @@ Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium dolor
         cm.setValue(DEFAULT_CONTENT);
         setTimeout(triggerRender, 100);
       }
+    }).catch(e => {
+      const loadingEl = document.getElementById("editor-loading");
+      if (loadingEl) loadingEl.remove();
+      const status = document.getElementById("status");
+      if (status) status.textContent = "Startup error: " + e.message;
+      console.error("pagedReady failed:", e);
     });
   </script>
 </body>
