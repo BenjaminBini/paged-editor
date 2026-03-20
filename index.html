@@ -94,6 +94,7 @@
     }
     .editor-pane .CodeMirror-gutters { background: #1e1e2e !important; border-right: 1px solid #2d2d3f !important; }
     .editor-pane .CodeMirror-linenumber { color: #4a4a6a !important; }
+    .editor-pane .cm-cursor-gutter .CodeMirror-linenumber { background: #3373b3 !important; color: #fff !important; border-radius: 2px; }
     .editor-pane .CodeMirror-cursor { border-left-color: #cdd6f4 !important; }
     .editor-pane .CodeMirror-selected { background: #364a6e !important; }
     .editor-pane .CodeMirror-focused .CodeMirror-selected { background: #364a6e !important; }
@@ -1342,6 +1343,7 @@ body { background: #e5e7eb; }
     // ── Highlight + center sync on cursor activity ────────────────────────
     let highlightEl = null;
     let flashTimer = null;
+    let gutterHighlightLine = null;
 
     function clearHighlight() {
       if (flashTimer) { clearTimeout(flashTimer); flashTimer = null; }
@@ -1352,9 +1354,21 @@ body { background: #e5e7eb; }
     }
 
     function highlightAtCursor() {
-      clearHighlight();
       try {
-        const text = cm.getLine(cm.getCursor().line)?.trim();
+        const cursorLine = cm.getCursor().line;
+
+        // Update gutter highlight
+        if (gutterHighlightLine !== null && gutterHighlightLine !== cursorLine) {
+          cm.removeLineClass(gutterHighlightLine, "gutter", "cm-cursor-gutter");
+        }
+        if (gutterHighlightLine !== cursorLine) {
+          cm.addLineClass(cursorLine, "gutter", "cm-cursor-gutter");
+          gutterHighlightLine = cursorLine;
+        }
+
+        // Update preview highlight
+        clearHighlight();
+        const text = cm.getLine(cursorLine)?.trim();
         if (!text) return;
         const el = findPreviewEl(text);
         if (!el) return;
