@@ -250,6 +250,7 @@
     .diff-modal .btn-cancel { background: #334155; color: #e2e8f0; }
     .diff-modal .btn-force { background: #f38ba8; color: #1e1e2e; }
     .diff-modal .btn-reload { background: #a6e3a1; color: #1e1e2e; }
+    .diff-modal .btn-merge { background: #89b4fa; color: #1e1e2e; }
     .diff-modal .btn-save { background: #3373b3; color: #fff; }
 
     /* ── Resize handle ─────────────────────────────────────── */
@@ -301,7 +302,8 @@
       <div class="diff-container" id="diffContainer"></div>
       <div class="btn-row">
         <button class="btn-cancel" onclick="closeDiffModal()">Cancel</button>
-        <button class="btn-reload" onclick="resolveConflict('reload')">Load remote version</button>
+        <button class="btn-reload" onclick="resolveConflict('reload')">Load disk version</button>
+        <button class="btn-merge" onclick="resolveConflict('merge')">Merge</button>
         <button class="btn-force" onclick="resolveConflict('force')">Overwrite with mine</button>
       </div>
     </div>
@@ -1782,6 +1784,7 @@ body { background: #e5e7eb; }
     let activeFileIdx = -1;     // index in fileHandles
     let activeFileName = "";    // name of active file (for restore after reload)
     let savedContent = "";      // content at last save/load (for dirty detection)
+    let localFileModTime = 0;   // lastModified timestamp of file when loaded/saved
 
     function isDirty() { return activeFileIdx >= 0 && cm.getValue() !== savedContent; }
 
@@ -1858,16 +1861,17 @@ body { background: #e5e7eb; }
       const fh = fileHandles[idx];
       activeFileName = fh.name;
       // Re-obtain handle from directory to avoid stale getFile() cache
-      let text;
+      let text, file;
       try {
         const freshHandle = await dirHandle.getFileHandle(fh.name);
-        const file = await freshHandle.getFile();
+        file = await freshHandle.getFile();
         text = await file.text();
       } catch(e) {
-        const file = await fh.handle.getFile();
+        file = await fh.handle.getFile();
         text = await file.text();
       }
       savedContent = text;
+      localFileModTime = file.lastModified;
       cm.setValue(text);
       cm.clearHistory();
       paneFileName.textContent = fh.name;
@@ -1883,10 +1887,54 @@ body { background: #e5e7eb; }
       if (activeFileIdx < 0) return;
       const fh = fileHandles[activeFileIdx];
       try {
+        // Check if file was modified externally since we loaded/saved it
+        if (localFileModTime && storageMode !== "gdrive") {
+          let currentFile;
+          try {
+            const freshHandle = await dirHandle.getFileHandle(fh.name);
+            currentFile = await freshHandle.getFile();
+          } catch(e) {
+            currentFile = await fh.handle.getFile();
+          }
+          if (currentFile.lastModified > localFileModTime) {
+            status.textContent = "Conflict detected — reviewing changes...";
+            const remoteText = await currentFile.text();
+            const localText = cm.getValue();
+            if (remoteText !== savedContent) {
+              // Show diff modal — reuse the same one as Google Drive
+              const action = await showDiffModal(localText, remoteText, fh.name);
+              if (action === "cancel") { status.textContent = "Save cancelled"; return; }
+              if (action === "reload") {
+                savedContent = remoteText;
+                localFileModTime = currentFile.lastModified;
+                cm.setValue(remoteText);
+                status.textContent = "Loaded disk version of " + fh.name;
+                renderFileList();
+                return;
+              }
+              if (action === "merge") {
+                const merged = threeWayMerge(savedContent, localText, remoteText);
+                cm.setValue(merged.text);
+                if (merged.hasConflicts) {
+                  status.textContent = "Merged with conflicts — search for <<<<<<< to resolve";
+                  return; // don't auto-save, let user resolve conflicts first
+                }
+                // Clean merge — fall through to save
+              }
+              // action === "force" or clean merge: fall through to save
+            }
+          }
+        }
+
         const writable = await fh.handle.createWritable();
         await writable.write(cm.getValue());
         await writable.close();
         savedContent = cm.getValue();
+        // Update mod time after save
+        try {
+          const freshFile = await (await dirHandle.getFileHandle(fh.name)).getFile();
+          localFileModTime = freshFile.lastModified;
+        } catch(e) {}
         status.textContent = "Saved " + fh.name;
         renderFileList();
       } catch(e) {
@@ -2224,9 +2272,97 @@ body { background: #e5e7eb; }
       return html;
     }
 
+    // ── Three-way merge ──────────────────────────────────────────────
+    // base = savedContent (common ancestor), local = editor, remote = disk/Drive
+    function threeWayMerge(baseText, localText, remoteText) {
+      const baseLines = baseText.split("\n");
+      const localLines = localText.split("\n");
+      const remoteLines = remoteText.split("\n");
+
+      // Compute diffs: base→local and base→remote
+      const localDiff = diffToEditMap(baseLines, localLines);
+      const remoteDiff = diffToEditMap(baseLines, remoteLines);
+
+      const result = [];
+      let hasConflicts = false;
+      let bi = 0, li = 0, ri = 0;
+
+      while (bi < baseLines.length || li < localLines.length || ri < remoteLines.length) {
+        const localChanged = localDiff.has(bi);
+        const remoteChanged = remoteDiff.has(bi);
+
+        if (bi >= baseLines.length) {
+          // Past base — append remaining local then remote additions
+          if (li < localLines.length) { result.push(localLines[li++]); continue; }
+          if (ri < remoteLines.length) { result.push(remoteLines[ri++]); continue; }
+          break;
+        }
+
+        if (!localChanged && !remoteChanged) {
+          // Both unchanged — take base line
+          result.push(baseLines[bi]);
+          bi++; li++; ri++;
+        } else if (localChanged && !remoteChanged) {
+          // Only local changed — take local edit
+          const edit = localDiff.get(bi);
+          for (const line of edit.newLines) result.push(line);
+          bi += edit.oldCount;
+          li += edit.newLines.length;
+          ri += edit.oldCount;
+        } else if (!localChanged && remoteChanged) {
+          // Only remote changed — take remote edit
+          const edit = remoteDiff.get(bi);
+          for (const line of edit.newLines) result.push(line);
+          bi += edit.oldCount;
+          li += edit.oldCount;
+          ri += edit.newLines.length;
+        } else {
+          // Both changed — conflict
+          const lEdit = localDiff.get(bi);
+          const rEdit = remoteDiff.get(bi);
+          // If both made the same change, take it
+          if (JSON.stringify(lEdit.newLines) === JSON.stringify(rEdit.newLines)) {
+            for (const line of lEdit.newLines) result.push(line);
+          } else {
+            hasConflicts = true;
+            result.push("<<<<<<< LOCAL");
+            for (const line of lEdit.newLines) result.push(line);
+            result.push("=======");
+            for (const line of rEdit.newLines) result.push(line);
+            result.push(">>>>>>> REMOTE");
+          }
+          bi += Math.max(lEdit.oldCount, rEdit.oldCount);
+          li += lEdit.newLines.length;
+          ri += rEdit.newLines.length;
+        }
+      }
+
+      return { text: result.join("\n"), hasConflicts };
+    }
+
+    // Build a map: baseLineIndex → { oldCount, newLines[] } for each changed hunk
+    function diffToEditMap(baseLines, modifiedLines) {
+      const diff = computeDiff(baseLines, modifiedLines);
+      const edits = new Map();
+      let i = 0;
+      while (i < diff.length) {
+        if (diff[i].type === "ctx") { i++; continue; }
+        // Collect contiguous change
+        const startBase = diff[i].type === "del" ? diff[i].oldLine - 1 : (i > 0 && diff[i-1].type === "ctx" ? diff[i-1].oldLine : 0);
+        let oldCount = 0;
+        const newLines = [];
+        while (i < diff.length && diff[i].type !== "ctx") {
+          if (diff[i].type === "del") oldCount++;
+          if (diff[i].type === "add") newLines.push(diff[i].text);
+          i++;
+        }
+        edits.set(startBase, { oldCount: Math.max(oldCount, 1), newLines });
+      }
+      return edits;
+    }
+
     // ── Conflict resolution state ────────────────────────────────────
     let gdModifiedTime = null; // modifiedTime from Drive when file was loaded
-    let conflictRemoteText = null; // remote text when conflict detected
     let conflictResolve = null; // promise resolver for conflict modal
 
     function closeDiffModal() {
@@ -2238,13 +2374,13 @@ body { background: #e5e7eb; }
       if (conflictResolve) { conflictResolve(action); conflictResolve = null; }
     }
 
-    function showDiffModal(localText, remoteText, fileName) {
+    function showDiffModal(localText, remoteText, fileName, hint) {
       const oldLines = localText.split("\n");
       const newLines = remoteText.split("\n");
       const diff = computeDiff(oldLines, newLines);
       document.getElementById("diffTitle").textContent = "Conflict — " + fileName;
-      document.getElementById("diffHint").textContent =
-        "This file was modified on Google Drive by someone else. Lines prefixed with − are your version, + are the remote version.";
+      document.getElementById("diffHint").textContent = hint ||
+        "This file was modified externally since you loaded it. Lines prefixed with − are your version, + are the disk version.";
       document.getElementById("diffContainer").innerHTML = renderDiffHtml(diff);
       document.getElementById("diffModal").classList.add("open");
       return new Promise(resolve => { conflictResolve = resolve; });
@@ -2316,7 +2452,8 @@ body { background: #e5e7eb; }
               status.textContent = "Conflict detected — reviewing changes...";
               const remoteText = await fetchGdFileContent(entry.gdId);
               const localText = cm.getValue();
-              const action = await showDiffModal(localText, remoteText, entry.name);
+              const action = await showDiffModal(localText, remoteText, entry.name,
+                "This file was modified on Google Drive by someone else. Lines prefixed with − are your version, + are the remote version.");
               if (action === "cancel") {
                 status.textContent = "Save cancelled";
                 return;
@@ -2332,7 +2469,15 @@ body { background: #e5e7eb; }
                 status.textContent = "Loaded remote version of " + entry.name;
                 return;
               }
-              // action === "force": fall through to save
+              if (action === "merge") {
+                const merged = threeWayMerge(savedContent, localText, remoteText);
+                cm.setValue(merged.text);
+                if (merged.hasConflicts) {
+                  status.textContent = "Merged with conflicts — search for <<<<<<< to resolve";
+                  return;
+                }
+              }
+              // action === "force" or clean merge: fall through to save
             }
           }
           const saveResp = await fetch("https://www.googleapis.com/upload/drive/v3/files/" + entry.gdId + "?uploadType=media&supportsAllDrives=true", {
