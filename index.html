@@ -1426,6 +1426,23 @@ body { background: #e5e7eb; }
       status.textContent = "Google Drive settings saved";
     }
 
+    // Apply settings from URL parameters (e.g. ?clientId=xxx&apiKey=yyy)
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const urlClientId = params.get("clientId");
+      const urlApiKey = params.get("apiKey");
+      if (urlClientId) localStorage.setItem("gd_client_id", urlClientId);
+      if (urlApiKey) localStorage.setItem("gd_api_key", urlApiKey);
+      // Clean URL to avoid leaking credentials in browser history
+      if (urlClientId || urlApiKey) {
+        params.delete("clientId");
+        params.delete("apiKey");
+        const clean = params.toString();
+        history.replaceState(null, "", location.pathname + (clean ? "?" + clean : ""));
+        status.textContent = "Google Drive settings applied from URL";
+      }
+    })();
+
     // Populate settings inputs on load
     (function() {
       const s = getGdSettings();
