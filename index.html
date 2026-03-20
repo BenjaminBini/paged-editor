@@ -369,7 +369,7 @@ h1 .beorn-underline .beorn-chunk, h2 .beorn-underline .beorn-chunk { height: 3.5
 
 /* ── H2: Subsection — numbered badge + bold title ── */
 h2 { font-size: 14pt; color: var(--section-color, var(--navy)); font-weight: 700;
-  margin: var(--space-2xl) 0 var(--space-md); padding: 0;
+  margin: 4rem 0 var(--space-md); padding: 0;
   line-height: 1.3; position: relative; width: auto; max-width: 100%;
   border: none; display: flex; align-items: center; gap: 0.6rem; }
 h2:first-child, section > h2:first-child { margin-top: 0; }
@@ -383,7 +383,7 @@ h2 .beorn-num {
 
 /* ── H3: Sub-subsection — pill background, smaller ── */
 h3 { font-size: 10.5pt; color: var(--section-color, var(--navy)); font-weight: 700;
-  margin: var(--space-xl) 0 var(--space-sm); line-height: 1.3;
+  margin: var(--space-lg) 0 var(--space-sm); line-height: 1.3;
   padding: 0.3rem 0.7rem !important; border-radius: 4px; text-indent: 0 !important;
   background: color-mix(in srgb, var(--section-color, var(--blue)) 6%, transparent);
   width: fit-content; max-width: 100%; }
@@ -400,8 +400,8 @@ strong { font-weight: 700; color: var(--navy); }
 em { color: var(--text-light); }
 
 /* ── Adjacent headings: tighten stacked gaps ── */
-h2 + h3 { margin-top: var(--space-md); }
-h3 + h4 { margin-top: var(--space-sm); }
+h2 + h3 { margin-top: var(--space-sm); }
+h3 + h4 { margin-top: var(--space-md); }
 
 /* ── Last child in sections: remove trailing margin ── */
 .pdf-content > *:last-child,
@@ -410,14 +410,14 @@ h3 + h4 { margin-top: var(--space-sm); }
 /* ── Lists — colored markers, consistent spacing ── */
 .pdf-content ul { list-style: none; display: grid; gap: var(--space-sm);
   margin: var(--space-md) 0; padding-left: 0; }
-.pdf-content ul li { position: relative; padding-left: 1.4rem; margin: 0; }
-.pdf-content ul li::before { content: "\\203A"; position: absolute; left: 0; font-size: 1.1rem; font-weight: 700;
-  color: var(--section-color, var(--blue)); line-height: inherit; top: 0; }
+.pdf-content ul li { position: relative; padding-left: 1rem; margin: 0; line-height: 1.6; }
+.pdf-content ul li::before { content: "\\203A"; position: absolute; left: 0; font-weight: 700;
+  color: var(--section-color, var(--blue)); font-size: inherit; line-height: 1.6; top: 0; }
 .pdf-content ul ul { margin: var(--space-xs) 0 0; }
-.pdf-content ul ul li::before { content: "\\2013"; font-size: 0.85rem;
+.pdf-content ul ul li::before { content: "\\2013";
   color: color-mix(in srgb, var(--section-color, var(--blue)) 50%, white); }
-.pdf-content ul ul ul li::before { content: "\\2022"; font-size: 0.55rem;
-  color: color-mix(in srgb, var(--section-color, var(--blue)) 30%, white); }
+.pdf-content ul ul ul li::before { content: "\\2022"; font-size: 0.7em;
+  color: color-mix(in srgb, var(--section-color, var(--blue)) 30%, white); top: 0.25em; }
 ol { margin: var(--space-md) 0 var(--space-md) 1.35rem; }
 ol li { padding-left: 0.3rem; }
 ol li + li { margin-top: var(--space-sm); }
@@ -427,10 +427,10 @@ ol li::marker { color: var(--section-color, var(--blue)); font-weight: 700; font
 table { width: 100%; border-collapse: separate; border-spacing: 0;
   margin: var(--space-lg) 0; font-size: 9pt;
   border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-thead th { background: var(--section-color, var(--navy)); color: #fff; padding: 0.45rem 0.8rem;
-  text-align: left; font-weight: 700; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.08em;
-  border-bottom: 2px solid color-mix(in srgb, var(--section-color, var(--navy)) 70%, black); }
-thead th + th { border-left: 1px solid rgba(255,255,255,0.15); }
+thead th { background: color-mix(in srgb, var(--section-color, var(--blue)) 10%, white); color: var(--navy);
+  padding: 0.35rem 0.8rem; text-align: left; font-weight: 700; font-size: 8pt;
+  border-bottom: 2px solid var(--section-color, var(--blue)); }
+thead th + th { border-left: 1px solid var(--border); }
 tbody td { padding: 0.4rem 0.8rem; border-top: 1px solid var(--border); background: transparent; }
 tbody td + td { border-left: 1px solid var(--border); }
 tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--section-color, var(--blue)) 4%, white); }
@@ -452,6 +452,7 @@ blockquote { border-left: 4px solid var(--section-color, var(--blue));
   padding: 0.9rem 1.1rem 0.9rem 1.3rem; border-radius: 0 10px 10px 0;
   margin: var(--space-lg) 0; color: var(--text); font-style: italic; }
 blockquote strong { font-style: normal; }
+blockquote > *:last-child { margin-bottom: 0; }
 
 /* ── Horizontal rules — decorative ── */
 hr { border: 0; height: 1px; margin: var(--space-2xl) 0;
@@ -473,7 +474,7 @@ blockquote { break-inside: avoid; page-break-inside: avoid; }
 figure, .mermaid-diagram { break-inside: avoid; page-break-inside: avoid; }
 .pdf-content ul, .pdf-content ol { break-inside: auto; page-break-inside: auto; }
 p + ul, p + ol { break-before: avoid; page-break-before: avoid; }
-.page-break { break-after: page; page-break-after: always; }
+.page-break { break-before: page !important; page-break-before: always !important; height: 0; margin: 0; padding: 0; border: none; }
 .pdf-content ul li::before { box-shadow: none; }
 a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 7.5pt; color: var(--text-light); font-weight: 400; }
 `;
@@ -705,8 +706,9 @@ body { background: #e5e7eb; }
       const acheteur = fm.acheteur || "";
       const doctype = fm.doctype || "Mémoire technique";
 
-      // Parse markdown (\newpage → page break div)
-      const htmlBody = marked.parse(body.replace(/^\\newpage$/gm, '<div class="page-break"></div>'));
+      // Parse markdown
+      const htmlBody = marked.parse(body)
+        .replace(/<p>[/\\]newpage<\/p>/g, '<div class="page-break"></div>');
 
       // Split on <h1> for sections, skip "Page de garde"
       const parts = htmlBody.split(/(?=<h1[^>]*>)/);
@@ -846,6 +848,15 @@ body { background: #e5e7eb; }
         pre.replaceWith(wrapper);
       } catch(e) { console.warn('Mermaid render error:', e); }
     }
+    // Replace page-break commands that survived markdown parsing
+    document.querySelectorAll('.pdf-content p').forEach(function(p) {
+      var t = p.textContent.trim();
+      if (t === String.fromCharCode(92)+'newpage' || t === '/newpage') {
+        var pb = document.createElement('div');
+        pb.className = 'page-break';
+        p.replaceWith(pb);
+      }
+    });
     // Wrap h2/h3/h4 + next sibling to prevent orphaned headings
     (function() {
       var headings = document.querySelectorAll('.pdf-content h2, .pdf-content h3, .pdf-content h4');
@@ -1335,8 +1346,16 @@ body { background: #e5e7eb; }
       activeFileIdx = idx;
       const fh = fileHandles[idx];
       activeFileName = fh.name;
-      const file = await fh.handle.getFile();
-      const text = await file.text();
+      // Re-obtain handle from directory to avoid stale getFile() cache
+      let text;
+      try {
+        const freshHandle = await dirHandle.getFileHandle(fh.name);
+        const file = await freshHandle.getFile();
+        text = await file.text();
+      } catch(e) {
+        const file = await fh.handle.getFile();
+        text = await file.text();
+      }
       savedContent = text;
       cm.setValue(text);
       cm.clearHistory();
@@ -1663,7 +1682,7 @@ body { background: #e5e7eb; }
         const entry = fileHandles[activeFileIdx];
         status.textContent = "Saving " + entry.name + "...";
         try {
-          await fetch("https://www.googleapis.com/upload/drive/v3/files/" + entry.gdId + "?uploadType=media", {
+          const saveResp = await fetch("https://www.googleapis.com/upload/drive/v3/files/" + entry.gdId + "?uploadType=media&supportsAllDrives=true", {
             method: "PATCH",
             headers: {
               "Authorization": "Bearer " + gdToken,
@@ -1671,10 +1690,12 @@ body { background: #e5e7eb; }
             },
             body: cm.getValue(),
           });
+          if (!saveResp.ok) throw new Error("Drive API " + saveResp.status + ": " + (await saveResp.text()));
           savedContent = cm.getValue();
           status.textContent = "Saved " + entry.name;
           renderFileList();
         } catch(e) {
+          console.error("GDrive save error:", e);
           status.textContent = "Save failed: " + e.message;
         }
       } else {
