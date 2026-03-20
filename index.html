@@ -99,6 +99,18 @@
     #editor-wrapper {
       flex: 1; overflow: hidden; position: relative;
     }
+    #editor-loading {
+      position: absolute; inset: 0; z-index: 10;
+      background: #1e1e2e; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 12px;
+      color: #6c7086; font-size: 13px; font-weight: 500;
+    }
+    #editor-loading .spinner {
+      width: 28px; height: 28px; border: 3px solid #2d2d3f;
+      border-top-color: #3373b3; border-radius: 50%;
+      animation: tw-spin 0.8s linear infinite;
+    }
+    @keyframes tw-spin { to { transform: rotate(360deg); } }
     /* CodeMirror theme overrides to match dark editor */
     .editor-pane .CodeMirror {
       height: 100% !important; background: #1e1e2e !important; color: #cdd6f4 !important;
@@ -328,43 +340,13 @@
           <div class="wrap-track"><div class="wrap-thumb"></div></div>
         </div>
       </div>
-      <div id="editor-wrapper"><textarea id="editor-textarea">---
-title: "Document Title"
-subtitle: "Subtitle here"
-language: fr
----
-
-# Section 1
-
-## 1.1 Introduction
-
-Lorem ipsum dolor sit amet, **consectetur** adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
-
-- Premier point important
-- Deuxième point avec **emphase**
-- Troisième point
-
-## 1.2 Details
-
-Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-
-| Colonne A | Colonne B | Colonne C |
-|---|---|---|
-| Valeur 1 | Valeur 2 | Valeur 3 |
-| Valeur 4 | Valeur 5 | Valeur 6 |
-
-# Section 2
-
-## 2.1 Architecture
-
-Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
-
-> Important : Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-## 2.2 Implementation
-
-Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.
-</textarea></div>
+      <div id="editor-wrapper">
+        <div id="editor-loading">
+          <div class="spinner"></div>
+          <span>Loading...</span>
+        </div>
+        <textarea id="editor-textarea"></textarea>
+      </div>
     </div>
 
     <div class="resize-handle" id="resizeHandle"></div>
@@ -2534,11 +2516,55 @@ body { background: #e5e7eb; }
       } catch(e) { console.log("GDrive restore failed:", e.message); }
     }
 
+    const DEFAULT_CONTENT = `---
+title: "Document Title"
+subtitle: "Subtitle here"
+language: fr
+---
+
+# Section 1
+
+## 1.1 Introduction
+
+Lorem ipsum dolor sit amet, **consectetur** adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+- Premier point important
+- Deuxième point avec **emphase**
+- Troisième point
+
+## 1.2 Details
+
+Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+
+| Colonne A | Colonne B | Colonne C |
+|---|---|---|
+| Valeur 1 | Valeur 2 | Valeur 3 |
+| Valeur 4 | Valeur 5 | Valeur 6 |
+
+# Section 2
+
+## 2.1 Architecture
+
+Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.
+
+> Important : Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+
+## 2.2 Implementation
+
+Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.`;
+
     // ── Initial render (wait for Paged.js to be loaded) ────────────────
     pagedReady.then(async () => {
       await tryRestore();
+      // Remove loading spinner
+      const loadingEl = document.getElementById("editor-loading");
+      if (loadingEl) loadingEl.remove();
       restoreDone = true;
-      if (activeFileIdx < 0) setTimeout(triggerRender, 100);
+      // If no file was restored, show default content
+      if (activeFileIdx < 0) {
+        cm.setValue(DEFAULT_CONTENT);
+        setTimeout(triggerRender, 100);
+      }
     });
   </script>
 </body>
