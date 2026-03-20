@@ -29,6 +29,7 @@
       transition: background 0.15s;
     }
     .toolbar button:hover { background: #475569; }
+    .toolbar button.active { background: #475569; color: #fff; }
     .toolbar button.primary { background: #3373b3; color: #fff; }
     .toolbar button.primary:hover { background: #2a5fa0; }
     .toolbar .status { margin-left: auto; font-size: 11px; color: #94a3b8; }
@@ -167,6 +168,31 @@
     .modal .btn-cancel { background: #334155; color: #e2e8f0; }
     .modal .btn-save { background: #3373b3; color: #fff; }
 
+    /* ── Conflict / Diff modal ────────────────────────────── */
+    .diff-modal {
+      background: #1e293b; border-radius: 12px; padding: 24px; width: 80vw; max-width: 900px;
+      max-height: 80vh; color: #e2e8f0; font-size: 13px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      display: flex; flex-direction: column;
+    }
+    .diff-modal h3 { font-size: 15px; font-weight: 700; margin-bottom: 4px; color: #fff; }
+    .diff-modal .diff-hint { font-size: 11px; color: #94a3b8; margin-bottom: 12px; }
+    .diff-modal .diff-container {
+      flex: 1; overflow: auto; background: #0f172a; border-radius: 8px; padding: 12px;
+      font-family: "JetBrains Mono", "SF Mono", monospace; font-size: 12px; line-height: 1.6;
+      border: 1px solid #334155; min-height: 200px;
+    }
+    .diff-modal .diff-line { white-space: pre-wrap; word-break: break-all; padding: 1px 6px; border-radius: 3px; }
+    .diff-modal .diff-add { background: rgba(166,227,161,0.15); color: #a6e3a1; }
+    .diff-modal .diff-del { background: rgba(243,139,168,0.15); color: #f38ba8; text-decoration: line-through; }
+    .diff-modal .diff-ctx { color: #6c7086; }
+    .diff-modal .diff-hdr { color: #89b4fa; font-weight: 700; margin-top: 8px; }
+    .diff-modal .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-shrink: 0; }
+    .diff-modal button { padding: 8px 18px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .diff-modal .btn-cancel { background: #334155; color: #e2e8f0; }
+    .diff-modal .btn-force { background: #f38ba8; color: #1e1e2e; }
+    .diff-modal .btn-reload { background: #a6e3a1; color: #1e1e2e; }
+    .diff-modal .btn-save { background: #3373b3; color: #fff; }
+
     /* ── Resize handle ─────────────────────────────────────── */
     .resize-handle {
       width: 5px; cursor: col-resize; background: #cbd5e1;
@@ -184,6 +210,11 @@
     <button onclick="openFolder()">Local Folder</button>
     <button onclick="openGoogleDrive()">Google Drive</button>
     <button onclick="saveCurrentFile()" id="btnSave" style="display:none">Save (Ctrl+S)</button>
+    <span class="sep"></span>
+    <button id="btnWrap" class="active" onclick="toggleWrap()" title="Toggle word wrap">Wrap</button>
+    <span class="sep"></span>
+    <button onclick="insertTable()" title="Insert a Markdown table at cursor">Insert Table</button>
+    <button onclick="formatTable()" title="Align table columns (Ctrl+Shift+T)">Format Table</button>
     <span class="sep"></span>
     <button onclick="triggerRender()">Render (Ctrl+Enter)</button>
     <button class="primary" onclick="openPreviewTab()">Open in new tab</button>
@@ -203,6 +234,19 @@
       <div class="btn-row">
         <button class="btn-cancel" onclick="document.getElementById('settingsModal').classList.remove('open')">Cancel</button>
         <button class="btn-save" onclick="saveGoogleSettings()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="diffModal">
+    <div class="diff-modal">
+      <h3 id="diffTitle">Conflict detected</h3>
+      <div class="diff-hint" id="diffHint">The file was modified on Google Drive since you loaded it. Changes from the remote version are shown below.</div>
+      <div class="diff-container" id="diffContainer"></div>
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="closeDiffModal()">Cancel</button>
+        <button class="btn-reload" onclick="resolveConflict('reload')">Load remote version</button>
+        <button class="btn-force" onclick="resolveConflict('force')">Overwrite with mine</button>
       </div>
     </div>
   </div>
@@ -961,7 +1005,7 @@ body { background: #e5e7eb; }
         status.textContent = e.data.pages + " pages";
         setupPreviewClick(previewFrame);
         setTimeout(scalePreview, 300);
-        setTimeout(() => { scalePreview(); buildAnchors(); }, 1000);
+        setTimeout(scalePreview, 1000);
         setupScrollSync();
       }
     });
@@ -975,15 +1019,330 @@ body { background: #e5e7eb; }
       renderTimeout = setTimeout(triggerRender, 800);
     });
 
-    // Ctrl+Enter to render immediately
+    // ── Table editing helpers ─────────────────────────────────────────
+
+    // Detect if a line is part of a Markdown table (starts with |)
+    function isTableLine(line) { return /^\s*\|/.test(line); }
+    function isSeparatorLine(line) { return /^\s*\|[\s:|-]+\|\s*$/.test(line); }
+
+    // Find the full table range around the cursor
+    function getTableRange() {
+      const cursor = cm.getCursor();
+      const line = cm.getLine(cursor.line);
+      if (!isTableLine(line)) return null;
+      let start = cursor.line, end = cursor.line;
+      while (start > 0 && isTableLine(cm.getLine(start - 1))) start--;
+      const lastLine = cm.lastLine();
+      while (end < lastLine && isTableLine(cm.getLine(end + 1))) end++;
+      return { start, end };
+    }
+
+    // Parse table lines into array of rows (each row = array of cell strings)
+    function parseTable(start, end) {
+      const rows = [];
+      for (let i = start; i <= end; i++) {
+        const line = cm.getLine(i);
+        const cells = line.split("|").slice(1); // drop leading empty from first |
+        if (cells.length && cells[cells.length - 1].trim() === "") cells.pop(); // drop trailing
+        rows.push(cells.map(c => c.trim()));
+      }
+      return rows;
+    }
+
+    // Rebuild table with aligned columns
+    function buildAlignedTable(rows, separatorIdx) {
+      if (rows.length === 0) return [];
+      const colCount = Math.max(...rows.map(r => r.length));
+      // Compute max width per column
+      const widths = Array(colCount).fill(3); // min width 3 for ---
+      rows.forEach((row, ri) => {
+        if (ri === separatorIdx) return;
+        row.forEach((cell, ci) => { widths[ci] = Math.max(widths[ci], cell.length); });
+      });
+      return rows.map((row, ri) => {
+        const cells = [];
+        for (let ci = 0; ci < colCount; ci++) {
+          if (ri === separatorIdx) {
+            cells.push("-".repeat(widths[ci]));
+          } else {
+            cells.push((row[ci] || "").padEnd(widths[ci]));
+          }
+        }
+        return "| " + cells.join(" | ") + " |";
+      });
+    }
+
+    // Format (align) the table under the cursor
+    function formatTable() {
+      const range = getTableRange();
+      if (!range) { status.textContent = "Cursor not in a table"; return; }
+      const rows = parseTable(range.start, range.end);
+      // Find separator row index
+      let sepIdx = -1;
+      for (let i = range.start; i <= range.end; i++) {
+        if (isSeparatorLine(cm.getLine(i))) { sepIdx = i - range.start; break; }
+      }
+      const lines = buildAlignedTable(rows, sepIdx);
+      // Compute cursor position in the new table
+      const cursor = cm.getCursor();
+      const cursorRowIdx = cursor.line - range.start;
+      const oldLine = cm.getLine(cursor.line);
+      // Find which cell the cursor is in
+      let col = 0, charCount = 0;
+      const oldCells = oldLine.split("|").slice(1);
+      for (let i = 0; i < oldCells.length; i++) {
+        const cellStart = oldLine.indexOf("|", charCount) + 1;
+        const cellEnd = cellStart + oldCells[i].length;
+        if (cursor.ch >= cellStart && cursor.ch <= cellEnd) { col = i; break; }
+        charCount = cellEnd;
+      }
+      cm.operation(() => {
+        for (let i = 0; i < lines.length; i++) {
+          const lineNum = range.start + i;
+          cm.replaceRange(lines[i], { line: lineNum, ch: 0 }, { line: lineNum, ch: cm.getLine(lineNum).length });
+        }
+      });
+      // Restore cursor roughly in the same cell
+      const newLine = lines[cursorRowIdx] || lines[0];
+      const newCells = newLine.split("|").slice(1);
+      let newCh = 0;
+      for (let i = 0; i <= col && i < newCells.length; i++) {
+        newCh = newLine.indexOf("|", newCh) + 2; // skip "| "
+        if (i < col) newCh += newCells[i].length - 1; // advance past cell + " "
+      }
+      cm.setCursor({ line: cursor.line, ch: Math.min(newCh, newLine.length) });
+    }
+
+    // Insert a new table at cursor
+    function insertTable() {
+      const cursor = cm.getCursor();
+      const table = [
+        "",
+        "| Header 1 | Header 2 | Header 3 |",
+        "| --------- | --------- | --------- |",
+        "| Cell      | Cell      | Cell      |",
+        "| Cell      | Cell      | Cell      |",
+        "",
+      ].join("\n");
+      cm.replaceRange(table, cursor);
+      // Place cursor in first data cell
+      cm.setCursor({ line: cursor.line + 3, ch: 2 });
+      cm.focus();
+    }
+
+    // Navigate to next/previous cell in a table
+    function tableNav(forward) {
+      const range = getTableRange();
+      if (!range) return false; // not in a table, let default behavior happen
+      const cursor = cm.getCursor();
+      const line = cm.getLine(cursor.line);
+      // Find all cell boundaries (positions after each |)
+      function getCellPositions(lineText) {
+        const positions = [];
+        for (let i = 0; i < lineText.length; i++) {
+          if (lineText[i] === "|" && i < lineText.length - 1) {
+            // Find start of cell content (skip space after |)
+            let start = i + 1;
+            while (start < lineText.length && lineText[start] === " ") start++;
+            // Find end of cell content (before space + next |)
+            let end = lineText.indexOf("|", i + 1);
+            if (end === -1) end = lineText.length;
+            let contentEnd = end;
+            while (contentEnd > start && lineText[contentEnd - 1] === " ") contentEnd--;
+            positions.push({ start, end: contentEnd, pipeEnd: end });
+          }
+        }
+        return positions;
+      }
+      const cells = getCellPositions(line);
+      if (cells.length === 0) return false;
+      // Find which cell cursor is in
+      let curCell = 0;
+      for (let i = 0; i < cells.length; i++) {
+        if (cursor.ch <= cells[i].pipeEnd) { curCell = i; break; }
+        if (i === cells.length - 1) curCell = i;
+      }
+      if (forward) {
+        if (curCell < cells.length - 1) {
+          // Next cell on same line
+          cm.setCursor({ line: cursor.line, ch: cells[curCell + 1].start });
+          cm.setSelection({ line: cursor.line, ch: cells[curCell + 1].start }, { line: cursor.line, ch: cells[curCell + 1].end });
+        } else {
+          // First cell on next non-separator row
+          let nextLine = cursor.line + 1;
+          while (nextLine <= range.end && isSeparatorLine(cm.getLine(nextLine))) nextLine++;
+          if (nextLine <= range.end) {
+            const nextCells = getCellPositions(cm.getLine(nextLine));
+            if (nextCells.length) {
+              cm.setCursor({ line: nextLine, ch: nextCells[0].start });
+              cm.setSelection({ line: nextLine, ch: nextCells[0].start }, { line: nextLine, ch: nextCells[0].end });
+            }
+          } else {
+            // Past last row — add a new row
+            addTableRow();
+          }
+        }
+      } else {
+        if (curCell > 0) {
+          cm.setCursor({ line: cursor.line, ch: cells[curCell - 1].start });
+          cm.setSelection({ line: cursor.line, ch: cells[curCell - 1].start }, { line: cursor.line, ch: cells[curCell - 1].end });
+        } else {
+          // Last cell on previous non-separator row
+          let prevLine = cursor.line - 1;
+          while (prevLine >= range.start && isSeparatorLine(cm.getLine(prevLine))) prevLine--;
+          if (prevLine >= range.start) {
+            const prevCells = getCellPositions(cm.getLine(prevLine));
+            if (prevCells.length) {
+              const last = prevCells[prevCells.length - 1];
+              cm.setCursor({ line: prevLine, ch: last.start });
+              cm.setSelection({ line: prevLine, ch: last.start }, { line: prevLine, ch: last.end });
+            }
+          }
+        }
+      }
+      return true;
+    }
+
+    // Add a new row at the end of the table (or after cursor row)
+    function addTableRow() {
+      const range = getTableRange();
+      if (!range) return;
+      const rows = parseTable(range.start, range.end);
+      const colCount = Math.max(...rows.map(r => r.length));
+      // Find separator for alignment
+      let sepIdx = -1;
+      for (let i = range.start; i <= range.end; i++) {
+        if (isSeparatorLine(cm.getLine(i))) { sepIdx = i - range.start; break; }
+      }
+      const widths = Array(colCount).fill(3);
+      rows.forEach((row, ri) => {
+        if (ri === sepIdx) return;
+        row.forEach((cell, ci) => { widths[ci] = Math.max(widths[ci], cell.length); });
+      });
+      const newRow = "| " + widths.map(w => " ".repeat(w)).join(" | ") + " |";
+      const endOfTable = { line: range.end, ch: cm.getLine(range.end).length };
+      cm.replaceRange("\n" + newRow, endOfTable);
+      // Place cursor in first cell of new row
+      const newLineNum = range.end + 1;
+      const cells = newRow.split("|").slice(1);
+      cm.setCursor({ line: newLineNum, ch: 2 });
+      cm.setSelection({ line: newLineNum, ch: 2 }, { line: newLineNum, ch: 2 + widths[0] });
+      cm.focus();
+    }
+
+    // Ctrl+Enter to render immediately, Tab/Shift-Tab for table nav
     cm.setOption("extraKeys", {
       "Ctrl-Enter": () => { clearTimeout(renderTimeout); triggerRender(); },
       "Cmd-Enter": () => { clearTimeout(renderTimeout); triggerRender(); },
+      "Tab": (cm) => {
+        if (tableNav(true)) return;
+        cm.replaceSelection("  "); // default: insert spaces
+      },
+      "Shift-Tab": (cm) => {
+        if (tableNav(false)) return;
+        cm.indentSelection("subtract");
+      },
+      "Ctrl-Shift-T": () => formatTable(),
+      "Cmd-Shift-T": () => formatTable(),
+      "Ctrl-Shift-Enter": () => { if (getTableRange()) addTableRow(); },
+      "Cmd-Shift-Enter": () => { if (getTableRange()) addTableRow(); },
     });
 
-    // ── Highlight matching element in preview ──────────────────────────
+    // ── Shared sync utilities ─────────────────────────────────────────────
+    const BLOCK_SEL =
+      ".pdf-content h1,.pdf-content h2,.pdf-content h3,.pdf-content h4," +
+      ".pdf-content p,.pdf-content li,.pdf-content blockquote," +
+      ".pdf-content pre,.pdf-content td,.pdf-content th";
+    const normalizeText = s => s.replace(/[#*_`>\-|]/g, "").replace(/\s+/g, " ").trim().substring(0, 60);
+
+    // Find best-matching preview element for a text string
+    function findPreviewEl(text) {
+      try {
+        const doc = previewFrame.contentDocument;
+        if (!doc) return null;
+        const needle = normalizeText(text);
+        if (needle.length < 4) return null;
+        let best = null, bestScore = 0;
+        doc.querySelectorAll(BLOCK_SEL).forEach(el => {
+          const t = normalizeText(el.textContent || "");
+          if (!t) return;
+          if (t.includes(needle) || needle.includes(t)) {
+            const score = Math.min(needle.length, t.length);
+            if (score > bestScore) { bestScore = score; best = el; }
+          }
+        });
+        return best;
+      } catch(e) { return null; }
+    }
+
+    // Find best-matching editor line for a text string
+    function findEditorLine(text) {
+      const needle = normalizeText(text);
+      if (needle.length < 4) return -1;
+      let best = -1, bestScore = 0;
+      for (let i = 0; i < cm.lineCount(); i++) {
+        const t = normalizeText(cm.getLine(i));
+        if (!t) continue;
+        if (t.includes(needle) || needle.includes(t)) {
+          const score = Math.min(needle.length, t.length);
+          if (score > bestScore) { bestScore = score; best = i; }
+        }
+      }
+      return best;
+    }
+
+    // Scaled vertical midpoint of a preview element relative to previewContainer
+    function previewElMid(el) {
+      const doc = previewFrame.contentDocument;
+      const pages = doc.querySelector(".pagedjs_pages");
+      if (!pages) return 0;
+      const scale = parseFloat(previewFrame.style.transform.replace(/[^0-9.]/g, "")) || 1;
+      const rect = el.getBoundingClientRect();
+      const pRect = pages.getBoundingClientRect();
+      return (rect.top - pRect.top + rect.height / 2) * scale;
+    }
+
+    // Two directional flags: each side suppresses only its own echo
+    let toPreviewSync = false; // preview is being scrolled by us → suppress preview→editor
+    let toEditorSync  = false; // editor  is being scrolled by us → suppress editor→preview
+    let pvSyncTimer   = null;  // single shared timer, reset on every centerPreviewOnEl call
+
+    // Center a preview element in the preview pane (smooth)
+    function centerPreviewOnEl(el) {
+      const top = Math.max(0, previewElMid(el) - previewContainer.clientHeight / 2);
+      toPreviewSync = true;
+      previewContainer.scrollTo({ top, behavior: "smooth" });
+      // Reset the shared timer so it only fires 600ms after the *last* call
+      clearTimeout(pvSyncTimer);
+      pvSyncTimer = setTimeout(() => { toPreviewSync = false; }, 600);
+    }
+
+    // Center an editor line in the editor pane (instant — no smooth scroll API in CM)
+    function centerEditorOnLine(line) {
+      toEditorSync = true;
+      cm.scrollIntoView({ line, ch: 0 }, cm.getScrollInfo().clientHeight / 2);
+      requestAnimationFrame(() => { toEditorSync = false; });
+    }
+
+    // Element closest to the vertical center of the preview pane
+    function previewCenterEl() {
+      try {
+        const doc = previewFrame.contentDocument;
+        if (!doc) return null;
+        const center = previewContainer.scrollTop + previewContainer.clientHeight / 2;
+        let best = null, bestDist = Infinity;
+        doc.querySelectorAll(BLOCK_SEL).forEach(el => {
+          const dist = Math.abs(previewElMid(el) - center);
+          if (dist < bestDist) { bestDist = dist; best = el; }
+        });
+        return best;
+      } catch(e) { return null; }
+    }
+
+    // ── Highlight + center sync on cursor activity ────────────────────────
     let highlightEl = null;
     let flashTimer = null;
+
     function clearHighlight() {
       if (flashTimer) { clearTimeout(flashTimer); flashTimer = null; }
       if (highlightEl) {
@@ -991,102 +1350,46 @@ body { background: #e5e7eb; }
         highlightEl = null;
       }
     }
+
     function highlightAtCursor() {
       clearHighlight();
       try {
-        const doc = previewFrame.contentDocument;
-        if (!doc) return;
-        const line = cm.getCursor().line;
-        const text = cm.getLine(line).trim();
+        const text = cm.getLine(cm.getCursor().line)?.trim();
         if (!text) return;
+        const el = findPreviewEl(text);
+        if (!el) return;
 
-        // Build a map: for each block element in preview, find its text
-        const blocks = doc.querySelectorAll(
-          ".pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4, " +
-          ".pdf-content p, .pdf-content li, .pdf-content blockquote, " +
-          ".pdf-content pre, .pdf-content td, .pdf-content th"
-        );
+        el.classList.add("paged-highlight-flash");
+        highlightEl = el;
+        flashTimer = setTimeout(() => {
+          el.classList.remove("paged-highlight-flash");
+          el.classList.add("paged-highlight");
+        }, 50);
 
-        // Normalize text for comparison: strip markdown syntax, collapse spaces
-        const normalize = s => s.replace(/[#*_`>\-|]/g, "").replace(/\s+/g, " ").trim().substring(0, 60);
-        const needle = normalize(text);
-        if (needle.length < 4) return; // too short to match reliably
-
-        let best = null;
-        let bestScore = 0;
-        blocks.forEach(el => {
-          const elText = normalize(el.textContent || "");
-          if (!elText) return;
-          // Check if needle is contained in element text or vice versa
-          if (elText.includes(needle) || needle.includes(elText)) {
-            const score = Math.min(needle.length, elText.length);
-            if (score > bestScore) { bestScore = score; best = el; }
-          }
-        });
-
-        if (best) {
-          best.classList.add("paged-highlight-flash");
-          highlightEl = best;
-          // Flash then fade to subtle
-          flashTimer = setTimeout(() => {
-            best.classList.remove("paged-highlight-flash");
-            best.classList.add("paged-highlight");
-          }, 50);
-
-          // Scroll preview to make highlighted element visible
-          const pages = doc.querySelector(".pagedjs_pages");
-          if (pages) {
-            const elRect = best.getBoundingClientRect();
-            const pagesRect = pages.getBoundingClientRect();
-            const elTop = elRect.top - pagesRect.top;
-            const scale = parseFloat(previewFrame.style.transform.replace(/[^0-9.]/g, "")) || 1;
-            const scaledTop = elTop * scale;
-            const containerH = previewContainer.clientHeight;
-            const scrollTop = previewContainer.scrollTop;
-            // If element is outside visible area, scroll to center it
-            if (scaledTop < scrollTop || scaledTop > scrollTop + containerH - 50) {
-              previewContainer.scrollTo({ top: Math.max(0, scaledTop - containerH / 3), behavior: "smooth" });
-            }
-          }
-        }
+        centerPreviewOnEl(el); // sets toPreviewSync internally
       } catch(e) {}
     }
     cm.on("cursorActivity", highlightAtCursor);
 
-    // ── Click preview → focus editor ─────────────────────────────────────
+    // ── Click preview → center both views ────────────────────────────────
     function setupPreviewClick(frame) {
       try {
         const doc = frame.contentDocument;
         if (!doc) return;
         doc.addEventListener("click", e => {
-          // Walk up to find a block-level element
           let el = e.target;
           const blockTags = new Set(["H1","H2","H3","H4","P","LI","BLOCKQUOTE","PRE","TD","TH"]);
           while (el && !blockTags.has(el.tagName)) el = el.parentElement;
           if (!el) return;
-
-          const normalize = s => s.replace(/[#*_`>\-|]/g, "").replace(/\s+/g, " ").trim();
-          const needle = normalize(el.textContent || "").substring(0, 80);
+          const needle = normalizeText(el.textContent || "");
           if (needle.length < 4) return;
 
-          // Search editor lines for best match
-          const lineCount = cm.lineCount();
-          let bestLine = -1;
-          let bestScore = 0;
-          for (let i = 0; i < lineCount; i++) {
-            const lineText = normalize(cm.getLine(i));
-            if (!lineText) continue;
-            if (lineText.includes(needle) || needle.includes(lineText)) {
-              const score = Math.min(needle.length, lineText.length);
-              if (score > bestScore) { bestScore = score; bestLine = i; }
-            }
-          }
-
-          if (bestLine >= 0) {
-            cm.setCursor({ line: bestLine, ch: 0 });
+          centerPreviewOnEl(el); // smooth, sets toPreviewSync
+          const line = findEditorLine(needle);
+          if (line >= 0) {
+            cm.setCursor({ line, ch: 0 });
             cm.focus();
-            // Scroll editor to show the line
-            cm.scrollIntoView({ line: bestLine, ch: 0 }, cm.getScrollInfo().clientHeight / 3);
+            centerEditorOnLine(line); // instant, sets toEditorSync
           }
         });
       } catch(e) {}
@@ -1099,85 +1402,42 @@ body { background: #e5e7eb; }
       setupPreviewClick(previewFrame);
     };
 
-    // ── Scroll sync (heading-based content matching, h1-h4) ─────────────
-    // Anchors: arrays of { ratio } where ratio = position / totalScrollable
-    let syncAnchors = null; // { ed: [...], pv: [...] }
-
-    function buildAnchors() {
-      // ── Editor anchors: line-based ──
-      const lines = cm.getValue().split("\n");
-      const totalLines = lines.length;
-      const ed = [0]; // start
-      for (let i = 0; i < totalLines; i++) {
-        if (/^#{1,4}\s/.test(lines[i])) ed.push(i / totalLines);
-      }
-      ed.push(1); // end
-
-      // ── Preview anchors: pixel-based from iframe ──
-      const pv = [0]; // start
-      try {
-        const doc = previewFrame.contentDocument;
-        if (!doc) { syncAnchors = null; return; }
-        const pages = doc.querySelector(".pagedjs_pages");
-        if (!pages) { syncAnchors = null; return; }
-        const totalH = pages.scrollHeight;
-        if (totalH < 100) { syncAnchors = null; return; }
-        const pagesTop = pages.getBoundingClientRect().top;
-        doc.querySelectorAll(".pdf-content h1, .pdf-content h2, .pdf-content h3, .pdf-content h4")
-          .forEach(h => {
-            const off = h.getBoundingClientRect().top - pagesTop;
-            pv.push(off / totalH);
-          });
-      } catch(e) { syncAnchors = null; return; }
-      pv.push(1); // end
-
-      syncAnchors = { ed, pv };
-    }
-
-    function mapRatio(from, to, r) {
-      // Find segment in 'from' that contains r, interpolate to 'to'
-      let i = 1;
-      while (i < from.length - 1 && from[i] <= r) i++;
-      i--; // i = index of segment start
-      const f0 = from[i], f1 = from[Math.min(i + 1, from.length - 1)];
-      const t = (f1 - f0) > 0 ? (r - f0) / (f1 - f0) : 0;
-      const j = Math.min(i, to.length - 2);
-      return to[j] + t * (to[j + 1] - to[j]);
-    }
-
+    // ── Scroll sync (center-element based, both directions) ───────────────
     function setupScrollSync() {
-      buildAnchors();
       if (setupScrollSync._done) return;
       setupScrollSync._done = true;
 
-      const container = previewContainer;
-      let syncing = false;
-
-      cm.on("scroll", () => {
-        if (syncing || !syncAnchors) return;
-        syncing = true;
-        const info = cm.getScrollInfo();
-        const maxEd = info.height - info.clientHeight;
-        if (maxEd > 0) {
-          const r = info.top / maxEd;
-          const pr = mapRatio(syncAnchors.ed, syncAnchors.pv, r);
-          const maxPv = container.scrollHeight - container.clientHeight;
-          container.scrollTop = pr * maxPv;
-        }
-        requestAnimationFrame(() => syncing = false);
+      // Clear toPreviewSync exactly when the smooth scroll animation ends
+      previewContainer.addEventListener("scrollend", () => {
+        clearTimeout(pvSyncTimer);
+        pvSyncTimer = null;
+        toPreviewSync = false;
       });
 
-      container.addEventListener("scroll", () => {
-        if (syncing || !syncAnchors) return;
-        syncing = true;
-        const maxPv = container.scrollHeight - container.clientHeight;
-        if (maxPv > 0) {
-          const r = container.scrollTop / maxPv;
-          const er = mapRatio(syncAnchors.pv, syncAnchors.ed, r);
+      // Editor scrolled by user → center matching element in preview
+      cm.on("scroll", () => {
+        if (toEditorSync) return; // this scroll was triggered by us, not user
+        try {
           const info = cm.getScrollInfo();
-          cm.scrollTo(null, er * (info.height - info.clientHeight));
-        }
-        requestAnimationFrame(() => syncing = false);
+          const line = cm.lineAtHeight(info.top + info.clientHeight / 2, "local");
+          const text = cm.getLine(line)?.trim();
+          if (text) {
+            const el = findPreviewEl(text);
+            if (el) centerPreviewOnEl(el);
+          }
+        } catch(e) {}
+      });
+
+      // Preview scrolled by user → center matching line in editor
+      previewContainer.addEventListener("scroll", () => {
+        if (toPreviewSync) return; // this scroll was triggered by us, not user
+        try {
+          const el = previewCenterEl();
+          if (el) {
+            const line = findEditorLine(el.textContent || "");
+            if (line >= 0) centerEditorOnLine(line);
+          }
+        } catch(e) {}
       });
     }
 
@@ -1658,6 +1918,105 @@ body { background: #e5e7eb; }
       if (fileHandles.length > 0) await openFile(idx);
     }
 
+    // ── Diff algorithm (Myers-like, minimal) ──────────────────────────
+    function computeDiff(oldLines, newLines) {
+      // Simple LCS-based diff producing context, add, and del entries
+      const n = oldLines.length, m = newLines.length;
+      // Build LCS table (optimize: only works well for files < ~5000 lines)
+      const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+      for (let i = 1; i <= n; i++)
+        for (let j = 1; j <= m; j++)
+          dp[i][j] = oldLines[i-1] === newLines[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+      // Backtrack to produce diff
+      const diff = [];
+      let i = n, j = m;
+      while (i > 0 || j > 0) {
+        if (i > 0 && j > 0 && oldLines[i-1] === newLines[j-1]) {
+          diff.unshift({ type: "ctx", text: oldLines[i-1], oldLine: i, newLine: j });
+          i--; j--;
+        } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+          diff.unshift({ type: "add", text: newLines[j-1], newLine: j });
+          j--;
+        } else {
+          diff.unshift({ type: "del", text: oldLines[i-1], oldLine: i });
+          i--;
+        }
+      }
+      return diff;
+    }
+
+    function renderDiffHtml(diff) {
+      // Show diff with 3 lines of context around changes
+      const CTX = 3;
+      const changeIdx = new Set();
+      diff.forEach((d, i) => { if (d.type !== "ctx") changeIdx.add(i); });
+      // Expand context around changes
+      const visible = new Set();
+      changeIdx.forEach(i => {
+        for (let k = Math.max(0, i - CTX); k <= Math.min(diff.length - 1, i + CTX); k++) visible.add(k);
+      });
+      let html = "";
+      let lastShown = -1;
+      diff.forEach((d, i) => {
+        if (!visible.has(i)) return;
+        if (lastShown >= 0 && i - lastShown > 1) {
+          html += '<div class="diff-line diff-hdr">···</div>';
+        }
+        lastShown = i;
+        const prefix = d.type === "add" ? "+" : d.type === "del" ? "-" : " ";
+        const lineNum = d.type === "del" ? d.oldLine : (d.newLine || "");
+        const cls = d.type === "add" ? "diff-add" : d.type === "del" ? "diff-del" : "diff-ctx";
+        const escaped = d.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        html += '<div class="diff-line ' + cls + '">' + prefix + " " + escaped + "</div>";
+      });
+      if (!html) html = '<div class="diff-line diff-ctx">(No differences)</div>';
+      return html;
+    }
+
+    // ── Conflict resolution state ────────────────────────────────────
+    let gdModifiedTime = null; // modifiedTime from Drive when file was loaded
+    let conflictRemoteText = null; // remote text when conflict detected
+    let conflictResolve = null; // promise resolver for conflict modal
+
+    function closeDiffModal() {
+      document.getElementById("diffModal").classList.remove("open");
+      if (conflictResolve) { conflictResolve("cancel"); conflictResolve = null; }
+    }
+    function resolveConflict(action) {
+      document.getElementById("diffModal").classList.remove("open");
+      if (conflictResolve) { conflictResolve(action); conflictResolve = null; }
+    }
+
+    function showDiffModal(localText, remoteText, fileName) {
+      const oldLines = localText.split("\n");
+      const newLines = remoteText.split("\n");
+      const diff = computeDiff(oldLines, newLines);
+      document.getElementById("diffTitle").textContent = "Conflict — " + fileName;
+      document.getElementById("diffHint").textContent =
+        "This file was modified on Google Drive by someone else. Lines prefixed with − are your version, + are the remote version.";
+      document.getElementById("diffContainer").innerHTML = renderDiffHtml(diff);
+      document.getElementById("diffModal").classList.add("open");
+      return new Promise(resolve => { conflictResolve = resolve; });
+    }
+
+    // Fetch file metadata (modifiedTime) from Drive
+    async function getGdFileModifiedTime(fileId) {
+      const resp = await driveApiFetch("files/" + fileId, {
+        fields: "modifiedTime",
+        supportsAllDrives: "true",
+      });
+      return resp.modifiedTime;
+    }
+
+    // Fetch file content from Drive
+    async function fetchGdFileContent(fileId) {
+      const dlResp = await fetch("https://www.googleapis.com/drive/v3/files/" + fileId + "?alt=media&supportsAllDrives=true", {
+        headers: { "Authorization": "Bearer " + gdToken },
+      });
+      if (!dlResp.ok) throw new Error("Download failed: " + dlResp.status);
+      return dlResp.text();
+    }
+
     // Override openFile and doSave to handle both modes
     const _origOpenFile = openFile;
     openFile = async function(idx) {
@@ -1668,12 +2027,11 @@ body { background: #e5e7eb; }
         activeFileName = entry.name;
         status.textContent = "Loading " + entry.name + "...";
         try {
-          // Download file content
-          const dlResp = await fetch("https://www.googleapis.com/drive/v3/files/" + entry.gdId + "?alt=media&supportsAllDrives=true", {
-            headers: { "Authorization": "Bearer " + gdToken },
-          });
-          if (!dlResp.ok) throw new Error("Download failed: " + dlResp.status);
-          const text = await dlResp.text();
+          const [text, modTime] = await Promise.all([
+            fetchGdFileContent(entry.gdId),
+            getGdFileModifiedTime(entry.gdId),
+          ]);
+          gdModifiedTime = modTime;
           savedContent = text;
           cm.setValue(text);
           cm.clearHistory();
@@ -1699,6 +2057,33 @@ body { background: #e5e7eb; }
         const entry = fileHandles[activeFileIdx];
         status.textContent = "Saving " + entry.name + "...";
         try {
+          // Check if file was modified remotely since we loaded it
+          if (gdModifiedTime) {
+            const currentModTime = await getGdFileModifiedTime(entry.gdId);
+            if (currentModTime !== gdModifiedTime) {
+              // Conflict! Fetch remote content and show diff
+              status.textContent = "Conflict detected — reviewing changes...";
+              const remoteText = await fetchGdFileContent(entry.gdId);
+              const localText = cm.getValue();
+              const action = await showDiffModal(localText, remoteText, entry.name);
+              if (action === "cancel") {
+                status.textContent = "Save cancelled";
+                return;
+              }
+              if (action === "reload") {
+                // Replace editor with remote version
+                gdModifiedTime = currentModTime;
+                savedContent = remoteText;
+                cm.setValue(remoteText);
+                cm.clearHistory();
+                renderFileList();
+                triggerRender();
+                status.textContent = "Loaded remote version of " + entry.name;
+                return;
+              }
+              // action === "force": fall through to save
+            }
+          }
           const saveResp = await fetch("https://www.googleapis.com/upload/drive/v3/files/" + entry.gdId + "?uploadType=media&supportsAllDrives=true", {
             method: "PATCH",
             headers: {
@@ -1709,6 +2094,8 @@ body { background: #e5e7eb; }
           });
           if (!saveResp.ok) throw new Error("Drive API " + saveResp.status + ": " + (await saveResp.text()));
           savedContent = cm.getValue();
+          // Update modifiedTime after successful save
+          gdModifiedTime = await getGdFileModifiedTime(entry.gdId);
           status.textContent = "Saved " + entry.name;
           renderFileList();
         } catch(e) {
