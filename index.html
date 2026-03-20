@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/codemirror@5/mode/markdown/markdown.min.js"></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client"></script>
   <style>
     /* ── Layout ─────────────────────────────────────────────── */
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -141,6 +143,30 @@
       transform-origin: top left;
     }
 
+    /* ── Settings modal ────────────────────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: #1e293b; border-radius: 12px; padding: 24px; width: 420px;
+      color: #e2e8f0; font-size: 13px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .modal h3 { font-size: 15px; font-weight: 700; margin-bottom: 16px; color: #fff; }
+    .modal label { display: block; font-size: 11px; font-weight: 600; color: #94a3b8;
+      text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; margin-top: 12px; }
+    .modal input {
+      width: 100%; background: #0f172a; border: 1px solid #334155; border-radius: 6px;
+      padding: 8px 10px; color: #e2e8f0; font-size: 12px; font-family: "JetBrains Mono", monospace;
+    }
+    .modal input:focus { outline: none; border-color: #3373b3; }
+    .modal .hint { font-size: 10px; color: #64748b; margin-top: 4px; }
+    .modal .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+    .modal button { padding: 6px 16px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .modal .btn-cancel { background: #334155; color: #e2e8f0; }
+    .modal .btn-save { background: #3373b3; color: #fff; }
+
     /* ── Resize handle ─────────────────────────────────────── */
     .resize-handle {
       width: 5px; cursor: col-resize; background: #cbd5e1;
@@ -155,18 +181,40 @@
     <span class="sep"></span>
     <span>Paged.js Editor</span>
     <span class="sep"></span>
-    <button onclick="openFolder()">Open Folder</button>
+    <button onclick="openFolder()">Local Folder</button>
+    <button onclick="openGoogleDrive()">Google Drive</button>
     <button onclick="saveCurrentFile()" id="btnSave" style="display:none">Save (Ctrl+S)</button>
     <span class="sep"></span>
     <button onclick="triggerRender()">Render (Ctrl+Enter)</button>
     <button class="primary" onclick="openPreviewTab()">Open in new tab</button>
     <span class="status" id="status">Ready</span>
+    <button onclick="document.getElementById('settingsModal').classList.add('open')" style="margin-left:4px;font-size:11px;padding:4px 8px;">Settings</button>
+  </div>
+
+  <div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+      <h3>Google Drive Settings</h3>
+      <label>Client ID</label>
+      <input id="gdClientId" placeholder="xxxxxx.apps.googleusercontent.com" />
+      <div class="hint">From Google Cloud Console &gt; APIs &amp; Services &gt; Credentials &gt; OAuth 2.0 Client ID (Web application). Add your domain as authorized JavaScript origin.</div>
+      <label>API Key</label>
+      <input id="gdApiKey" placeholder="AIzaSy..." />
+      <div class="hint">From Google Cloud Console &gt; APIs &amp; Services &gt; Credentials &gt; API Key. Restrict to Google Drive API.</div>
+      <div class="btn-row">
+        <button class="btn-cancel" onclick="document.getElementById('settingsModal').classList.remove('open')">Cancel</button>
+        <button class="btn-save" onclick="saveGoogleSettings()">Save</button>
+      </div>
+    </div>
   </div>
 
   <div class="container">
     <div class="file-sidebar" id="fileSidebar">
       <div class="sidebar-header">
+        <span id="folderIcon" style="display:none;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="12" viewBox="0 0 256 229" style="vertical-align:-1px;margin-right:4px;"><path fill="#0066da" d="m19.354 196.034l11.29 19.5c2.346 4.106 5.718 7.332 9.677 9.678q17.009-21.591 23.68-33.137q6.77-11.717 16.641-36.655q-26.604-3.502-40.32-3.502q-13.165 0-40.322 3.502c0 4.545 1.173 9.09 3.519 13.196z"/><path fill="#ea4335" d="M215.681 225.212c3.96-2.346 7.332-5.572 9.677-9.677l4.692-8.064l22.434-38.855a26.57 26.57 0 0 0 3.518-13.196q-27.315-3.502-40.247-3.502q-13.899 0-40.248 3.502q9.754 25.075 16.422 36.655q6.724 11.683 23.752 33.137"/><path fill="#00832d" d="M128.001 73.311q19.68-23.768 27.125-36.655q5.996-10.377 13.196-33.137C164.363 1.173 159.818 0 155.126 0h-54.25C96.184 0 91.64 1.32 87.68 3.519q9.16 26.103 15.544 37.154q7.056 12.213 24.777 32.638"/><path fill="#2684fc" d="M175.36 155.42H80.642l-40.32 69.792c3.958 2.346 8.503 3.519 13.195 3.519h148.968c4.692 0 9.238-1.32 13.196-3.52z"/><path fill="#00ac47" d="M128.001 73.311L87.681 3.52c-3.96 2.346-7.332 5.571-9.678 9.677L3.519 142.224A26.57 26.57 0 0 0 0 155.42h80.642z"/><path fill="#ffba00" d="m215.242 77.71l-37.243-64.514c-2.345-4.106-5.718-7.331-9.677-9.677l-40.32 69.792l47.358 82.109h80.496c0-4.546-1.173-9.09-3.519-13.196z"/></svg>
+        </span>
         <span class="folder-name" id="folderName">Files</span>
+        <button onclick="closeFolder()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:14px;padding:2px 4px;margin-left:auto;" title="Close folder">&times;</button>
       </div>
       <div class="file-list" id="fileList"></div>
     </div>
@@ -310,49 +358,109 @@ body { font-family: "Hanken Grotesk", -apple-system, BlinkMacSystemFont, "Segoe 
 
 .pdf-content { max-width: 100%; padding: 0; }
 h1, h2, h3, h4, h5, h6 { font-family: "Montserrat", sans-serif; }
-h1 { font-size: 16pt; color: var(--navy); font-weight: 700; margin: 0 0 var(--space-lg); line-height: 1.2;
-  padding-bottom: 0.4rem; position: relative; width: fit-content; max-width: 100%; }
+
+/* ── H1: Section title — large, with chunked underline ── */
+h1 { font-size: 18pt; color: var(--navy); font-weight: 800; margin: var(--space-2xl) 0 var(--space-xl); line-height: 1.15;
+  padding-bottom: 0.5rem; position: relative; width: fit-content; max-width: 100%; letter-spacing: -0.01em; }
+h1:first-child, section > h1:first-child { margin-top: 0; }
 h1 .beorn-underline, h2 .beorn-underline { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; display: flex; align-items: center; gap: 4px; }
 h1 .beorn-underline .beorn-solid, h2 .beorn-underline .beorn-solid { height: 3.5px; border-radius: 1.75px; flex-shrink: 0; }
 h1 .beorn-underline .beorn-chunk, h2 .beorn-underline .beorn-chunk { height: 3.5px; border-radius: 1.75px; flex-shrink: 0; }
-h2 { font-size: 13pt; color: var(--navy); font-weight: 600; margin: 0 0 var(--space-xs); padding-bottom: 0.3rem;
-  line-height: 1.25; position: relative; width: fit-content; max-width: 100%; border-bottom: none; }
-h3 { font-size: 11pt; color: var(--navy); font-weight: 700; margin: var(--space-md) 0 var(--space-sm); line-height: 1.3; }
-h4 { font-size: 9pt; color: var(--navy); font-weight: 700; margin: var(--space-lg) 0 var(--space-sm); line-height: 1.35; }
-p { margin-bottom: var(--space-md); }
+
+/* ── H2: Subsection — numbered badge + bold title ── */
+h2 { font-size: 14pt; color: var(--section-color, var(--navy)); font-weight: 700;
+  margin: var(--space-2xl) 0 var(--space-md); padding: 0;
+  line-height: 1.3; position: relative; width: auto; max-width: 100%;
+  border: none; display: flex; align-items: center; gap: 0.6rem; }
+h2:first-child, section > h2:first-child { margin-top: 0; }
+h2 { padding-left: 0 !important; text-indent: 0 !important; }
+h2 .beorn-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--section-color, var(--blue)) !important; color: #fff !important;
+  font-size: 15px; font-weight: 600; min-width: 2.2rem; padding: 5px 7px;
+  border-radius: 8px; line-height: 1; flex-shrink: 0;
+}
+
+/* ── H3: Sub-subsection — pill background, smaller ── */
+h3 { font-size: 10.5pt; color: var(--section-color, var(--navy)); font-weight: 700;
+  margin: var(--space-xl) 0 var(--space-sm); line-height: 1.3;
+  padding: 0.3rem 0.7rem !important; border-radius: 4px; text-indent: 0 !important;
+  background: color-mix(in srgb, var(--section-color, var(--blue)) 6%, transparent);
+  width: fit-content; max-width: 100%; }
+
+/* ── H4: Label style — uppercase, tiny, em-dash prefix ── */
+h4 { font-size: 7.5pt; color: var(--section-color, var(--navy)); font-weight: 800;
+  margin: var(--space-lg) 0 var(--space-sm); line-height: 1.4;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  padding-left: 0 !important; text-indent: 0 !important; }
+h4::before { content: "\\2014"; margin-right: 12px; color: var(--section-color, var(--blue)); font-weight: 700; font-size: 1.1em; }
+
+p { margin: 0 0 var(--space-md); }
 strong { font-weight: 700; color: var(--navy); }
+em { color: var(--text-light); }
 
-.pdf-content ul { list-style: none; display: grid; gap: var(--space-sm); margin: var(--space-xs) 0 var(--space-md); padding-left: 0; }
+/* ── Adjacent headings: tighten stacked gaps ── */
+h2 + h3 { margin-top: var(--space-md); }
+h3 + h4 { margin-top: var(--space-sm); }
+
+/* ── Last child in sections: remove trailing margin ── */
+.pdf-content > *:last-child,
+.pdf-content section > *:last-child { margin-bottom: 0; }
+
+/* ── Lists — colored markers, consistent spacing ── */
+.pdf-content ul { list-style: none; display: grid; gap: var(--space-sm);
+  margin: var(--space-md) 0; padding-left: 0; }
 .pdf-content ul li { position: relative; padding-left: 1.4rem; margin: 0; }
-.pdf-content ul li::before { content: "\\203A"; position: absolute; left: 0; font-size: 1.3rem; font-weight: 700;
-  color: var(--section-color, var(--blue)); line-height: 1; top: 0.15rem; }
+.pdf-content ul li::before { content: "\\203A"; position: absolute; left: 0; font-size: 1.1rem; font-weight: 700;
+  color: var(--section-color, var(--blue)); line-height: inherit; top: 0; }
 .pdf-content ul ul { margin: var(--space-xs) 0 0; }
-.pdf-content ul ul li::before { content: "\\2013"; font-size: 0.9rem; color: color-mix(in srgb, var(--section-color, var(--blue)) 60%, white); }
-ol { margin: var(--space-xs) 0 var(--space-md) 1.35rem; }
+.pdf-content ul ul li::before { content: "\\2013"; font-size: 0.85rem;
+  color: color-mix(in srgb, var(--section-color, var(--blue)) 50%, white); }
+.pdf-content ul ul ul li::before { content: "\\2022"; font-size: 0.55rem;
+  color: color-mix(in srgb, var(--section-color, var(--blue)) 30%, white); }
+ol { margin: var(--space-md) 0 var(--space-md) 1.35rem; }
+ol li { padding-left: 0.3rem; }
 ol li + li { margin-top: var(--space-sm); }
+ol li::marker { color: var(--section-color, var(--blue)); font-weight: 700; font-size: 0.9em; }
 
-table { width: 100%; border-collapse: collapse; margin: var(--space-lg) 0; font-size: 9pt;
-  border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
-thead th { background: var(--section-color, var(--navy)); color: #fff; padding: 0.35rem 0.7rem;
-  text-align: left; font-weight: 700; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.05em;
-  border: 1px solid rgba(255,255,255,0.15); }
-tbody td { padding: 0.3rem 0.7rem; border: 1px solid var(--border); background: transparent; }
-tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--section-color, var(--blue)) 5%, white); }
+/* ── Tables — rounded, section-colored header, subtle stripes ── */
+table { width: 100%; border-collapse: separate; border-spacing: 0;
+  margin: var(--space-lg) 0; font-size: 9pt;
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+thead th { background: var(--section-color, var(--navy)); color: #fff; padding: 0.45rem 0.8rem;
+  text-align: left; font-weight: 700; font-size: 7.5pt; text-transform: uppercase; letter-spacing: 0.08em;
+  border-bottom: 2px solid color-mix(in srgb, var(--section-color, var(--navy)) 70%, black); }
+thead th + th { border-left: 1px solid rgba(255,255,255,0.15); }
+tbody td { padding: 0.4rem 0.8rem; border-top: 1px solid var(--border); background: transparent; }
+tbody td + td { border-left: 1px solid var(--border); }
+tbody tr:nth-child(even) td { background: color-mix(in srgb, var(--section-color, var(--blue)) 4%, white); }
 
-code { background: #edf2f7; padding: 0.12em 0.35em; border-radius: 4px; font-size: 0.85em; color: var(--purple);
+
+/* ── Code ── */
+code { background: #f1f5f9; padding: 0.15em 0.4em; border-radius: 5px; font-size: 0.82em;
+  color: var(--section-color, var(--purple)); border: 1px solid #e2e8f0;
   font-family: "SF Mono", "Fira Code", Consolas, monospace; }
-pre { background: #1e293b; color: #e2e8f0; padding: 1rem 1.2rem; border-radius: 10px; overflow-x: auto;
-  margin: var(--space-lg) 0; font-size: 8.5pt; line-height: 1.6; font-family: "SF Mono", "Fira Code", Consolas, monospace; }
-pre code { background: none; color: inherit; padding: 0; }
+pre { background: #0f172a; color: #e2e8f0; padding: 1.1rem 1.3rem; border-radius: 12px; overflow-x: auto;
+  margin: var(--space-lg) 0; font-size: 8.5pt; line-height: 1.7;
+  font-family: "SF Mono", "Fira Code", Consolas, monospace;
+  border: 1px solid rgba(255,255,255,0.06); }
+pre code { background: none; color: inherit; padding: 0; border: none; }
 
+/* ── Blockquotes — icon + colored left bar ── */
 blockquote { border-left: 4px solid var(--section-color, var(--blue));
-  background: color-mix(in srgb, var(--section-color, var(--blue)) 8%, transparent);
-  padding: 0.8rem 1rem; border-radius: 0 8px 8px 0; margin: var(--space-lg) 0; color: var(--text); }
-hr { border: 0; border-top: 1px solid var(--border); margin: var(--space-xl) 0; }
-.mermaid-diagram { background: #fff; border: 1px solid rgba(25,54,88,0.08); border-radius: 12px; padding: 1.25rem;
-  margin: var(--space-lg) 0; overflow-x: auto; box-shadow: 0 2px 8px rgba(25,54,88,0.04); }
+  background: color-mix(in srgb, var(--section-color, var(--blue)) 5%, white);
+  padding: 0.9rem 1.1rem 0.9rem 1.3rem; border-radius: 0 10px 10px 0;
+  margin: var(--space-lg) 0; color: var(--text); font-style: italic; }
+blockquote strong { font-style: normal; }
+
+/* ── Horizontal rules — decorative ── */
+hr { border: 0; height: 1px; margin: var(--space-2xl) 0;
+  background: linear-gradient(90deg, var(--border) 0%, color-mix(in srgb, var(--section-color, var(--blue)) 20%, white) 50%, var(--border) 100%); }
+
+/* ── Diagrams ── */
+.mermaid-diagram { margin: var(--space-xl) 0; overflow-x: auto; }
 .mermaid-diagram svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
-img { max-width: 100%; height: auto; }
+img { max-width: 100%; height: auto; border-radius: 8px; margin: var(--space-md) 0; }
 
 /* ── Pagination ── */
 .pdf-content > section.level2:first-of-type { break-before: auto !important; page-break-before: auto !important; }
@@ -365,6 +473,7 @@ blockquote { break-inside: avoid; page-break-inside: avoid; }
 figure, .mermaid-diagram { break-inside: avoid; page-break-inside: avoid; }
 .pdf-content ul, .pdf-content ol { break-inside: auto; page-break-inside: auto; }
 p + ul, p + ol { break-before: avoid; page-break-before: avoid; }
+.page-break { break-after: page; page-break-after: always; }
 .pdf-content ul li::before { box-shadow: none; }
 a[href^="http"]::after { content: " (" attr(href) ")"; font-size: 7.5pt; color: var(--text-light); font-weight: 400; }
 `;
@@ -389,7 +498,7 @@ body { background: #e5e7eb; }
 .pagedjs_named_page::after { display: none; }
 /* Beorn logo watermark bottom-left on every page */
 .pagedjs_page::after {
-  content: ""; position: absolute; bottom: 10mm; left: 18mm;
+  content: ""; position: absolute; bottom: 8mm; left: 18mm;
   width: 107px; height: 40px; z-index: 50; opacity: 0.6;
   background-size: contain; background-repeat: no-repeat; background-position: left center;
 }
@@ -420,7 +529,14 @@ body { background: #e5e7eb; }
     if(!match)return;
     var span=document.createElement("span");span.className="beorn-num";span.style.color=color;span.textContent=match[1];
     firstText.textContent=text.slice(match[1].length);el.insertBefore(span,firstText);
-    var numWidth=span.getBoundingClientRect().width;el.style.paddingLeft=numWidth+"px";el.style.textIndent="-"+numWidth+"px";
+    if(el.tagName==="H2"){
+      // Wrap remaining content in a span for flexbox layout
+      var textSpan=document.createElement("span");textSpan.className="beorn-text";
+      while(span.nextSibling)textSpan.appendChild(span.nextSibling);
+      el.appendChild(textSpan);
+    } else {
+      var numWidth=span.getBoundingClientRect().width;el.style.paddingLeft=numWidth+"px";el.style.textIndent="-"+numWidth+"px";
+    }
   }
   function buildUnderlines(){
     document.querySelectorAll("h1 .beorn-underline").forEach(function(el){el.remove()});
@@ -446,16 +562,31 @@ body { background: #e5e7eb; }
   }
   // Apply section colors to all elements — runs after Paged.js restructures DOM
   function applyColors(){
-    var allH1s=document.querySelectorAll("h1[data-color-index]");
-    if(!allH1s.length) allH1s=document.querySelectorAll("h1");
-    // Build a flat list of all block elements in document order
-    var allEls=document.querySelectorAll("h1,h2,h3,h4,p,ul,ol,li,blockquote,table,pre,section");
+    // 1) Pre-build H1 → color pair map (cycle by position, matching buildUnderlines)
+    var h1ColorMap=new Map();
+    document.querySelectorAll("h1").forEach(function(h1,idx){
+      var ci=h1.getAttribute("data-color-index");
+      var colorIdx=ci!=null?parseInt(ci,10):idx;
+      h1ColorMap.set(h1,colorPairs[colorIdx%colorPairs.length]);
+    });
+    // 2) Apply to section elements based on their child H1
+    document.querySelectorAll("section").forEach(function(sec){
+      var h1=sec.querySelector("h1");
+      if(h1&&h1ColorMap.has(h1)){
+        var pair=h1ColorMap.get(h1);
+        sec.style.setProperty("--section-color",pair[0]);
+        sec.style.setProperty("--section-color-light",pair[1]);
+      }
+    });
+    // 3) Apply to all block elements in document order (excluding section)
+    var allEls=document.querySelectorAll("h1,h2,h3,h4,p,ul,ol,li,blockquote,table,pre");
     var currentPair=null;
     allEls.forEach(function(el){
-      var ci=el.getAttribute("data-color-index");
-      if(el.tagName==="H1"||ci!=null){
-        var idx=ci!=null?parseInt(ci,10):0;
-        currentPair=colorPairs[idx%colorPairs.length];
+      if(el.tagName==="H1"){
+        currentPair=h1ColorMap.get(el)||null;
+      } else {
+        var ci=el.getAttribute("data-color-index");
+        if(ci!=null) currentPair=colorPairs[parseInt(ci,10)%colorPairs.length];
       }
       if(!currentPair)return;
       el.style.setProperty("--section-color",currentPair[0]);
@@ -574,8 +705,8 @@ body { background: #e5e7eb; }
       const acheteur = fm.acheteur || "";
       const doctype = fm.doctype || "Mémoire technique";
 
-      // Parse markdown
-      const htmlBody = marked.parse(body);
+      // Parse markdown (\newpage → page break div)
+      const htmlBody = marked.parse(body.replace(/^\\newpage$/gm, '<div class="page-break"></div>'));
 
       // Split on <h1> for sections, skip "Page de garde"
       const parts = htmlBody.split(/(?=<h1[^>]*>)/);
@@ -685,8 +816,36 @@ body { background: #e5e7eb; }
   <style>${PAGED_CSS}</style>
   ${BEORN_LOGO_DATA_URI ? '<style>.pagedjs_page::after { background-image: url(' + BEORN_LOGO_DATA_URI + '); }</style>' : ''}
   <script>window.PagedConfig = { auto: false };<\/script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"><\/script>
   <script src="${PAGED_JS_BLOB_URL}"><\/script>
   <script type="module">
+    // Render mermaid diagrams before Paged.js runs
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose',
+      look: 'handDrawn',
+      theme: 'base',
+      themeVariables: {
+        primaryColor: '#e8f0fa', primaryBorderColor: '#3373b3', primaryTextColor: '#193658',
+        secondaryColor: '#eef8fa', secondaryBorderColor: '#0096ae', secondaryTextColor: '#193658',
+        tertiaryColor: '#f3f0fa', tertiaryBorderColor: '#493a8b', tertiaryTextColor: '#193658',
+        lineColor: '#94a3b8', textColor: '#2d3748',
+        fontFamily: '"Hanken Grotesk", -apple-system, sans-serif', fontSize: '13px',
+        nodeBorder: '#3373b3', mainBkg: '#e8f0fa',
+        edgeLabelBackground: '#fff', clusterBkg: '#f8f9fc', clusterBorder: '#e2e8f0',
+        titleColor: '#193658',
+      }
+    });
+    const mermaidBlocks = document.querySelectorAll('pre > code.language-mermaid');
+    for (let i = 0; i < mermaidBlocks.length; i++) {
+      const code = mermaidBlocks[i];
+      const pre = code.parentElement;
+      try {
+        const { svg } = await mermaid.render('mermaid-' + i, code.textContent);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mermaid-diagram';
+        wrapper.innerHTML = svg;
+        pre.replaceWith(wrapper);
+      } catch(e) { console.warn('Mermaid render error:', e); }
+    }
     // Wrap h2/h3/h4 + next sibling to prevent orphaned headings
     (function() {
       var headings = document.querySelectorAll('.pdf-content h2, .pdf-content h3, .pdf-content h4');
@@ -740,6 +899,8 @@ body { background: #e5e7eb; }
     function getFront() { return frames[frontIdx]; }
     function getBack() { return frames[1 - frontIdx]; }
 
+    let lastBlobUrl = null;
+
     function triggerRender() {
       const md = editor.value;
       status.textContent = "Rendering...";
@@ -747,8 +908,10 @@ body { background: #e5e7eb; }
       if (html === lastRenderedHtml) { status.textContent = "No changes"; return; }
       lastRenderedHtml = html;
       pendingSwap = true;
+      if (lastBlobUrl) URL.revokeObjectURL(lastBlobUrl);
       const blob = new Blob([html], { type: "text/html" });
       const url = URL.createObjectURL(blob);
+      lastBlobUrl = url;
       const back = getBack();
       back.style.width = getFront().style.width || "794px";
       back.style.height = getFront().style.height || "20000px";
@@ -793,7 +956,9 @@ body { background: #e5e7eb; }
     });
 
     // ── Auto-render on pause ─────────────────────────────────────────────
+    let restoreDone = false;
     cm.on("change", () => {
+      if (!restoreDone) return; // don't render default content while restoring
       clearTimeout(renderTimeout);
       status.textContent = "Typing...";
       renderTimeout = setTimeout(triggerRender, 800);
@@ -1113,10 +1278,18 @@ body { background: #e5e7eb; }
     }
 
     async function activateFolder(restoreFile) {
+      storageMode = "local";
       folderNameEl.textContent = dirHandle.name;
+      document.getElementById("folderIcon").style.display = "none";
       fileSidebar.classList.add("open");
       btnSave.style.display = "";
       cm.refresh();
+
+      // Clear GDrive state so restore picks local
+      localStorage.removeItem("gd_folder_id");
+      localStorage.removeItem("gd_drive_id");
+      localStorage.removeItem("gd_folder_name");
+      sessionStorage.removeItem("gd_token");
 
       // Persist handle for reload
       await idbSet("dirHandle", dirHandle);
@@ -1195,9 +1368,13 @@ body { background: #e5e7eb; }
       await doSave();
     }
 
-    // Track dirty state
+    // Track dirty state — update only the active file's indicator, not the whole list
     cm.on("change", () => {
-      if (activeFileIdx >= 0) renderFileList();
+      if (activeFileIdx < 0) return;
+      const activeEl = fileList.children[activeFileIdx];
+      if (!activeEl) return;
+      if (isDirty()) activeEl.classList.add("dirty");
+      else activeEl.classList.remove("dirty");
     });
 
     // Ctrl+S / Cmd+S to save
@@ -1207,6 +1384,303 @@ body { background: #e5e7eb; }
         if (activeFileIdx >= 0) doSave();
       }
     });
+
+    // ── Google Drive API ───────────────────────────────────────────────
+    const GD_SCOPES = "https://www.googleapis.com/auth/drive";
+    let gdToken = null;         // OAuth access token
+    let gdFolderId = null;      // selected folder ID
+    let gdDriveId = null;       // shared drive ID (null for My Drive)
+    let gdFolderName = "";      // folder name from picker
+    let storageMode = "local";  // "local" or "gdrive"
+
+    function getGdSettings() {
+      return {
+        clientId: localStorage.getItem("gd_client_id") || "",
+        apiKey: localStorage.getItem("gd_api_key") || "",
+      };
+    }
+
+    function saveGoogleSettings() {
+      localStorage.setItem("gd_client_id", document.getElementById("gdClientId").value.trim());
+      localStorage.setItem("gd_api_key", document.getElementById("gdApiKey").value.trim());
+      document.getElementById("settingsModal").classList.remove("open");
+      status.textContent = "Google Drive settings saved";
+    }
+
+    // Populate settings inputs on load
+    (function() {
+      const s = getGdSettings();
+      document.getElementById("gdClientId").value = s.clientId;
+      document.getElementById("gdApiKey").value = s.apiKey;
+    })();
+
+    async function initGapi() {
+      if (typeof gapi === "undefined") throw new Error("Google API script failed to load (blocked by browser?)");
+      await new Promise((resolve, reject) => {
+        gapi.load("picker", { callback: resolve, onerror: () => reject(new Error("Failed to load picker")) });
+      });
+    }
+
+    // Direct fetch wrapper for Drive API (bypasses gapi.client token issues)
+    async function driveApiFetch(path, params) {
+      const url = new URL("https://www.googleapis.com/drive/v3/" + path);
+      if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+      const resp = await fetch(url, { headers: { "Authorization": "Bearer " + gdToken } });
+      if (!resp.ok) throw new Error("Drive API " + resp.status + ": " + (await resp.text()));
+      return resp.json();
+    }
+
+    async function getGdToken(silent) {
+      // Try stored token first
+      const stored = sessionStorage.getItem("gd_token");
+      if (stored) {
+        gdToken = stored;
+        // Verify it's still valid
+        try {
+          const r = await fetch("https://www.googleapis.com/oauth2/v1/tokeninfo?access_token=" + stored);
+          if (r.ok) return gdToken;
+        } catch(e) {}
+        sessionStorage.removeItem("gd_token");
+        gdToken = null;
+      }
+      if (silent) return null; // don't prompt
+
+      const s = getGdSettings();
+      if (!s.clientId) throw new Error("Client ID not configured");
+      if (typeof google === "undefined" || !google.accounts) throw new Error("Google Identity Services failed to load (blocked by browser?)");
+      return new Promise((resolve, reject) => {
+        const client = google.accounts.oauth2.initTokenClient({
+          client_id: s.clientId,
+          scope: GD_SCOPES,
+          callback: (resp) => {
+            if (resp.error) return reject(new Error(resp.error + ": " + (resp.error_description || "no details")));
+            gdToken = resp.access_token;
+            sessionStorage.setItem("gd_token", gdToken);
+            resolve(gdToken);
+          },
+          error_callback: (err) => {
+            reject(new Error(err.type || err.message || JSON.stringify(err)));
+          },
+        });
+        client.requestAccessToken();
+      });
+    }
+
+    async function openGoogleDrive() {
+      try {
+        const s = getGdSettings();
+        if (!s.clientId || !s.apiKey) {
+          document.getElementById("settingsModal").classList.add("open");
+          status.textContent = "Configure Google Drive settings first";
+          return;
+        }
+        status.textContent = "Connecting to Google Drive...";
+        await initGapi();
+        await getGdToken();
+
+        // Pick a folder
+        const picked = await pickFolder();
+        if (!picked) return;
+        gdFolderId = picked.id;
+        gdDriveId = picked.driveId;
+        gdFolderName = picked.name;
+        storageMode = "gdrive";
+
+        // Clear local folder state so restore picks GDrive
+        dirHandle = null;
+        await idbSet("dirHandle", null);
+
+        // Persist folder for reload
+        localStorage.setItem("gd_folder_id", gdFolderId);
+        localStorage.setItem("gd_drive_id", gdDriveId || "");
+        localStorage.setItem("gd_folder_name", gdFolderName || "");
+
+        await activateGdFolder();
+      } catch(e) {
+        console.error("Google Drive error:", e);
+        status.textContent = "Google Drive error: " + (e.message || e);
+      }
+    }
+
+    // Reconnect to stored Drive folder (on reload)
+    async function tryRestoreGdrive() {
+      const s = getGdSettings();
+      const fId = localStorage.getItem("gd_folder_id");
+      if (!s.clientId || !s.apiKey || !fId) return false;
+
+      await initGapi();
+      const token = await getGdToken(true); // silent — use stored token
+      if (!token) {
+        status.textContent = "Click Google Drive to reconnect";
+        return false;
+      }
+
+      gdFolderId = fId;
+      gdDriveId = localStorage.getItem("gd_drive_id") || null;
+      gdFolderName = localStorage.getItem("gd_folder_name") || "Google Drive";
+      storageMode = "gdrive";
+
+      const restoreFile = await idbGet("activeFile");
+      await activateGdFolder(restoreFile || null);
+      return true;
+    }
+
+    function closeFolder() {
+      // Reset state
+      fileSidebar.classList.remove("open");
+      btnSave.style.display = "none";
+      fileHandles = [];
+      activeFileIdx = -1;
+      activeFileName = "";
+      savedContent = "";
+      storageMode = "local";
+      dirHandle = null;
+      gdFolderId = null;
+      gdDriveId = null;
+      gdFolderName = "";
+      gdToken = null;
+      document.getElementById("folderIcon").style.display = "none";
+      paneFileName.textContent = "Markdown";
+      document.title = "Markdown \u2014 Paged.js Editor";
+
+      // Clear persisted state
+      localStorage.removeItem("gd_folder_id");
+      localStorage.removeItem("gd_drive_id");
+      localStorage.removeItem("gd_folder_name");
+      sessionStorage.removeItem("gd_token");
+      idbSet("dirHandle", null);
+      idbSet("activeFile", null);
+
+      cm.setValue("");
+      cm.refresh();
+      lastRenderedHtml = "";
+      triggerRender();
+    }
+
+    function pickFolder() {
+      return new Promise((resolve) => {
+        const s = getGdSettings();
+        const myDriveView = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+          .setSelectFolderEnabled(true)
+          .setIncludeFolders(true)
+          .setMimeTypes("application/vnd.google-apps.folder");
+        const sharedDrivesView = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+          .setSelectFolderEnabled(true)
+          .setIncludeFolders(true)
+          .setEnableDrives(true)
+          .setMimeTypes("application/vnd.google-apps.folder");
+        const picker = new google.picker.PickerBuilder()
+          .addView(myDriveView)
+          .addView(sharedDrivesView)
+          .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+          .setDeveloperKey(s.apiKey)
+          .setOAuthToken(gdToken)
+          .setTitle("Select a folder with Markdown files")
+          .setCallback((data) => {
+            if (data.action === google.picker.Action.PICKED) {
+              const doc = data.docs[0];
+              resolve({ id: doc.id, name: doc.name, driveId: doc.driveId || null });
+            } else if (data.action === google.picker.Action.CANCEL) {
+              resolve(null);
+            }
+          })
+          .build();
+        picker.setVisible(true);
+      });
+    }
+
+    async function activateGdFolder(restoreFile) {
+      // List .md files in the folder
+      const listParams = {
+        q: `'${gdFolderId}' in parents and (mimeType='text/markdown' or name contains '.md') and trashed=false`,
+        fields: "files(id,name)",
+        orderBy: "name",
+        pageSize: "100",
+        includeItemsFromAllDrives: "true",
+        supportsAllDrives: "true",
+      };
+      if (gdDriveId) { listParams.corpora = "drive"; listParams.driveId = gdDriveId; }
+      else { listParams.corpora = "allDrives"; }
+      const resp = await driveApiFetch("files", listParams);
+      const entries = resp.files || [];
+
+      folderNameEl.textContent = gdFolderName || "Google Drive";
+      document.getElementById("folderIcon").style.display = "inline";
+      fileSidebar.classList.add("open");
+      btnSave.style.display = "";
+      cm.refresh();
+
+      // Build fileHandles-compatible entries (API returns sorted by name via orderBy)
+      fileHandles = entries.map(f => ({ name: f.name, handle: null, gdId: f.id }));
+      renderFileList();
+
+      let idx = 0;
+      if (restoreFile) {
+        const found = fileHandles.findIndex(f => f.name === restoreFile);
+        if (found >= 0) idx = found;
+      }
+      if (fileHandles.length > 0) await openFile(idx);
+    }
+
+    // Override openFile and doSave to handle both modes
+    const _origOpenFile = openFile;
+    openFile = async function(idx) {
+      if (storageMode === "gdrive") {
+        if (isDirty()) await doSave();
+        activeFileIdx = idx;
+        const entry = fileHandles[idx];
+        activeFileName = entry.name;
+        status.textContent = "Loading " + entry.name + "...";
+        try {
+          // Download file content
+          const dlResp = await fetch("https://www.googleapis.com/drive/v3/files/" + entry.gdId + "?alt=media&supportsAllDrives=true", {
+            headers: { "Authorization": "Bearer " + gdToken },
+          });
+          if (!dlResp.ok) throw new Error("Download failed: " + dlResp.status);
+          const text = await dlResp.text();
+          savedContent = text;
+          cm.setValue(text);
+          cm.clearHistory();
+          paneFileName.textContent = entry.name;
+          document.title = entry.name + " — Paged.js Editor";
+          renderFileList();
+          triggerRender();
+          await idbSet("activeFile", entry.name);
+          status.textContent = "Loaded " + entry.name;
+        } catch(e) {
+          status.textContent = "Load failed: " + e.message;
+          console.error("GDrive open error:", e);
+        }
+      } else {
+        await _origOpenFile(idx);
+      }
+    };
+
+    const _origDoSave = doSave;
+    doSave = async function() {
+      if (storageMode === "gdrive") {
+        if (activeFileIdx < 0) return;
+        const entry = fileHandles[activeFileIdx];
+        status.textContent = "Saving " + entry.name + "...";
+        try {
+          await fetch("https://www.googleapis.com/upload/drive/v3/files/" + entry.gdId + "?uploadType=media", {
+            method: "PATCH",
+            headers: {
+              "Authorization": "Bearer " + gdToken,
+              "Content-Type": "text/markdown",
+            },
+            body: cm.getValue(),
+          });
+          savedContent = cm.getValue();
+          status.textContent = "Saved " + entry.name;
+          renderFileList();
+        } catch(e) {
+          status.textContent = "Save failed: " + e.message;
+        }
+      } else {
+        await _origDoSave();
+      }
+    };
 
     // ── Warn before closing with unsaved changes ─────────────────────────
     window.addEventListener("beforeunload", e => {
@@ -1218,21 +1692,31 @@ body { background: #e5e7eb; }
 
     // ── Restore folder on page load ──────────────────────────────────────
     async function tryRestore() {
+      // Try local folder first
       try {
         const stored = await idbGet("dirHandle");
-        if (!stored) return;
-        // Verify permission (may prompt user)
-        const perm = await stored.requestPermission({ mode: "readwrite" });
-        if (perm !== "granted") return;
-        dirHandle = stored;
-        const restoreFile = await idbGet("activeFile");
-        await activateFolder(restoreFile || null);
-      } catch(e) { /* no stored handle or permission denied */ }
+        if (stored) {
+          const perm = await stored.requestPermission({ mode: "readwrite" });
+          if (perm === "granted") {
+            dirHandle = stored;
+            storageMode = "local";
+            const restoreFile = await idbGet("activeFile");
+            await activateFolder(restoreFile || null);
+            return;
+          }
+        }
+      } catch(e) {}
+      // Try Google Drive (with stored token from sessionStorage)
+      try {
+        const restored = await tryRestoreGdrive();
+        if (restored) return;
+      } catch(e) { console.log("GDrive restore failed:", e.message); }
     }
 
     // ── Initial render (wait for Paged.js to be loaded) ────────────────
     pagedReady.then(async () => {
       await tryRestore();
+      restoreDone = true;
       if (activeFileIdx < 0) setTimeout(triggerRender, 100);
     });
   </script>
