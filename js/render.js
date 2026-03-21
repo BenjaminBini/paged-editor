@@ -136,38 +136,96 @@ function generateUnderline(primary, light) {
 marked.use({
   renderer: {
     // ── Headings: numbering + underlines + section colors ──
-    heading({ tokens, depth }) {
+    heading(token) {
+      const { tokens, depth } = token;
+      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : '';
       const text = this.parser.parseInline(tokens);
       const pair = COLOR_PAIRS[_colorIdx % COLOR_PAIRS.length];
       const [primary, light] = pair;
       const vars = `--section-color:${primary};--section-color-light:${light}`;
 
-      if (depth >= 5) return false; // default for h5, h6
+      if (depth >= 5) return `<h${depth}${sl}>${text}</h${depth}>\n`;
 
       const numMatch = text.match(/^(\d+(?:\.\d+)*\.?\s)/);
       let inner = text;
 
       if (depth === 1) {
         if (numMatch) inner = `<span class="beorn-num" style="color:${primary}">${numMatch[1]}</span>${text.slice(numMatch[1].length)}`;
-        return `<h1 style="${vars}">${inner}${generateUnderline(primary, light)}</h1>\n`;
+        return `<h1${sl} style="${vars}">${inner}${generateUnderline(primary, light)}</h1>\n`;
       }
       if (depth === 2) {
         if (numMatch) inner = `<span class="beorn-num" style="background:${primary};color:#fff">${numMatch[1]}</span><span class="beorn-text">${text.slice(numMatch[1].length)}</span>`;
-        return `<h2 style="color:${primary};${vars}">${inner}</h2>\n`;
+        return `<h2${sl} style="color:${primary};${vars}">${inner}</h2>\n`;
       }
       // H3, H4
       if (numMatch) inner = `<span class="beorn-num" style="color:${primary}">${numMatch[1]}</span>${text.slice(numMatch[1].length)}`;
-      return `<h${depth} style="color:${primary};${vars}">${inner}</h${depth}>\n`;
+      return `<h${depth}${sl} style="color:${primary};${vars}">${inner}</h${depth}>\n`;
+    },
+
+    // ── Paragraphs: emit data-source-line ──
+    paragraph(token) {
+      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : '';
+      return `<p${sl}>${this.parser.parseInline(token.tokens)}</p>\n`;
+    },
+
+    // ── Blockquotes: emit data-source-line ──
+    blockquote(token) {
+      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : '';
+      const body = this.parser.parse(token.tokens);
+      return `<blockquote${sl}>\n${body}</blockquote>\n`;
+    },
+
+    // ── Lists: emit data-source-line ──
+    list(token) {
+      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : '';
+      const tag = token.ordered ? 'ol' : 'ul';
+      const startAttr = token.ordered && token.start !== 1 ? ` start="${token.start}"` : '';
+      let body = '';
+      for (const item of token.items) {
+        body += this.listitem(item);
+      }
+      return `<${tag}${startAttr}${sl}>\n${body}</${tag}>\n`;
+    },
+
+    // ── Tables: emit data-source-line ──
+    table(token) {
+      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : '';
+      let header = '';
+      for (const cell of token.header) {
+        const align = cell.align ? ` align="${cell.align}"` : '';
+        header += `<th${align}>${this.parser.parseInline(cell.tokens)}</th>\n`;
+      }
+      header = `<tr>\n${header}</tr>\n`;
+      let body = '';
+      for (const row of token.rows) {
+        let rowContent = '';
+        for (const cell of row) {
+          const align = cell.align ? ` align="${cell.align}"` : '';
+          rowContent += `<td${align}>${this.parser.parseInline(cell.tokens)}</td>\n`;
+        }
+        body += `<tr>\n${rowContent}</tr>\n`;
+      }
+      return `<table${sl}>\n<thead>\n${header}</thead>\n<tbody>\n${body}</tbody>\n</table>\n`;
+    },
+
+    // ── Horizontal rules: emit data-source-line ──
+    hr(token) {
+      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : '';
+      return `<hr${sl} />\n`;
     },
 
     // ── Code blocks: intercept mermaid, default for everything else ──
-    code({ text, lang }) {
+    code(token) {
+      const { text, lang } = token;
+      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : '';
       if (lang === 'mermaid') {
         const idx = _mermaidQueue.length;
         _mermaidQueue.push(text);
-        return `<div class="mermaid-diagram" data-mermaid-idx="${idx}"></div>\n`;
+        return `<div class="mermaid-diagram"${sl} data-mermaid-idx="${idx}"></div>\n`;
       }
-      return false; // fall back to default renderer
+      // Default code block with source line
+      const langClass = lang ? ` class="language-${escapeHtml(lang)}"` : '';
+      return `<pre${sl}><code${langClass}>${escapeHtml(text)}</code></pre>\n`;
     },
   },
 
@@ -197,10 +255,27 @@ marked.use({
 // Sets colorIdx, parses with marked (sync), then resolves mermaid placeholders (async).
 
 // Synchronous parse (no mermaid). Returns HTML string.
-function parseSectionMarkdownSync(md, colorIdx) {
+// When startLine is provided, block elements get data-source-line attributes for scroll sync.
+function parseSectionMarkdownSync(md, colorIdx, startLine) {
   _colorIdx = colorIdx;
   _mermaidQueue = [];
-  return marked.parse(md);
+
+  // Use separate lexer/parser to annotate tokens with source line numbers
+  const tokens = marked.lexer(md);
+
+  if (startLine != null) {
+    let cursor = 0;
+    for (const token of tokens) {
+      const idx = md.indexOf(token.raw, cursor);
+      if (idx >= 0) {
+        const lineInSection = md.substring(0, idx).split('\n').length - 1;
+        token._sourceLine = startLine + lineInSection;
+        cursor = idx + token.raw.length;
+      }
+    }
+  }
+
+  return marked.parser(tokens);
 }
 
 // Async parse (resolves mermaid placeholders if any). Returns HTML string.
@@ -227,27 +302,35 @@ function splitMarkdownSections(md) {
   const { fm, body } = parseFrontmatter(md);
   const lines = body.split('\n');
 
+  // Compute absolute line offset: frontmatter lines + body start
+  const fmMatch = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
+  const fmLineCount = fmMatch ? fmMatch[0].split('\n').length - 1 : 0;
+
   // Split into chunks at H1 boundaries and /newpage markers
-  const chunks = []; // Each: { lines: string[], startsWithH1: boolean }
+  const chunks = []; // Each: { lines: string[], startsWithH1: boolean, bodyLineIdx: number }
   let current = [];
+  let currentStartIdx = 0;
   let preamble = [];
   let foundFirstH1 = false;
 
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const trimmed = line.trim();
     if (/^# /.test(line)) {
       if (foundFirstH1 && current.length > 0) {
-        chunks.push({ lines: [...current], startsWithH1: /^# /.test(current[0]) });
+        chunks.push({ lines: [...current], startsWithH1: /^# /.test(current[0]), bodyLineIdx: currentStartIdx });
         current = [];
       }
       foundFirstH1 = true;
+      if (current.length === 0) currentStartIdx = i;
       current.push(line);
     } else if (foundFirstH1 && (trimmed === '/newpage' || trimmed === '\\newpage')) {
       // /newpage splits into a new rendering chunk (page break is implicit between iframes)
       if (current.length > 0) {
-        chunks.push({ lines: [...current], startsWithH1: /^# /.test(current[0]) });
+        chunks.push({ lines: [...current], startsWithH1: /^# /.test(current[0]), bodyLineIdx: currentStartIdx });
         current = [];
       }
+      currentStartIdx = i + 1;
     } else if (!foundFirstH1) {
       preamble.push(line);
     } else {
@@ -255,7 +338,7 @@ function splitMarkdownSections(md) {
     }
   }
   if (current.length > 0) {
-    chunks.push({ lines: [...current], startsWithH1: /^# /.test(current[0] || '') });
+    chunks.push({ lines: [...current], startsWithH1: /^# /.test(current[0] || ''), bodyLineIdx: currentStartIdx });
   }
 
   // Extract H1 titles for TOC (skip "Page de garde")
@@ -276,7 +359,7 @@ function splitMarkdownSections(md) {
 
   // Section 0: cover
   const coverKey = JSON.stringify(fm) + '|' + tocEntries.join('|');
-  sections.push({ type: 'cover', fm, tocEntries, hash: quickHash(coverKey) });
+  sections.push({ type: 'cover', fm, tocEntries, hash: quickHash(coverKey), startLine: 0 });
 
   // Content sections (one per chunk, skip "Page de garde")
   let colorIdx = -1;
@@ -295,6 +378,8 @@ function splitMarkdownSections(md) {
       preamble: pre,
       colorIdx: Math.max(0, colorIdx),
       startsWithH1: chunk.startsWithH1,
+      startLine: fmLineCount + chunk.bodyLineIdx,
+      preambleStartLine: sections.length === 1 ? fmLineCount : null,
       // Include headerText so frontmatter changes invalidate all sections
       hash: quickHash(raw + '|' + pre + '|' + headerText),
     });
@@ -468,10 +553,10 @@ export async function triggerRender() {
       builds.push({ index: i, bodyHtml: buildCoverContentHtml(section.fm, section.tocEntries) });
     } else {
       // Sync parse (mermaid blocks become placeholders)
-      const bodyHtml = parseSectionMarkdownSync(section.raw, section.colorIdx);
+      const bodyHtml = parseSectionMarkdownSync(section.raw, section.colorIdx, section.startLine);
       const hasMermaid = _mermaidQueue.length > 0;
       let preambleHtml = '';
-      if (section.preamble) preambleHtml = parseSectionMarkdownSync(section.preamble, section.colorIdx);
+      if (section.preamble) preambleHtml = parseSectionMarkdownSync(section.preamble, section.colorIdx, section.preambleStartLine);
       if (hasMermaid) hasMermaidSections = true;
       builds.push({
         index: i,
@@ -682,6 +767,11 @@ export function getSectionFrames() {
 
 export function getSectionStates() {
   return sectionStates;
+}
+
+export function getPreviewScale() {
+  const containerW = previewContainer.clientWidth - 40;
+  return Math.min(1, containerW / A4_WIDTH_PX);
 }
 
 // ── Full document export (for "Open in new tab") ──────────────────────────────

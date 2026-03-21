@@ -8,7 +8,7 @@ import {
   registerOnSectionReady, getSectionStates,
   clearRenderTimeout, scheduleRender,
 } from './render.js';
-import { setupPreviewClick, setupScrollSync } from './sync.js';
+import { setupPreviewClick, setupScrollSync, rebuildAnchorMap } from './sync.js';
 import {
   refreshTableWidgets, insertTable, getTableRangeAt,
   setTableRangesDirty, twSyncing, tableWidgets, destroyTableWidget,
@@ -18,7 +18,7 @@ import {
   activateFolder, setDirHandle, setStorageMode,
   activeFileIdx, idbGet,
 } from './file-manager.js';
-import { openGoogleDrive, tryRestoreGdrive, saveGoogleSettings, closeFolder } from './google-drive.js';
+import { openGoogleDrive, openDriveFile, tryRestoreGdrive, saveGoogleSettings, closeFolder } from './google-drive.js';
 import { closeDiffModal, resolveConflict } from './diff-merge.js';
 import './resize.js'; // self-initializing
 
@@ -40,8 +40,14 @@ registerOnSectionReady((sectionIdx) => {
   setTimeout(scalePreview, 300);
   setTimeout(scalePreview, 1000);
   setupScrollSync();
+  // Rebuild anchor map after scaling settles (needed for scroll sync)
+  setTimeout(rebuildAnchorMap, 350);
+  setTimeout(rebuildAnchorMap, 1050);
   setTimeout(refreshTableWidgets, 50);
 });
+
+// Rebuild anchor map after window resize (scale changes Y positions)
+window.addEventListener("resize", () => setTimeout(rebuildAnchorMap, 400));
 
 // ── Auto-render on pause ────────────────────────────────────────────────────
 
@@ -192,6 +198,63 @@ cm.on("scroll", updateOutlineHighlight);
 // Build initial outline after startup
 setTimeout(buildOutline, 200);
 
+// ── Desktop-style menu bar ──────────────────────────────────────────────────
+
+(function initMenubar() {
+  const menubar = document.querySelector('.menubar');
+  if (!menubar) return;
+
+  // Create click-away backdrop
+  const backdrop = document.createElement('div');
+  backdrop.className = 'menu-backdrop';
+  document.body.appendChild(backdrop);
+
+  let openMenu = null;
+
+  function openItem(item) {
+    if (openMenu === item) return;
+    closeAll();
+    item.classList.add('open');
+    backdrop.classList.add('active');
+    openMenu = item;
+  }
+
+  function closeAll() {
+    if (openMenu) openMenu.classList.remove('open');
+    backdrop.classList.remove('active');
+    openMenu = null;
+  }
+
+  // Click trigger to toggle
+  menubar.querySelectorAll('.menu-trigger').forEach(trigger => {
+    trigger.addEventListener('click', e => {
+      e.stopPropagation();
+      const item = trigger.closest('.menu-item');
+      if (openMenu === item) { closeAll(); } else { openItem(item); }
+    });
+  });
+
+  // Hover to switch when a menu is already open
+  menubar.querySelectorAll('.menu-item').forEach(item => {
+    item.addEventListener('mouseenter', () => {
+      if (openMenu && openMenu !== item) openItem(item);
+    });
+  });
+
+  // Click dropdown item closes menu
+  menubar.querySelectorAll('.menu-dropdown button').forEach(btn => {
+    btn.addEventListener('click', () => closeAll());
+  });
+
+  // Backdrop closes menus
+  backdrop.addEventListener('click', closeAll);
+
+  // Escape closes menus
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && openMenu) closeAll();
+  });
+})();
+
 // ── Drag & drop .md files ───────────────────────────────────────────────────
 
 const cmEl = cm.getWrapperElement();
@@ -219,6 +282,31 @@ window.addEventListener("beforeunload", e => {
 // ── Expose globals for onclick handlers in HTML ─────────────────────────────
 // (toolbar buttons use onclick="functionName()")
 
+// ── Open single file (File System Access API) ──────────────────────────────
+
+async function openLocalFile() {
+  try {
+    const [handle] = await window.showOpenFilePicker({
+      types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md'] } }],
+      multiple: false,
+    });
+    showLoading("Loading " + handle.name + "...");
+    const file = await handle.getFile();
+    const text = await file.text();
+    cm.setValue(text);
+    cm.clearHistory();
+    hideLoading();
+    document.getElementById("paneFileName").textContent = handle.name;
+    document.title = handle.name + " — Paged.js Editor";
+    triggerRender();
+  } catch(e) {
+    hideLoading();
+    if (e.name !== 'AbortError') console.warn("Open file failed:", e);
+  }
+}
+
+window.openLocalFile = openLocalFile;
+window.openDriveFile = openDriveFile;
 window.openFolder = openFolder;
 window.openGoogleDrive = openGoogleDrive;
 window.saveCurrentFile = saveCurrentFile;
