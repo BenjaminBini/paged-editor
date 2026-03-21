@@ -238,6 +238,65 @@ function pickFolder() {
   });
 }
 
+function pickFile() {
+  return new Promise((resolve) => {
+    const s = getGdSettings();
+    const docsView = new google.picker.DocsView()
+      .setIncludeFolders(false)
+      .setMimeTypes("text/markdown,text/plain");
+    const sharedView = new google.picker.DocsView()
+      .setIncludeFolders(false)
+      .setEnableDrives(true)
+      .setMimeTypes("text/markdown,text/plain");
+    const picker = new google.picker.PickerBuilder()
+      .addView(docsView)
+      .addView(sharedView)
+      .enableFeature(google.picker.Feature.SUPPORT_DRIVES)
+      .setDeveloperKey(s.apiKey)
+      .setOAuthToken(gdToken)
+      .setTitle("Select a Markdown file")
+      .setCallback((data) => {
+        if (data.action === google.picker.Action.PICKED) {
+          const doc = data.docs[0];
+          resolve({ id: doc.id, name: doc.name });
+        } else if (data.action === google.picker.Action.CANCEL) {
+          resolve(null);
+        }
+      })
+      .build();
+    picker.setVisible(true);
+  });
+}
+
+export async function openDriveFile() {
+  const s = getGdSettings();
+  if (!s.clientId || !s.apiKey) {
+    document.getElementById('settingsModal').classList.add('open');
+    return;
+  }
+  await initGapi();
+  await getGdToken();
+
+  const picked = await pickFile();
+  if (!picked) return;
+
+  showLoading("Loading " + picked.name + "...");
+  try {
+    const text = await fetchGdFileContent(picked.id);
+    cm.setValue(text);
+    cm.clearHistory();
+    hideLoading();
+    document.getElementById("paneFileName").textContent = picked.name;
+    document.title = picked.name + " — Paged.js Editor";
+    triggerRender();
+    status.textContent = "Loaded " + picked.name;
+  } catch(e) {
+    hideLoading();
+    status.textContent = "Load failed: " + e.message;
+    console.error("Drive file open error:", e);
+  }
+}
+
 async function activateGdFolder(restoreFile) {
   // List .md files in the folder
   const listParams = {

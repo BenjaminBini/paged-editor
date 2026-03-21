@@ -42,6 +42,7 @@ let savedContent = "";      // content at last save/load (for conflict detection
 let dirtyFlag = false;      // true when content differs from last save/load
 let localFileModTime = 0;   // lastModified timestamp of file when loaded/saved
 let storageMode = null;     // "local" | "gdrive" | null
+let standaloneHandle = null; // FileHandle for single-file open (no folder)
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 
@@ -161,6 +162,22 @@ export let openFile = async function(idx) {
 };
 
 export let doSave = async function() {
+  // Standalone file mode (single file opened without folder)
+  if (activeFileIdx < 0 && standaloneHandle) {
+    try {
+      const writable = await standaloneHandle.createWritable();
+      await writable.write(cm.getValue());
+      await writable.close();
+      savedContent = cm.getValue();
+      dirtyFlag = false;
+      const file = await standaloneHandle.getFile();
+      localFileModTime = file.lastModified;
+      status.textContent = "Saved " + standaloneHandle.name;
+    } catch (e) {
+      status.textContent = "Save failed: " + e.message;
+    }
+    return;
+  }
   if (activeFileIdx < 0) return;
   const fh = fileHandles[activeFileIdx];
   try {
@@ -225,6 +242,46 @@ export async function saveCurrentFile() {
   await doSave();
 }
 
+// ── Save As (File System Access API) ─────────────────────────────────────────
+
+export async function doSaveAs() {
+  try {
+    const handle = await window.showSaveFilePicker({
+      types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md'] } }],
+      suggestedName: activeFileName || 'document.md',
+    });
+    const writable = await handle.createWritable();
+    await writable.write(cm.getValue());
+    await writable.close();
+
+    // Track as standalone file
+    standaloneHandle = handle;
+    savedContent = cm.getValue();
+    dirtyFlag = false;
+    const file = await handle.getFile();
+    localFileModTime = file.lastModified;
+
+    const name = handle.name;
+    paneFileName.textContent = name;
+    document.title = name + " — Paged.js Editor";
+    status.textContent = "Saved as " + name;
+    renderFileList();
+  } catch (e) {
+    if (e.name !== 'AbortError') status.textContent = "Save As failed: " + e.message;
+  }
+}
+
+// ── Standalone file support ──────────────────────────────────────────────────
+
+export function setStandaloneHandle(handle, content) {
+  standaloneHandle = handle;
+  savedContent = content;
+  dirtyFlag = false;
+  localFileModTime = 0;
+  // Not in folder mode, but enable save
+  activeFileIdx = -1;
+}
+
 // ── Setters for google-drive.js (mutates module-level variables) ─────────────
 
 export function setOpenFile(fn)        { openFile = fn; }
@@ -257,8 +314,18 @@ cm.on("change", () => {
 // ── Ctrl+S / Cmd+S to save ────────────────────────────────────────────────────
 
 document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "S") {
+    e.preventDefault();
+    doSaveAs();
+    return;
+  }
   if ((e.ctrlKey || e.metaKey) && e.key === "s") {
     e.preventDefault();
-    if (activeFileIdx >= 0) doSave();
+    if (activeFileIdx >= 0 || standaloneHandle) doSave();
+    else doSaveAs(); // No file open yet — prompt Save As
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === "o") {
+    e.preventDefault();
+    if (typeof window.openLocalFile === "function") window.openLocalFile();
   }
 });

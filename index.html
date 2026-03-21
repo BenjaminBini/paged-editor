@@ -29,18 +29,49 @@
   <div class="toolbar">
     <span class="logo">BEORN</span>
     <span class="sep"></span>
-    <span>Paged.js Editor</span>
-    <span class="sep"></span>
-    <button onclick="openFolder()">Local Folder</button>
-    <button onclick="openGoogleDrive()">Google Drive</button>
-    <button onclick="saveCurrentFile()" id="btnSave" style="display:none">Save (Ctrl+S)</button>
-    <span class="sep"></span>
-    <button onclick="insertTable()" title="Insert a Markdown table at cursor">Insert Table</button>
-    <span class="sep"></span>
-    <button onclick="triggerRender()">Render (Ctrl+Enter)</button>
-    <button class="primary" onclick="openPreviewTab()">Open in new tab</button>
+
+    <nav class="menubar">
+      <div class="menu-item" data-menu="file">
+        <button class="menu-trigger">File</button>
+        <div class="menu-dropdown">
+          <button onclick="openLocalFile()"><span class="menu-label">Open Local File...</span><span class="menu-shortcut">Ctrl+O</span></button>
+          <button onclick="openDriveFile()"><span class="menu-label">Open Drive File...</span></button>
+          <button onclick="openUrl()"><span class="menu-label">Open URL...</span></button>
+          <div class="menu-divider"></div>
+          <button onclick="openFolder()"><span class="menu-label">Open Local Folder</span></button>
+          <button onclick="openGoogleDrive()"><span class="menu-label">Open Drive Folder</span></button>
+          <div class="menu-divider"></div>
+          <button onclick="saveCurrentFile()" id="btnSave"><span class="menu-label">Save</span><span class="menu-shortcut">Ctrl+S</span></button>
+          <button onclick="saveAs()"><span class="menu-label">Save As...</span><span class="menu-shortcut">Ctrl+Shift+S</span></button>
+          <div class="menu-divider"></div>
+          <button onclick="closeFolder()"><span class="menu-label">Close Folder</span></button>
+        </div>
+      </div>
+
+      <div class="menu-item" data-menu="edit">
+        <button class="menu-trigger">Edit</button>
+        <div class="menu-dropdown">
+          <button onclick="insertTable()"><span class="menu-label">Insert Table</span></button>
+          <div class="menu-divider"></div>
+          <button onclick="document.querySelector('.CodeMirror').CodeMirror.undo()"><span class="menu-label">Undo</span><span class="menu-shortcut">Ctrl+Z</span></button>
+          <button onclick="document.querySelector('.CodeMirror').CodeMirror.redo()"><span class="menu-label">Redo</span><span class="menu-shortcut">Ctrl+Shift+Z</span></button>
+        </div>
+      </div>
+
+      <div class="menu-item" data-menu="view">
+        <button class="menu-trigger">View</button>
+        <div class="menu-dropdown">
+          <button onclick="triggerRender()"><span class="menu-label">Render Preview</span><span class="menu-shortcut">Ctrl+Enter</span></button>
+          <button onclick="openPreviewTab()"><span class="menu-label">Open in New Tab</span></button>
+          <div class="menu-divider"></div>
+          <button onclick="toggleWrap()"><span class="menu-label">Toggle Line Wrap</span></button>
+          <button onclick="document.getElementById('settingsModal').classList.add('open')"><span class="menu-label">Settings</span></button>
+        </div>
+      </div>
+    </nav>
+
+    <span id="paneFileName" class="pane-filename"></span>
     <span class="status" id="status">Ready</span>
-    <button onclick="document.getElementById('settingsModal').classList.add('open')" style="margin-left:4px;font-size:11px;padding:4px 8px;">Settings</button>
   </div>
 
   <div class="modal-overlay" id="settingsModal">
@@ -90,7 +121,6 @@
     </div>
     <div class="editor-pane" id="editorPane">
       <div class="pane-header">
-        <span id="paneFileName">Markdown</span>
         <div id="btnWrap" class="wrap-toggle active" onclick="toggleWrap()" title="Toggle word wrap">
           <span>Wrap</span>
           <div class="wrap-track"><div class="wrap-thumb"></div></div>

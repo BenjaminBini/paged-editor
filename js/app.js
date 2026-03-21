@@ -14,9 +14,9 @@ import {
   setTableRangesDirty, twSyncing, tableWidgets, destroyTableWidget,
 } from './table-widget.js';
 import {
-  openFolder, saveCurrentFile, isDirty,
+  openFolder, saveCurrentFile, doSaveAs, isDirty,
   activateFolder, setDirHandle, setStorageMode,
-  activeFileIdx, idbGet,
+  activeFileIdx, idbGet, setStandaloneHandle,
 } from './file-manager.js';
 import { openGoogleDrive, openDriveFile, tryRestoreGdrive, saveGoogleSettings, closeFolder } from './google-drive.js';
 import { closeDiffModal, resolveConflict } from './diff-merge.js';
@@ -162,15 +162,33 @@ function updateOutlineHighlight() {
     if (outlineHeadings[i].line <= cursorLine) { activeIdx = i; break; }
   }
 
+  // Find the center line of the viewport
+  const centerLine = cm.lineAtHeight(info.top + info.clientHeight / 2, "local");
+
+  // Compute proximity to center for each visible heading (0 = edge, 1 = center)
+  const proximity = new Array(outlineHeadings.length).fill(0);
+  if (firstVisible >= 0 && lastVisible >= firstVisible) {
+    for (let i = firstVisible; i <= lastVisible; i++) {
+      const headLine = outlineHeadings[i].line;
+      const nextLine = (i + 1 < outlineHeadings.length) ? outlineHeadings[i + 1].line : cm.lineCount();
+      const sectionMid = (headLine + nextLine) / 2;
+      const halfSpan = Math.max(1, (bottomLine - topLine) / 2);
+      const dist = Math.abs(sectionMid - centerLine) / halfSpan;
+      proximity[i] = Math.max(0, 1 - dist);
+    }
+  }
+
   // Skip DOM update if nothing changed
-  const visKey = firstVisible + ':' + lastVisible + ':' + activeIdx;
+  const visKey = firstVisible + ':' + lastVisible + ':' + activeIdx + ':' + centerLine;
   if (visKey === lastVisibleRange) return;
   lastVisibleRange = visKey;
 
   const items = outlineList.querySelectorAll('.outline-item');
   items.forEach((el, i) => {
     el.classList.toggle('active', i === activeIdx);
-    el.classList.toggle('visible', i >= firstVisible && i <= lastVisible && i !== activeIdx);
+    const isVisible = i >= firstVisible && i <= lastVisible && i !== activeIdx;
+    el.classList.toggle('visible', isVisible);
+    el.style.setProperty('--prox', isVisible ? proximity[i].toFixed(2) : '0');
   });
 
   // Center visible range in the outline panel
@@ -284,6 +302,8 @@ window.addEventListener("beforeunload", e => {
 
 // ── Open single file (File System Access API) ──────────────────────────────
 
+let isUrlDocument = false; // true when file loaded from URL (read-only, no Save)
+
 async function openLocalFile() {
   try {
     const [handle] = await window.showOpenFilePicker({
@@ -293,6 +313,8 @@ async function openLocalFile() {
     showLoading("Loading " + handle.name + "...");
     const file = await handle.getFile();
     const text = await file.text();
+    setStandaloneHandle(handle, text);
+    isUrlDocument = false;
     cm.setValue(text);
     cm.clearHistory();
     hideLoading();
@@ -305,11 +327,25 @@ async function openLocalFile() {
   }
 }
 
+function openUrl() {
+  const current = urlParams.get("file") || "";
+  const path = prompt("URL or path to open:", current);
+  if (!path) return;
+  const url = new URL(location.href);
+  url.searchParams.set("file", path);
+  location.href = url.toString();
+}
+
 window.openLocalFile = openLocalFile;
+window.openUrl = openUrl;
 window.openDriveFile = openDriveFile;
 window.openFolder = openFolder;
 window.openGoogleDrive = openGoogleDrive;
-window.saveCurrentFile = saveCurrentFile;
+window.saveCurrentFile = () => {
+  if (isUrlDocument) return doSaveAs();
+  return saveCurrentFile();
+};
+window.saveAs = doSaveAs;
 window.insertTable = insertTable;
 window.triggerRender = triggerRender;
 window.openPreviewTab = openPreviewTab;
@@ -350,15 +386,60 @@ async function tryRestore() {
 
 // ── Startup ─────────────────────────────────────────────────────────────────
 
+// ── Load file from URL parameter (?file=path/to/file.md) ────────────────────
+
+const urlParams = new URLSearchParams(location.search);
+const viewOnly = urlParams.get("editor") === "false";
+
+async function tryLoadFromUrl() {
+  const fileUrl = urlParams.get("file");
+  if (!fileUrl) return false;
+  try {
+    showLoading("Loading " + fileUrl + "...");
+    const r = await fetch(fileUrl);
+    if (!r.ok) throw new Error(r.status + " " + r.statusText);
+    const text = await r.text();
+    isUrlDocument = true;
+    cm.setValue(text);
+    cm.clearHistory();
+    const name = fileUrl.split("/").pop() || "document.md";
+    document.getElementById("paneFileName").textContent = name;
+    document.title = name + " — Paged.js Editor";
+    triggerRender();
+    return true;
+  } catch (e) {
+    console.warn("Failed to load ?file=", fileUrl, e);
+    status.textContent = "Failed to load " + fileUrl;
+    return false;
+  }
+}
+
+// ── View-only mode (?editor=false) ──────────────────────────────────────────
+
+function activateViewOnly() {
+  document.querySelector(".toolbar")?.remove();
+  document.getElementById("fileSidebar")?.remove();
+  document.getElementById("editorPane")?.remove();
+  document.getElementById("resizeHandle")?.remove();
+  // Adjust layout: preview takes full space, no toolbar offset
+  const container = document.querySelector(".container");
+  if (container) container.style.height = "100%";
+}
+
 pagedReady.then(async () => {
-  await tryRestore();
+  if (viewOnly) activateViewOnly();
+  // URL parameter takes priority
+  const loaded = await tryLoadFromUrl();
+  if (!loaded) {
+    await tryRestore();
+    // If no file was restored, show default content
+    if (activeFileIdx < 0) {
+      cm.setValue(DEFAULT_CONTENT);
+      setTimeout(triggerRender, 100);
+    }
+  }
   hideLoading();
   restoreDone = true;
-  // If no file was restored, show default content
-  if (activeFileIdx < 0) {
-    cm.setValue(DEFAULT_CONTENT);
-    setTimeout(triggerRender, 100);
-  }
 }).catch(e => {
   hideLoading();
   if (status) status.textContent = "Startup error: " + e.message;

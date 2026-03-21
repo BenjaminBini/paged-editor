@@ -180,7 +180,10 @@ function createTableWidget(startLine, endLine) {
     tbody.appendChild(tr);
   });
   table.appendChild(tbody);
-  wrapper.appendChild(table);
+  const tableScroll = document.createElement("div");
+  tableScroll.className = "tw-table-scroll";
+  tableScroll.appendChild(table);
+  wrapper.appendChild(tableScroll);
 
   // Toolbar
   const toolbar = document.createElement("div");

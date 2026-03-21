@@ -1,8 +1,11 @@
 .table-widget {
   background: #181825; border: 1px solid #3373b3; border-radius: 8px;
-  margin: 4px 0 4px 30px; padding: 0;
+  margin: 4px 22px; padding: 0;
   box-shadow: 0 2px 12px rgba(0,0,0,0.3);
-  overflow-x: auto; overflow-y: hidden;
+  overflow: hidden;
+}
+.table-widget .tw-table-scroll {
+  overflow-x: auto;
 }
 .table-widget table {
   border-collapse: collapse; table-layout: auto;

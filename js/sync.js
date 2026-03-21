@@ -112,8 +112,6 @@ let pvSyncTimer = null;
 
 let highlightEl = null;
 let flashTimer = null;
-let gutterHighlightLine = null;
-
 function clearPreviewHighlight() {
   if (flashTimer) { clearTimeout(flashTimer); flashTimer = null; }
   if (highlightEl) {
@@ -138,16 +136,6 @@ function setPreviewHighlight(el, flash) {
   }
 }
 
-function setGutterHighlight(line) {
-  if (gutterHighlightLine !== null && gutterHighlightLine !== line) {
-    cm.removeLineClass(gutterHighlightLine, "gutter", "cm-cursor-gutter");
-  }
-  if (line != null && gutterHighlightLine !== line) {
-    cm.addLineClass(line, "gutter", "cm-cursor-gutter");
-  }
-  gutterHighlightLine = line;
-}
-
 // ── Editor → Preview sync ───────────────────────────────────────────────────
 
 function syncEditorToPreview() {
@@ -167,7 +155,7 @@ function syncEditorToPreview() {
     // Highlight closest anchor
     const idx = findClosestByLine(centerLine);
     if (idx >= 0) {
-      setGutterHighlight(centerLine);
+
       setPreviewHighlight(anchorMap[idx].el, false);
     }
   } catch (e) { console.warn("sync editor→preview failed", e); }
@@ -184,7 +172,7 @@ function syncPreviewToEditor() {
 
     const anchor = anchorMap[idx];
     setPreviewHighlight(anchor.el, false);
-    setGutterHighlight(anchor.line);
+
 
     toEditorSync = true;
     cm.scrollIntoView({ line: anchor.line, ch: 0 }, cm.getScrollInfo().clientHeight / 2);
@@ -197,7 +185,7 @@ function syncPreviewToEditor() {
 export function highlightAtCursor() {
   try {
     const cursorLine = cm.getCursor().line;
-    setGutterHighlight(cursorLine);
+
 
     const idx = findClosestByLine(cursorLine);
     if (idx >= 0 && Math.abs(anchorMap[idx].line - cursorLine) <= 3) {
@@ -230,7 +218,7 @@ export function setupPreviewClick(frame) {
       if (isNaN(line)) return;
 
       setPreviewHighlight(el, true);
-      setGutterHighlight(line);
+
       cm.setCursor({ line, ch: 0 });
       cm.focus();
 
