@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Paged Editor — Architecture &amp; Lifecycle</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: "Inter", system-ui, -apple-system, sans-serif; background: #0f1117; color: #c9d1d9; line-height: 1.6; }
+    .page { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 28px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+    h1 span { font-weight: 400; color: #8b949e; font-size: 18px; }
+    .subtitle { color: #8b949e; font-size: 14px; margin-bottom: 32px; }
+    h2 { font-size: 18px; font-weight: 700; color: #e6edf3; margin: 40px 0 16px; padding-bottom: 8px; border-bottom: 1px solid #21262d; }
+    h3 { font-size: 14px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.05em; margin: 24px 0 12px; }
+    svg { width: 100%; height: auto; }
+    svg text { font-family: "Inter", system-ui, sans-serif; }
+    .legend { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0 24px; font-size: 12px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; }
+    .legend-dot { width: 12px; height: 12px; border-radius: 3px; }
+    .columns { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 16px 0; }
+    .card { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 16px; }
+    .card h4 { font-size: 13px; font-weight: 600; color: #e6edf3; margin-bottom: 8px; }
+    .card ul { list-style: none; font-size: 12px; }
+    .card li { padding: 3px 0; color: #8b949e; }
+    .card li code { background: #1c2128; padding: 1px 5px; border-radius: 3px; font-size: 11px; color: #79c0ff; font-family: "SF Mono", monospace; }
+    .card li strong { color: #c9d1d9; font-weight: 600; }
+    .fn { font-family: "SF Mono", monospace; font-size: 11px; }
+    .phase-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 700; }
+    @media (max-width: 900px) { .columns { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="page">
+
+<h1>Paged Editor <span>Architecture &amp; Lifecycle</span></h1>
+<p class="subtitle">Section-based partial rendering with Paged.js &mdash; function-level granularity</p>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<h2>1. Module Map</h2>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#58a6ff"></div> Editor core</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f0883e"></div> Rendering pipeline</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#a371f7"></div> Sync &amp; highlight</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div> File I/O</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f778ba"></div> Widgets &amp; UI</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d29922"></div> Iframe scripts</div>
+</div>
+
+<svg viewBox="0 0 1100 420" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#484f58"/></marker>
+    <marker id="arr-o" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#f0883e"/></marker>
+    <marker id="arr-p" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#a371f7"/></marker>
+    <marker id="arr-g" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#3fb950"/></marker>
+  </defs>
+
+  <!-- app.js orchestrator -->
+  <rect x="420" y="10" width="260" height="56" rx="8" fill="#161b22" stroke="#484f58"/>
+  <text x="550" y="32" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">app.js</text>
+  <text x="550" y="50" text-anchor="middle" fill="#8b949e" font-size="10">Orchestrator &mdash; hooks, globals, outline, startup</text>
+
+  <!-- editor.js -->
+  <rect x="30" y="100" width="200" height="80" rx="8" fill="#0d1117" stroke="#58a6ff"/>
+  <text x="130" y="122" text-anchor="middle" fill="#58a6ff" font-size="12" font-weight="700">editor.js</text>
+  <text x="130" y="140" text-anchor="middle" fill="#8b949e" font-size="10" class="fn">cm (CodeMirror)</text>
+  <text x="130" y="154" text-anchor="middle" fill="#8b949e" font-size="10" class="fn">editor, status, previewContainer</text>
+  <text x="130" y="168" text-anchor="middle" fill="#8b949e" font-size="10" class="fn">showLoading / hideLoading</text>
+
+  <!-- render.js -->
+  <rect x="280" y="100" width="260" height="140" rx="8" fill="#0d1117" stroke="#f0883e"/>
+  <text x="410" y="122" text-anchor="middle" fill="#f0883e" font-size="12" font-weight="700">render.js</text>
+  <text x="410" y="138" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">marked plugins (heading, code, postprocess)</text>
+  <text x="410" y="152" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">parseSectionMarkdown[Sync]()</text>
+  <text x="410" y="166" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">splitMarkdownSections()</text>
+  <text x="410" y="180" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">triggerRender() / scheduleRender()</text>
+  <text x="410" y="194" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">scalePreview() / updatePageNumbers()</text>
+  <text x="410" y="208" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">ensureMermaid() (lazy CDN load)</text>
+  <text x="410" y="224" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">buildPagedHtml() / openPreviewTab()</text>
+
+  <!-- sync.js -->
+  <rect x="590" y="100" width="230" height="140" rx="8" fill="#0d1117" stroke="#a371f7"/>
+  <text x="705" y="122" text-anchor="middle" fill="#a371f7" font-size="12" font-weight="700">sync.js</text>
+  <text x="705" y="138" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">normalizeText() (strip md + list markers)</text>
+  <text x="705" y="152" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">buildSectionBoundaries()</text>
+  <text x="705" y="166" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">getEditorSubsection() (h1-h4 scoped)</text>
+  <text x="705" y="180" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">findPreviewEl(text, sec, sub)</text>
+  <text x="705" y="194" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">highlightAtCursor() (no scroll)</text>
+  <text x="705" y="208" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">setupPreviewClick() / setupScrollSync()</text>
+  <text x="705" y="224" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">setGutterHighlight / setPreviewHighlight</text>
+
+  <!-- file-manager.js -->
+  <rect x="30" y="260" width="200" height="100" rx="8" fill="#0d1117" stroke="#3fb950"/>
+  <text x="130" y="282" text-anchor="middle" fill="#3fb950" font-size="12" font-weight="700">file-manager.js</text>
+  <text x="130" y="300" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">openFolder() / activateFolder()</text>
+  <text x="130" y="314" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">openFile() / doSave()</text>
+  <text x="130" y="328" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">idbGet() / idbSet()</text>
+  <text x="130" y="344" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">renderFileList() / isDirty()</text>
+
+  <!-- google-drive.js -->
+  <rect x="280" y="290" width="200" height="100" rx="8" fill="#0d1117" stroke="#3fb950"/>
+  <text x="380" y="312" text-anchor="middle" fill="#3fb950" font-size="12" font-weight="700">google-drive.js</text>
+  <text x="380" y="330" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">openGoogleDrive()</text>
+  <text x="380" y="344" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">tryRestoreGdrive()</text>
+  <text x="380" y="358" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">activateGdFolder()</text>
+  <text x="380" y="372" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">fetchGdFileContent()</text>
+
+  <!-- diff-merge.js -->
+  <rect x="530" y="290" width="180" height="80" rx="8" fill="#0d1117" stroke="#3fb950"/>
+  <text x="620" y="312" text-anchor="middle" fill="#3fb950" font-size="12" font-weight="700">diff-merge.js</text>
+  <text x="620" y="330" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">computeDiff() / threeWayMerge()</text>
+  <text x="620" y="344" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">showDiffModal()</text>
+  <text x="620" y="358" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">resolveConflict()</text>
+
+  <!-- table-widget.js -->
+  <rect x="760" y="290" width="200" height="80" rx="8" fill="#0d1117" stroke="#f778ba"/>
+  <text x="860" y="312" text-anchor="middle" fill="#f778ba" font-size="12" font-weight="700">table-widget.js</text>
+  <text x="860" y="330" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">refreshTableWidgets()</text>
+  <text x="860" y="344" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">createTableWidget()</text>
+  <text x="860" y="358" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">syncWidgetToCM() / insertTable()</text>
+
+  <!-- section-init.js -->
+  <rect x="870" y="100" width="190" height="70" rx="8" fill="#0d1117" stroke="#d29922"/>
+  <text x="965" y="122" text-anchor="middle" fill="#d29922" font-size="12" font-weight="700">section-init.js</text>
+  <text x="965" y="140" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">heading orphan prevention</text>
+  <text x="965" y="156" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">Paged.Previewer().preview()</text>
+
+  <rect x="870" y="190" width="190" height="36" rx="8" fill="#0d1117" stroke="#484f58"/>
+  <text x="965" y="212" text-anchor="middle" fill="#8b949e" font-size="12" font-weight="600">resize.js</text>
+
+  <!-- Arrows -->
+  <line x1="460" y1="66" x2="180" y2="100" stroke="#484f58" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="540" y1="66" x2="410" y2="100" stroke="#484f58" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="620" y1="66" x2="680" y2="100" stroke="#484f58" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="540" y1="170" x2="870" y2="135" stroke="#f0883e" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arr-o)"/>
+  <text x="710" y="138" fill="#f0883e" font-size="9" class="fn">iframe src=blob</text>
+  <line x1="870" y1="150" x2="540" y2="185" stroke="#d29922" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arr)"/>
+  <text x="710" y="176" fill="#d29922" font-size="9" class="fn">postMessage section-ready</text>
+  <line x1="590" y1="165" x2="540" y2="165" stroke="#a371f7" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-p)"/>
+  <text x="565" y="160" fill="#a371f7" font-size="8" class="fn">getSectionFrames</text>
+  <line x1="230" y1="310" x2="280" y2="230" stroke="#3fb950" stroke-width="1" marker-end="url(#arr-g)"/>
+  <line x1="280" y1="330" x2="230" y2="320" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-g)"/>
+  <line x1="230" y1="350" x2="530" y2="330" stroke="#3fb950" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arr-g)"/>
+</svg>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<h2>2. Full Application Lifecycle</h2>
+<p style="color:#8b949e;font-size:13px;margin-bottom:16px;">Every event chain from page load through editing, saving, and file switching.</p>
+
+<svg viewBox="0 0 1100 1320" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="la" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#484f58"/></marker>
+    <marker id="lb" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#58a6ff"/></marker>
+    <marker id="lc" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#f0883e"/></marker>
+    <marker id="ld" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#d29922"/></marker>
+    <marker id="le" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#3fb950"/></marker>
+    <marker id="lf" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#a371f7"/></marker>
+    <marker id="lg" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#f778ba"/></marker>
+  </defs>
+
+  <!-- ═══ PHASE A: STARTUP ═══ -->
+  <rect x="0" y="0" width="1100" height="28" rx="4" fill="#161b22"/>
+  <text x="20" y="18" fill="#58a6ff" font-size="11" class="phase-label" font-weight="700">A. STARTUP (page load)</text>
+
+  <rect x="40" y="42" width="240" height="36" rx="6" fill="#1c2128" stroke="#484f58"/>
+  <text x="160" y="58" text-anchor="middle" fill="#8b949e" font-size="10">index.html loads CDN scripts</text>
+  <text x="160" y="70" text-anchor="middle" fill="#8b949e" font-size="9">CodeMirror, marked, Google APIs (no mermaid)</text>
+
+  <path d="M280,60 L320,60" stroke="#484f58" stroke-width="1.5" marker-end="url(#la)"/>
+
+  <rect x="320" y="42" width="220" height="36" rx="6" fill="#1c2128" stroke="#58a6ff"/>
+  <text x="430" y="58" text-anchor="middle" fill="#58a6ff" font-size="10" font-weight="600">app.js module loaded</text>
+  <text x="430" y="70" text-anchor="middle" fill="#8b949e" font-size="9">imports modules, registers hooks, marked.use()</text>
+
+  <path d="M540,60 L580,60" stroke="#484f58" stroke-width="1.5" marker-end="url(#la)"/>
+
+  <rect x="580" y="36" width="300" height="48" rx="6" fill="#1c2128" stroke="#f0883e" stroke-width="2"/>
+  <text x="730" y="54" text-anchor="middle" fill="#f0883e" font-size="11" font-weight="700" class="fn">pagedReady = Promise.all([...])</text>
+  <text x="730" y="70" text-anchor="middle" fill="#8b949e" font-size="9">fetch: paged.polyfill.js, section-init.js, pdf.css, paged.css, logos</text>
+
+  <path d="M730,84 L730,102" stroke="#f0883e" stroke-width="1.5" marker-end="url(#lc)"/>
+
+  <rect x="580" y="104" width="300" height="36" rx="6" fill="#1c2128" stroke="#58a6ff"/>
+  <text x="730" y="118" text-anchor="middle" fill="#58a6ff" font-size="10" font-weight="600" class="fn">pagedReady.then(() =&gt; tryRestore())</text>
+  <text x="730" y="132" text-anchor="middle" fill="#8b949e" font-size="9">try IndexedDB dirHandle, then GDrive token</text>
+
+  <path d="M630,140 L550,170" stroke="#3fb950" stroke-width="1.5" marker-end="url(#le)"/>
+  <path d="M830,140 L920,170" stroke="#484f58" stroke-width="1.5" marker-end="url(#la)"/>
+
+  <rect x="400" y="170" width="300" height="52" rx="6" fill="#1c2128" stroke="#3fb950"/>
+  <text x="550" y="186" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">Restore found (local or GDrive)</text>
+  <text x="550" y="200" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">setDirHandle() &rarr; setStorageMode()</text>
+  <text x="550" y="214" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">activateFolder(restoreFile) &rarr; openFile()</text>
+
+  <rect x="840" y="170" width="220" height="52" rx="6" fill="#1c2128" stroke="#484f58"/>
+  <text x="950" y="186" text-anchor="middle" fill="#8b949e" font-size="10" font-weight="600">No restore found</text>
+  <text x="950" y="200" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">fetch("assets/default.md")</text>
+  <text x="950" y="214" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">cm.setValue(DEFAULT_CONTENT)</text>
+
+  <path d="M550,222 L730,270" stroke="#484f58" stroke-width="1" stroke-dasharray="4,3"/>
+  <path d="M950,222 L730,270" stroke="#484f58" stroke-width="1" stroke-dasharray="4,3"/>
+
+  <rect x="610" y="268" width="240" height="50" rx="6" fill="#1c2128" stroke="#58a6ff"/>
+  <text x="730" y="284" text-anchor="middle" fill="#58a6ff" font-size="10" font-weight="600">Startup complete</text>
+  <text x="730" y="298" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">hideLoading() &rarr; restoreDone = true</text>
+  <text x="730" y="312" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">buildOutline() &rarr; triggerRender()</text>
+
+  <!-- ═══ PHASE B: EDITING ═══ -->
+  <rect x="0" y="340" width="1100" height="28" rx="4" fill="#161b22"/>
+  <text x="20" y="358" fill="#f0883e" font-size="11" class="phase-label" font-weight="700">B. EDITING LOOP (user types in editor)</text>
+
+  <rect x="40" y="380" width="200" height="36" rx="6" fill="#1c2128" stroke="#58a6ff"/>
+  <text x="140" y="396" text-anchor="middle" fill="#58a6ff" font-size="11" font-weight="600">User types</text>
+  <text x="140" y="408" text-anchor="middle" fill="#8b949e" font-size="9">cm.on("change") fires</text>
+
+  <path d="M240,398 L300,378" stroke="#484f58" stroke-width="1.2" marker-end="url(#la)"/>
+  <path d="M240,398 L300,398" stroke="#f0883e" stroke-width="1.5" marker-end="url(#lc)"/>
+  <path d="M240,398 L300,418" stroke="#f778ba" stroke-width="1.2" marker-end="url(#lg)"/>
+  <path d="M240,398 L300,438" stroke="#a371f7" stroke-width="1.2" marker-end="url(#lf)"/>
+
+  <rect x="300" y="364" width="200" height="24" rx="4" fill="#21262d" stroke="#484f58"/>
+  <text x="400" y="380" text-anchor="middle" fill="#8b949e" font-size="10" class="fn">dirtyFlag = true</text>
+
+  <rect x="300" y="392" width="250" height="24" rx="4" fill="#21262d" stroke="#f0883e"/>
+  <text x="425" y="408" text-anchor="middle" fill="#f0883e" font-size="10" class="fn">scheduleRender(800) &mdash; debounced</text>
+
+  <rect x="300" y="420" width="280" height="24" rx="4" fill="#21262d" stroke="#f778ba"/>
+  <text x="440" y="436" text-anchor="middle" fill="#f778ba" font-size="10" class="fn">setTableRangesDirty() &rarr; refreshTableWidgets(200ms)</text>
+
+  <rect x="300" y="448" width="220" height="24" rx="4" fill="#21262d" stroke="#a371f7"/>
+  <text x="410" y="464" text-anchor="middle" fill="#a371f7" font-size="10" class="fn">buildOutline(300ms debounce)</text>
+
+  <path d="M550,404 L620,404" stroke="#f0883e" stroke-width="2" marker-end="url(#lc)"/>
+  <text x="585" y="400" fill="#f0883e" font-size="8">800ms</text>
+
+  <rect x="620" y="380" width="200" height="52" rx="6" fill="#1c2128" stroke="#f0883e" stroke-width="2"/>
+  <text x="720" y="398" text-anchor="middle" fill="#f0883e" font-size="11" font-weight="700" class="fn">triggerRender()</text>
+  <text x="720" y="412" text-anchor="middle" fill="#8b949e" font-size="9">renderStartTime = now()</text>
+  <text x="720" y="424" text-anchor="middle" fill="#8b949e" font-size="9">see section 3 for full pipeline</text>
+
+  <!-- cursor activity -->
+  <rect x="40" y="488" width="200" height="36" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="140" y="504" text-anchor="middle" fill="#a371f7" font-size="11" font-weight="600">Cursor moves (click)</text>
+  <text x="140" y="516" text-anchor="middle" fill="#8b949e" font-size="9">cm.on("cursorActivity") fires</text>
+
+  <path d="M240,506 L300,494" stroke="#a371f7" stroke-width="1.2" marker-end="url(#lf)"/>
+  <path d="M240,506 L300,518" stroke="#a371f7" stroke-width="1.2" marker-end="url(#lf)"/>
+
+  <rect x="300" y="484" width="310" height="24" rx="4" fill="#21262d" stroke="#a371f7"/>
+  <text x="455" y="500" text-anchor="middle" fill="#a371f7" font-size="10" class="fn">highlightAtCursor(80ms) &rarr; highlight only (no scroll)</text>
+
+  <rect x="300" y="512" width="260" height="24" rx="4" fill="#21262d" stroke="#a371f7"/>
+  <text x="430" y="528" text-anchor="middle" fill="#a371f7" font-size="10" class="fn">updateOutlineHighlight() &rarr; center outline</text>
+
+  <!-- scroll sync -->
+  <rect x="40" y="552" width="200" height="36" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="140" y="568" text-anchor="middle" fill="#a371f7" font-size="11" font-weight="600">Editor scrolls</text>
+  <text x="140" y="580" text-anchor="middle" fill="#8b949e" font-size="9">cm.on("scroll") fires</text>
+
+  <path d="M240,570 L300,558" stroke="#a371f7" stroke-width="1.2" marker-end="url(#lf)"/>
+  <path d="M240,570 L300,578" stroke="#a371f7" stroke-width="1.2" marker-end="url(#lf)"/>
+
+  <rect x="300" y="548" width="380" height="24" rx="4" fill="#21262d" stroke="#a371f7"/>
+  <text x="490" y="564" text-anchor="middle" fill="#a371f7" font-size="10" class="fn">findPreviewEl(text, secIdx, sub) &rarr; highlight + centerPreviewOnEl()</text>
+
+  <rect x="300" y="578" width="260" height="24" rx="4" fill="#21262d" stroke="#a371f7"/>
+  <text x="430" y="594" text-anchor="middle" fill="#a371f7" font-size="10" class="fn">updateOutlineHighlight() &rarr; center outline</text>
+
+  <!-- ═══ PHASE C: FILE OPERATIONS ═══ -->
+  <rect x="0" y="620" width="1100" height="28" rx="4" fill="#161b22"/>
+  <text x="20" y="638" fill="#3fb950" font-size="11" class="phase-label" font-weight="700">C. FILE OPERATIONS</text>
+
+  <rect x="40" y="662" width="180" height="36" rx="6" fill="#1c2128" stroke="#3fb950"/>
+  <text x="130" y="678" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="600">Ctrl+S / Save btn</text>
+  <text x="130" y="690" text-anchor="middle" fill="#8b949e" font-size="9">saveCurrentFile() &rarr; doSave()</text>
+
+  <path d="M220,680 L270,680" stroke="#3fb950" stroke-width="1.5" marker-end="url(#le)"/>
+
+  <rect x="270" y="662" width="200" height="36" rx="6" fill="#1c2128" stroke="#3fb950"/>
+  <text x="370" y="678" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">check lastModified / modifiedTime</text>
+  <text x="370" y="690" text-anchor="middle" fill="#8b949e" font-size="9">conflict detection</text>
+
+  <path d="M470,674 L530,660" stroke="#f0883e" stroke-width="1.2" marker-end="url(#lc)"/>
+  <path d="M470,686 L530,700" stroke="#3fb950" stroke-width="1.2" marker-end="url(#le)"/>
+
+  <rect x="530" y="648" width="280" height="36" rx="6" fill="#1c2128" stroke="#f0883e"/>
+  <text x="670" y="662" text-anchor="middle" fill="#f0883e" font-size="10" font-weight="600">Conflict &rarr; showDiffModal()</text>
+  <text x="670" y="676" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">reload / threeWayMerge() / force overwrite</text>
+
+  <rect x="530" y="692" width="200" height="28" rx="6" fill="#1c2128" stroke="#3fb950"/>
+  <text x="630" y="710" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">No conflict &rarr; write file</text>
+
+  <!-- Open file -->
+  <rect x="40" y="740" width="180" height="36" rx="6" fill="#1c2128" stroke="#3fb950"/>
+  <text x="130" y="756" text-anchor="middle" fill="#3fb950" font-size="11" font-weight="600">Click file in sidebar</text>
+  <text x="130" y="768" text-anchor="middle" fill="#8b949e" font-size="9">openFile(idx)</text>
+
+  <path d="M220,758 L270,758" stroke="#3fb950" stroke-width="1.5" marker-end="url(#le)"/>
+
+  <rect x="270" y="740" width="440" height="36" rx="6" fill="#1c2128" stroke="#3fb950"/>
+  <text x="490" y="756" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">if isDirty(): doSave() &rarr; showLoading() &rarr; read file</text>
+  <text x="490" y="768" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">&rarr; cm.setValue(text) &rarr; hideLoading() &rarr; triggerRender()</text>
+
+  <!-- ═══ PHASE D: TABLE WIDGET ═══ -->
+  <rect x="0" y="800" width="1100" height="28" rx="4" fill="#161b22"/>
+  <text x="20" y="818" fill="#f778ba" font-size="11" class="phase-label" font-weight="700">D. TABLE WIDGET LIFECYCLE</text>
+
+  <rect x="40" y="840" width="200" height="36" rx="6" fill="#1c2128" stroke="#f778ba"/>
+  <text x="140" y="856" text-anchor="middle" fill="#f778ba" font-size="11" font-weight="600">Table in viewport</text>
+  <text x="140" y="868" text-anchor="middle" fill="#8b949e" font-size="9">| col | col | pattern detected</text>
+
+  <path d="M240,858 L290,858" stroke="#f778ba" stroke-width="1.5" marker-end="url(#lg)"/>
+
+  <rect x="290" y="840" width="240" height="36" rx="6" fill="#1c2128" stroke="#f778ba"/>
+  <text x="410" y="856" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">refreshTableWidgets() (lazy)</text>
+  <text x="410" y="868" text-anchor="middle" fill="#8b949e" font-size="9">findAllTableRanges() &rarr; createTableWidget()</text>
+
+  <path d="M530,858 L580,858" stroke="#f778ba" stroke-width="1.5" marker-end="url(#lg)"/>
+
+  <rect x="580" y="840" width="260" height="36" rx="6" fill="#1c2128" stroke="#f778ba"/>
+  <text x="710" y="856" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">user edits cell &rarr; onCellInput()</text>
+  <text x="710" y="868" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">&rarr; syncWidgetToCM(300ms) &rarr; scheduleRender()</text>
+
+  <!-- ═══ PHASE E: RENDER COMPLETE ═══ -->
+  <rect x="0" y="900" width="1100" height="28" rx="4" fill="#161b22"/>
+  <text x="20" y="918" fill="#d29922" font-size="11" class="phase-label" font-weight="700">E. RENDER COMPLETE (per-section callback chain)</text>
+
+  <rect x="40" y="940" width="260" height="36" rx="6" fill="#1c2128" stroke="#d29922"/>
+  <text x="170" y="956" text-anchor="middle" fill="#d29922" font-size="11" font-weight="600">section-ready postMessage</text>
+  <text x="170" y="968" text-anchor="middle" fill="#8b949e" font-size="9">from iframe &rarr; parent window</text>
+
+  <path d="M300,958 L340,958" stroke="#d29922" stroke-width="1.5" marker-end="url(#ld)"/>
+
+  <rect x="340" y="940" width="180" height="36" rx="6" fill="#1c2128" stroke="#484f58"/>
+  <text x="430" y="956" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">gen check (skip stale)</text>
+  <text x="430" y="968" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">swap pending iframe</text>
+
+  <path d="M520,958 L560,958" stroke="#484f58" stroke-width="1.5" marker-end="url(#la)"/>
+
+  <rect x="560" y="940" width="160" height="36" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="640" y="956" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">scaleSection(idx)</text>
+
+  <path d="M640,976 L640,1000" stroke="#a371f7" stroke-width="1.5" marker-end="url(#lf)"/>
+
+  <rect x="530" y="1002" width="220" height="32" rx="14" fill="none" stroke="#a371f7" stroke-dasharray="4,3"/>
+  <text x="640" y="1022" text-anchor="middle" fill="#a371f7" font-size="10" font-weight="600">pendingSectionCount === 0?</text>
+
+  <path d="M640,1034 L640,1056" stroke="#a371f7" stroke-width="1" marker-end="url(#lf)"/>
+  <text x="652" y="1048" fill="#3fb950" font-size="9">yes</text>
+
+  <rect x="510" y="1058" width="260" height="44" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="640" y="1074" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">updatePageNumbers() &mdash; all iframes</text>
+  <text x="640" y="1090" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">status = "N pages &mdash; Xms"</text>
+
+  <!-- onSectionReady -->
+  <path d="M720,958 L780,958" stroke="#484f58" stroke-width="1.5" marker-end="url(#la)"/>
+
+  <rect x="780" y="934" width="280" height="90" rx="6" fill="#1c2128" stroke="#58a6ff" stroke-width="2"/>
+  <text x="920" y="952" text-anchor="middle" fill="#58a6ff" font-size="11" font-weight="700" class="fn">onSectionReady(idx)</text>
+  <text x="920" y="970" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">setupPreviewClick(frame)</text>
+  <text x="920" y="986" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">setupScrollSync() &mdash; one-time init</text>
+  <text x="920" y="1002" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">scalePreview() (300ms + 1000ms)</text>
+  <text x="920" y="1018" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">refreshTableWidgets()</text>
+
+  <rect x="350" y="1130" width="400" height="32" rx="14" fill="#161b22" stroke="#484f58" stroke-dasharray="4,3"/>
+  <text x="550" y="1150" text-anchor="middle" fill="#8b949e" font-size="11">&larr; returns to editing loop (B) &mdash; user types again &rarr;</text>
+</svg>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<h2>3. Rendering Pipeline Detail (triggerRender)</h2>
+
+<svg viewBox="0 0 1100 620" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#f0883e"/></marker>
+    <marker id="a3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#d29922"/></marker>
+    <marker id="a4" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#a371f7"/></marker>
+  </defs>
+
+  <!-- Phase labels -->
+  <rect x="0" y="0" width="1100" height="28" fill="#161b22"/>
+  <text x="220" y="18" text-anchor="middle" fill="#f0883e" font-size="10" class="phase-label">PHASE 1: MD PHASE (sync, string transforms via marked plugins)</text>
+  <text x="660" y="18" text-anchor="middle" fill="#d29922" font-size="10" class="phase-label">PHASE 2: PAGED-HTML (iframe)</text>
+  <text x="960" y="18" text-anchor="middle" fill="#a371f7" font-size="10" class="phase-label">POST-RENDER</text>
+
+  <line x1="460" y1="28" x2="460" y2="620" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4"/>
+  <line x1="810" y1="28" x2="810" y2="620" stroke="#21262d" stroke-width="1" stroke-dasharray="4,4"/>
+
+  <!-- Split sections -->
+  <rect x="30" y="44" width="400" height="36" rx="6" fill="#1c2128" stroke="#f0883e"/>
+  <text x="230" y="62" text-anchor="middle" fill="#f0883e" font-size="11" font-weight="600" class="fn">splitMarkdownSections(md)</text>
+  <text x="230" y="74" text-anchor="middle" fill="#8b949e" font-size="9">split at # and /newpage &rarr; hash each chunk</text>
+
+  <path d="M230,80 L230,100" stroke="#f0883e" stroke-width="1.2" marker-end="url(#a2)"/>
+
+  <rect x="60" y="100" width="90" height="28" rx="4" fill="#21262d" stroke="#484f58"/>
+  <text x="105" y="118" text-anchor="middle" fill="#8b949e" font-size="10">Cover</text>
+  <rect x="160" y="100" width="90" height="28" rx="4" fill="#21262d" stroke="#484f58"/>
+  <text x="205" y="118" text-anchor="middle" fill="#8b949e" font-size="10">Sec 1</text>
+  <rect x="260" y="100" width="90" height="28" rx="4" fill="#21262d" stroke="#484f58"/>
+  <text x="305" y="118" text-anchor="middle" fill="#8b949e" font-size="10">Sec N</text>
+
+  <!-- Hash check -->
+  <path d="M230,128 L230,150" stroke="#f0883e" stroke-width="1.2" marker-end="url(#a2)"/>
+
+  <rect x="150" y="152" width="160" height="28" rx="14" fill="none" stroke="#f0883e" stroke-dasharray="4,3"/>
+  <text x="230" y="170" text-anchor="middle" fill="#f0883e" font-size="10" font-weight="600">hash === prev? SKIP</text>
+
+  <path d="M230,180 L230,204" stroke="#f0883e" stroke-width="1.2" marker-end="url(#a2)"/>
+  <text x="242" y="196" fill="#3fb950" font-size="9">changed</text>
+
+  <!-- marked.parse with plugins -->
+  <rect x="40" y="206" width="400" height="70" rx="6" fill="#1c2128" stroke="#f0883e" stroke-width="2"/>
+  <text x="240" y="224" text-anchor="middle" fill="#f0883e" font-size="11" font-weight="700" class="fn">parseSectionMarkdownSync(md, colorIdx)</text>
+  <text x="240" y="240" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">marked.parse() with registered plugins:</text>
+  <text x="240" y="254" text-anchor="middle" fill="#8b949e" font-size="9">renderer.heading &rarr; numbering + underlines + colors</text>
+  <text x="240" y="266" text-anchor="middle" fill="#8b949e" font-size="9">renderer.code &rarr; mermaid placeholders &nbsp;|&nbsp; hooks.postprocess &rarr; French typo + CSS vars</text>
+
+  <path d="M230,276 L230,298" stroke="#f0883e" stroke-width="1.2" marker-end="url(#a2)"/>
+
+  <!-- Mermaid resolution (conditional) -->
+  <rect x="60" y="300" width="340" height="44" rx="6" fill="#1c2128" stroke="#d29922" stroke-dasharray="4,3"/>
+  <text x="230" y="318" text-anchor="middle" fill="#d29922" font-size="10" class="fn">if mermaid blocks: ensureMermaid() (lazy CDN)</text>
+  <text x="230" y="334" text-anchor="middle" fill="#8b949e" font-size="9">resolve placeholders &rarr; mermaid.render() &rarr; inline SVG</text>
+
+  <path d="M230,344 L230,366" stroke="#f0883e" stroke-width="1.2" marker-end="url(#a2)"/>
+
+  <!-- wrapInDocument -->
+  <rect x="60" y="368" width="340" height="36" rx="6" fill="#1c2128" stroke="#f0883e"/>
+  <text x="230" y="384" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">wrapInDocument(bodyHtml, opts)</text>
+  <text x="230" y="398" text-anchor="middle" fill="#8b949e" font-size="9">adds CSS (text), Paged.js (blob), section-init.js (blob)</text>
+
+  <path d="M230,404 L230,424" stroke="#f0883e" stroke-width="1.2" marker-end="url(#a2)"/>
+
+  <rect x="80" y="426" width="300" height="28" rx="6" fill="#1c2128" stroke="#f0883e"/>
+  <text x="230" y="444" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">Blob URL &rarr; iframe.src (all iframes at once)</text>
+
+  <!-- PHASE 2: Paged-HTML -->
+  <path d="M380,440 L480,440" stroke="#d29922" stroke-width="2" marker-end="url(#a3)"/>
+
+  <rect x="480" y="44" width="310" height="30" rx="6" fill="#1c2128" stroke="#d29922"/>
+  <text x="635" y="63" text-anchor="middle" fill="#d29922" font-size="11" font-weight="600">section-init.js (runs in iframe, end of body)</text>
+
+  <rect x="490" y="92" width="290" height="28" rx="6" fill="#21262d" stroke="#484f58"/>
+  <text x="635" y="110" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">replace /newpage &rarr; page-break div</text>
+
+  <path d="M635,120 L635,136" stroke="#d29922" stroke-width="1" marker-end="url(#a3)"/>
+
+  <rect x="490" y="138" width="290" height="28" rx="6" fill="#21262d" stroke="#484f58"/>
+  <text x="635" y="156" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">wrap h2-h4 + sibling (orphan prevention)</text>
+
+  <path d="M635,166 L635,186" stroke="#d29922" stroke-width="1" marker-end="url(#a3)"/>
+
+  <rect x="480" y="188" width="310" height="36" rx="6" fill="#1c2128" stroke="#d29922" stroke-width="2"/>
+  <text x="635" y="210" text-anchor="middle" fill="#d29922" font-size="12" font-weight="700" class="fn">Paged.Previewer().preview()</text>
+
+  <path d="M635,224 L635,246" stroke="#d29922" stroke-width="1.5" marker-end="url(#a3)"/>
+
+  <rect x="500" y="248" width="270" height="28" rx="6" fill="#1c2128" stroke="#d29922"/>
+  <text x="635" y="266" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">postMessage({type:"section-ready", gen, pages})</text>
+
+  <!-- POST-RENDER -->
+  <path d="M770,262 L830,262" stroke="#a371f7" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#a4)"/>
+
+  <rect x="830" y="44" width="240" height="28" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="950" y="62" text-anchor="middle" fill="#a371f7" font-size="11" font-weight="600">render.js message handler</text>
+
+  <rect x="840" y="90" width="220" height="28" rx="6" fill="#21262d" stroke="#484f58"/>
+  <text x="950" y="108" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">gen check &rarr; swap iframe</text>
+
+  <path d="M950,118 L950,132" stroke="#a371f7" stroke-width="1" marker-end="url(#a4)"/>
+
+  <rect x="840" y="134" width="220" height="28" rx="6" fill="#21262d" stroke="#484f58"/>
+  <text x="950" y="152" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">scaleSection(idx)</text>
+
+  <path d="M950,162 L950,180" stroke="#a371f7" stroke-width="1" marker-end="url(#a4)"/>
+
+  <rect x="830" y="182" width="240" height="28" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="950" y="200" text-anchor="middle" fill="#a371f7" font-size="10" class="fn">if all done: updatePageNumbers()</text>
+
+  <path d="M950,210 L950,228" stroke="#a371f7" stroke-width="1" marker-end="url(#a4)"/>
+
+  <rect x="830" y="230" width="240" height="44" rx="6" fill="#1c2128" stroke="#58a6ff" stroke-width="2"/>
+  <text x="950" y="248" text-anchor="middle" fill="#58a6ff" font-size="10" font-weight="600" class="fn">onSectionReady(idx)</text>
+  <text x="950" y="264" text-anchor="middle" fill="#8b949e" font-size="9">setupPreviewClick, setupScrollSync, scalePreview</text>
+
+  <!-- Bottom: what's in each phase -->
+  <rect x="0" y="480" width="1100" height="28" fill="#161b22"/>
+  <text x="550" y="498" text-anchor="middle" fill="#8b949e" font-size="10" class="phase-label">SUMMARY: WHAT RUNS WHERE</text>
+
+  <rect x="30" y="520" width="410" height="90" rx="6" fill="#1c2128" stroke="#f0883e"/>
+  <text x="235" y="538" text-anchor="middle" fill="#f0883e" font-size="11" font-weight="700">MD Phase (render.js, main page)</text>
+  <text x="235" y="556" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">marked plugins: heading renderer, code renderer, postprocess</text>
+  <text x="235" y="572" text-anchor="middle" fill="#8b949e" font-size="10">Colors, numbering, underlines, French typo, CSS vars</text>
+  <text x="235" y="588" text-anchor="middle" fill="#8b949e" font-size="10">Mermaid SVG (lazy-loaded, main page DOM)</text>
+  <text x="235" y="604" text-anchor="middle" fill="#8b949e" font-size="9">All string transforms &mdash; no DOM needed (except mermaid)</text>
+
+  <rect x="470" y="520" width="310" height="90" rx="6" fill="#1c2128" stroke="#d29922"/>
+  <text x="625" y="538" text-anchor="middle" fill="#d29922" font-size="11" font-weight="700">Paged-HTML Phase (iframe)</text>
+  <text x="625" y="556" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">section-init.js (end of &lt;body&gt;)</text>
+  <text x="625" y="572" text-anchor="middle" fill="#8b949e" font-size="10">/newpage replacement, orphan prevention</text>
+  <text x="625" y="588" text-anchor="middle" fill="#8b949e" font-size="10">Paged.Previewer().preview() &mdash; pagination only</text>
+  <text x="625" y="604" text-anchor="middle" fill="#8b949e" font-size="9">DOM manipulation + CSS paged media polyfill</text>
+
+  <rect x="810" y="520" width="260" height="90" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="940" y="538" text-anchor="middle" fill="#a371f7" font-size="11" font-weight="700">Post-Render (render.js)</text>
+  <text x="940" y="556" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">postMessage handler</text>
+  <text x="940" y="572" text-anchor="middle" fill="#8b949e" font-size="10">Iframe swap, scaling, page numbers</text>
+  <text x="940" y="588" text-anchor="middle" fill="#8b949e" font-size="10">Hook chain: click, sync, tables</text>
+  <text x="940" y="604" text-anchor="middle" fill="#8b949e" font-size="9">No styling &mdash; only layout + wiring</text>
+</svg>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<h2>4. Partial Rendering &mdash; What Gets Skipped</h2>
+
+<svg viewBox="0 0 1100 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a5" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#a371f7"/></marker>
+  </defs>
+  <rect x="30" y="30" width="150" height="60" rx="6" fill="#1c2128" stroke="#484f58" stroke-dasharray="4,3"/>
+  <text x="105" y="55" text-anchor="middle" fill="#484f58" font-size="11" font-weight="600">Cover</text>
+  <text x="105" y="72" text-anchor="middle" fill="#484f58" font-size="9">hash unchanged</text>
+  <text x="105" y="100" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">SKIPPED</text>
+
+  <rect x="210" y="30" width="150" height="60" rx="6" fill="#1c2128" stroke="#484f58" stroke-dasharray="4,3"/>
+  <text x="285" y="55" text-anchor="middle" fill="#484f58" font-size="11" font-weight="600">Section 1</text>
+  <text x="285" y="72" text-anchor="middle" fill="#484f58" font-size="9">hash unchanged</text>
+  <text x="285" y="100" text-anchor="middle" fill="#3fb950" font-size="10" font-weight="600">SKIPPED</text>
+
+  <rect x="390" y="30" width="150" height="60" rx="6" fill="#1c2128" stroke="#f0883e" stroke-width="2"/>
+  <text x="465" y="55" text-anchor="middle" fill="#f0883e" font-size="11" font-weight="700">Section 2</text>
+  <text x="465" y="72" text-anchor="middle" fill="#f0883e" font-size="9">hash CHANGED</text>
+  <text x="465" y="100" text-anchor="middle" fill="#f0883e" font-size="10" font-weight="600">RE-RENDERED</text>
+
+  <rect x="570" y="30" width="150" height="60" rx="6" fill="#1c2128" stroke="#484f58" stroke-dasharray="4,3"/>
+  <text x="645" y="55" text-anchor="middle" fill="#484f58" font-size="11" font-weight="600">Section 3</text>
+  <text x="645" y="72" text-anchor="middle" fill="#484f58" font-size="9">hash unchanged</text>
+  <text x="645" y="100" text-anchor="middle" fill="#484f58" font-size="10">iframe untouched</text>
+
+  <path d="M465,110 L465,135 L800,135" stroke="#a371f7" stroke-width="1.5" marker-end="url(#a5)"/>
+  <rect x="800" y="120" width="260" height="36" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="930" y="136" text-anchor="middle" fill="#a371f7" font-size="10" class="fn">updatePageNumbers()</text>
+  <text x="930" y="150" text-anchor="middle" fill="#8b949e" font-size="9">JS fix for sections 3+ if page count changed</text>
+
+  <text x="465" y="128" text-anchor="middle" fill="#8b949e" font-size="9">gen=3 &mdash; stale gen=2 messages ignored</text>
+
+  <rect x="30" y="165" width="1040" height="28" rx="6" fill="#161b22" stroke="#21262d"/>
+  <text x="550" y="183" text-anchor="middle" fill="#8b949e" font-size="11">Only <tspan fill="#f0883e" font-weight="700">1 of 4</tspan> sections runs Paged.js. Cover + sections 1,3 keep their existing iframes.</text>
+</svg>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<h2>5. Sync Architecture (subsection-scoped, scroll-driven)</h2>
+
+<svg viewBox="0 0 1100 260" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="a6" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#a371f7"/></marker>
+  </defs>
+
+  <rect x="0" y="0" width="1100" height="28" fill="#161b22"/>
+  <text x="280" y="18" text-anchor="middle" fill="#a371f7" font-size="10" class="phase-label">EDITOR &rarr; PREVIEW (scroll-driven)</text>
+  <text x="820" y="18" text-anchor="middle" fill="#a371f7" font-size="10" class="phase-label">PREVIEW &rarr; EDITOR (scroll-driven)</text>
+
+  <!-- Editor → Preview -->
+  <rect x="20" y="42" width="160" height="36" rx="6" fill="#1c2128" stroke="#58a6ff"/>
+  <text x="100" y="58" text-anchor="middle" fill="#58a6ff" font-size="10" font-weight="600">cm.on("scroll")</text>
+  <text x="100" y="70" text-anchor="middle" fill="#8b949e" font-size="9">get center line</text>
+
+  <path d="M180,60 L210,60" stroke="#a371f7" stroke-width="1.5" marker-end="url(#a6)"/>
+
+  <rect x="210" y="42" width="150" height="36" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="285" y="56" text-anchor="middle" fill="#c9d1d9" font-size="9" class="fn">sectionIndexForLine()</text>
+  <text x="285" y="70" text-anchor="middle" fill="#c9d1d9" font-size="9" class="fn">getEditorSubsection()</text>
+
+  <path d="M360,60 L390,60" stroke="#a371f7" stroke-width="1.5" marker-end="url(#a6)"/>
+
+  <rect x="390" y="38" width="130" height="44" rx="6" fill="#1c2128" stroke="#a371f7" stroke-width="2"/>
+  <text x="455" y="56" text-anchor="middle" fill="#a371f7" font-size="10" font-weight="600" class="fn">findPreviewEl</text>
+  <text x="455" y="72" text-anchor="middle" fill="#8b949e" font-size="8">(text, sec, sub)</text>
+
+  <path d="M520,60 L545,60" stroke="#a371f7" stroke-width="1.5" marker-end="url(#a6)"/>
+
+  <rect x="545" y="38" width="180" height="44" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="635" y="56" text-anchor="middle" fill="#c9d1d9" font-size="9" class="fn">setGutterHighlight(line)</text>
+  <text x="635" y="68" text-anchor="middle" fill="#c9d1d9" font-size="9" class="fn">setPreviewHighlight(el)</text>
+  <text x="635" y="78" text-anchor="middle" fill="#c9d1d9" font-size="9" class="fn">centerPreviewOnEl(el)</text>
+
+  <!-- Cursor activity (highlight only) -->
+  <rect x="20" y="96" width="160" height="36" rx="6" fill="#1c2128" stroke="#58a6ff" stroke-dasharray="4,3"/>
+  <text x="100" y="112" text-anchor="middle" fill="#58a6ff" font-size="10">cursorActivity (click)</text>
+  <text x="100" y="124" text-anchor="middle" fill="#8b949e" font-size="9">highlight only, no scroll</text>
+
+  <path d="M180,114 L210,114" stroke="#a371f7" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#a6)"/>
+
+  <rect x="210" y="96" width="240" height="36" rx="6" fill="#1c2128" stroke="#484f58" stroke-dasharray="4,3"/>
+  <text x="330" y="112" text-anchor="middle" fill="#8b949e" font-size="9" class="fn">highlightAtCursor() &rarr; findPreviewEl()</text>
+  <text x="330" y="124" text-anchor="middle" fill="#8b949e" font-size="9">gutter + preview highlight, NO centerPreviewOnEl</text>
+
+  <!-- Preview → Editor -->
+  <rect x="575" y="155" width="190" height="36" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="670" y="171" text-anchor="middle" fill="#a371f7" font-size="10" font-weight="600">preview scroll / click</text>
+  <text x="670" y="183" text-anchor="middle" fill="#8b949e" font-size="9">get center element</text>
+
+  <path d="M765,173 L800,173" stroke="#a371f7" stroke-width="1.5" marker-end="url(#a6)"/>
+
+  <rect x="800" y="155" width="160" height="36" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="880" y="169" text-anchor="middle" fill="#c9d1d9" font-size="9" class="fn">sectionIndexOfEl(el)</text>
+  <text x="880" y="183" text-anchor="middle" fill="#c9d1d9" font-size="9" class="fn">getPreviewElSubsection(el)</text>
+
+  <path d="M960,173 L990,173" stroke="#a371f7" stroke-width="1.5" marker-end="url(#a6)"/>
+
+  <rect x="990" y="155" width="90" height="36" rx="6" fill="#1c2128" stroke="#a371f7" stroke-width="2"/>
+  <text x="1035" y="173" text-anchor="middle" fill="#a371f7" font-size="10" font-weight="600" class="fn">findEditorLine</text>
+  <text x="1035" y="185" text-anchor="middle" fill="#8b949e" font-size="8">(text, bounds)</text>
+
+  <path d="M1035,191 L1035,212" stroke="#a371f7" stroke-width="1" marker-end="url(#a6)"/>
+
+  <rect x="930" y="214" width="150" height="36" rx="6" fill="#1c2128" stroke="#a371f7"/>
+  <text x="1005" y="230" text-anchor="middle" fill="#c9d1d9" font-size="9" class="fn">setGutterHighlight(line)</text>
+  <text x="1005" y="244" text-anchor="middle" fill="#c9d1d9" font-size="9" class="fn">centerEditorOnLine(line)</text>
+
+  <!-- Scoping note -->
+  <rect x="20" y="155" width="520" height="90" rx="6" fill="#161b22" stroke="#21262d"/>
+  <text x="280" y="175" text-anchor="middle" fill="#8b949e" font-size="11" font-weight="600">Subsection Scoping</text>
+  <text x="280" y="193" text-anchor="middle" fill="#c9d1d9" font-size="10">findPreviewEl walks DOM in document order, only matches</text>
+  <text x="280" y="207" text-anchor="middle" fill="#c9d1d9" font-size="10">elements under the same h1-h4 heading as the cursor.</text>
+  <text x="280" y="225" text-anchor="middle" fill="#c9d1d9" font-size="10" class="fn">normalizeText() strips: #*_`&gt;-| + leading "N. " list markers</text>
+  <text x="280" y="239" text-anchor="middle" fill="#8b949e" font-size="9">Headings are both section markers AND match candidates.</text>
+</svg>
+
+<!-- ════════════════════════════════════════════════════════════════════ -->
+<h2>6. File &amp; Iframe Structure</h2>
+
+<div class="columns">
+  <div class="card">
+    <h4>External Files (fetched at startup)</h4>
+    <ul>
+      <li><code>css/pdf.css</code> &mdash; PDF print stylesheet (fetched as text, injected as &lt;style&gt;)</li>
+      <li><code>css/paged.css</code> &mdash; Paged.js viewer styles (fetched as text)</li>
+      <li><code>js/section-init.js</code> &mdash; iframe init script (fetched as blob URL)</li>
+      <li><code>assets/paged.polyfill.js</code> &mdash; Paged.js 900KB (fetched as blob URL)</li>
+      <li><code>assets/default.md</code> &mdash; fallback document (fetched as text)</li>
+      <li><code>assets/beorn-logo.png</code> &mdash; logo (converted to data URI)</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Lazy-loaded (on demand)</h4>
+    <ul>
+      <li><code>mermaid@11 CDN</code> &mdash; ~2.5MB, loaded only when first <code>```mermaid</code> block detected</li>
+      <li>Rendered in main page DOM via <code>ensureMermaid()</code></li>
+      <li>SVG baked into section HTML before iframe creation</li>
+      <li>No mermaid script in iframes</li>
+    </ul>
+  </div>
+</div>
+
+<div class="columns">
+  <div class="card">
+    <h4>Each Section Iframe Contains</h4>
+    <ul>
+      <li><strong>&lt;head&gt;</strong></li>
+      <li>&nbsp;&nbsp;<code>&lt;style&gt;</code> PDF_CSS + PAGED_CSS (inline text)</li>
+      <li>&nbsp;&nbsp;<code>&lt;style&gt;</code> @page :first override (content sections)</li>
+      <li><strong>&lt;body&gt;</strong></li>
+      <li>&nbsp;&nbsp;Pre-styled HTML (colors, numbers, underlines, mermaid SVG baked in)</li>
+      <li>&nbsp;&nbsp;<code>&lt;script src&gt;</code> paged.polyfill.js (blob URL)</li>
+      <li>&nbsp;&nbsp;<code>&lt;script&gt;</code> __sectionIndex / __sectionGen</li>
+      <li>&nbsp;&nbsp;<code>&lt;script src&gt;</code> section-init.js (blob URL)</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h4>Marked Plugins (configured once in render.js)</h4>
+    <ul>
+      <li><strong>renderer.heading</strong> &mdash; numbering, decorative underlines, --section-color CSS vars</li>
+      <li><strong>renderer.code</strong> &mdash; mermaid blocks &rarr; placeholder divs (resolved async after parse)</li>
+      <li><strong>hooks.postprocess</strong> &mdash; French typography (non-breaking spaces) + CSS variable injection on all block elements</li>
+      <li><strong>_colorIdx</strong> &mdash; module-level state, set before each parse call (safe: marked.parse is sync)</li>
+    </ul>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

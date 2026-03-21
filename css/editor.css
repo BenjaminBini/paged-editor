@@ -1,0 +1,59 @@
+.editor-pane {
+  flex: 1; min-width: 0; display: flex; flex-direction: column;
+  border-right: 1px solid #e2e8f0; background: #1e1e2e;
+}
+.editor-pane .pane-header {
+  height: 32px; background: #2d2d3f; color: #a0a0c0;
+  display: flex; align-items: center; padding: 0 12px;
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.05em; flex-shrink: 0;
+}
+#editor-wrapper {
+  flex: 1; overflow: hidden; position: relative;
+}
+#editor-loading {
+  position: absolute; inset: 0; z-index: 10;
+  background: #1e1e2e; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
+  color: #6c7086; font-size: 13px; font-weight: 500;
+}
+#editor-loading .spinner {
+  width: 28px; height: 28px; border: 3px solid #2d2d3f;
+  border-top-color: #3373b3; border-radius: 50%;
+  animation: tw-spin 0.8s linear infinite;
+}
+@keyframes tw-spin { to { transform: rotate(360deg); } }
+/* CodeMirror theme overrides to match dark editor */
+.editor-pane .CodeMirror {
+  height: 100% !important; background: #1e1e2e !important; color: #cdd6f4 !important;
+  font-family: "JetBrains Mono", "SF Mono", monospace !important;
+  font-size: 13px !important; line-height: 1.7 !important;
+}
+.editor-pane .CodeMirror-gutters { background: #1e1e2e !important; border-right: 1px solid #2d2d3f !important; }
+.editor-pane .CodeMirror-linenumber { color: #4a4a6a !important; }
+.editor-pane .cm-cursor-gutter .CodeMirror-linenumber { background: #3373b3 !important; color: #fff !important; border-radius: 2px; }
+.editor-pane .CodeMirror-cursor { border-left-color: #cdd6f4 !important; }
+.editor-pane .CodeMirror-selected { background: #364a6e !important; }
+.editor-pane .CodeMirror-focused .CodeMirror-selected { background: #364a6e !important; }
+.editor-pane .CodeMirror .CodeMirror-matchingbracket { color: #89dceb !important; }
+/* Markdown syntax colors */
+.editor-pane .cm-header { color: #f0a840 !important; font-weight: 700 !important; }
+.editor-pane .cm-header-1 { font-size: 1.2em !important; color: #f0a840 !important; }
+.editor-pane .cm-header-2 { font-size: 1.1em !important; color: #e0c070 !important; }
+.editor-pane .cm-header-3 { color: #c8d880 !important; }
+.editor-pane .cm-strong { color: #f9e2af !important; font-weight: 700 !important; }
+.editor-pane .cm-em { color: #cba6f7 !important; font-style: italic !important; }
+.editor-pane .cm-link { color: #89b4fa !important; }
+.editor-pane .cm-url { color: #6c7086 !important; }
+.editor-pane .cm-quote { color: #a6adc8 !important; font-style: italic !important; }
+.editor-pane .cm-comment { color: #6c7086 !important; }
+.editor-pane .cm-keyword { color: #cba6f7 !important; }
+.editor-pane .cm-atom { color: #fab387 !important; }
+.editor-pane .cm-string { color: #a6e3a1 !important; }
+.editor-pane .cm-hr { color: #585b70 !important; }
+.editor-pane .cm-tag { color: #f38ba8 !important; }
+.editor-pane .cm-attribute { color: #89b4fa !important; }
+.editor-pane .cm-def { color: #89dceb !important; }
+/* Hide text content of table lines; line widgets (siblings) stay visible */
+.tw-hidden-text { height: 0 !important; overflow: hidden !important; padding: 0 !important; margin: 0 !important; }
+.tw-hidden-gutter { visibility: hidden !important; }

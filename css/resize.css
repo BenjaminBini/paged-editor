@@ -1,0 +1,5 @@
+.resize-handle {
+  width: 5px; cursor: col-resize; background: #cbd5e1;
+  transition: background 0.15s; flex-shrink: 0;
+}
+.resize-handle:hover, .resize-handle.active { background: #3373b3; }

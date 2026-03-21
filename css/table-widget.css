@@ -1,0 +1,40 @@
+.table-widget {
+  background: #181825; border: 1px solid #3373b3; border-radius: 8px;
+  margin: 4px 0 4px 30px; padding: 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  overflow-x: auto; overflow-y: hidden;
+}
+.table-widget table {
+  border-collapse: collapse; table-layout: auto;
+  min-width: 100%;
+}
+.table-widget th, .table-widget td {
+  border: 1px solid #2d2d3f; padding: 4px 12px; font-size: 12px;
+  font-family: "JetBrains Mono", "SF Mono", monospace;
+  line-height: 1.5; min-width: 80px; outline: none;
+  white-space: nowrap; cursor: text;
+}
+.table-widget th {
+  background: #1e1e3a; color: #f0a840; font-weight: 700;
+  border-bottom: 2px solid #3373b3;
+}
+.table-widget td {
+  background: #1e1e2e; color: #cdd6f4;
+}
+.table-widget th:focus, .table-widget td:focus {
+  background: #2a2a4a; outline: 2px solid #3373b3; outline-offset: -2px;
+}
+.table-widget .tw-toolbar {
+  display: flex; gap: 4px; padding: 4px 8px; background: #11111b;
+  border-top: 1px solid #2d2d3f; align-items: center;
+}
+.table-widget .tw-toolbar button {
+  background: #2d2d3f; color: #a0a0c0; border: none; border-radius: 4px;
+  padding: 2px 8px; font-size: 10px; font-weight: 600; cursor: pointer;
+  transition: background 0.15s;
+}
+.table-widget .tw-toolbar button:hover { background: #3373b3; color: #fff; }
+.table-widget .tw-toolbar .tw-spacer { flex: 1; }
+.table-widget .tw-toolbar .tw-hint {
+  font-size: 9px; color: #4a4a6a; margin-right: 4px;
+}
