@@ -144,6 +144,13 @@ export async function openGoogleDrive() {
     localStorage.setItem("gd_drive_id", gdDriveId || "");
     localStorage.setItem("gd_folder_name", gdFolderName || "");
 
+    // Update URL
+    const url = new URL(location.href);
+    url.searchParams.delete("file");
+    url.searchParams.delete("driveFile");
+    url.searchParams.set("driveFolder", gdFolderId);
+    history.replaceState(null, "", url);
+
     await activateGdFolder();
   } catch(e) {
     console.error("Google Drive error:", e);
@@ -174,6 +181,27 @@ export async function tryRestoreGdrive() {
   return true;
 }
 
+export async function restoreDriveFile(fileId) {
+  const s = getGdSettings();
+  if (!s.clientId || !s.apiKey || !fileId) return false;
+  await initGapi();
+  const token = await getGdToken(true);
+  if (!token) return false;
+
+  // Fetch file metadata for the name
+  const meta = await driveApiFetch("files/" + fileId, { fields: "name", supportsAllDrives: "true" });
+  showLoading("Loading " + meta.name + "...");
+  const text = await fetchGdFileContent(fileId);
+  cm.setValue(text);
+  cm.clearHistory();
+  hideLoading();
+  document.getElementById("paneFileName").textContent = meta.name;
+  document.title = meta.name + " — Paged.js Editor";
+  triggerRender();
+  status.textContent = "Loaded " + meta.name;
+  return true;
+}
+
 export function closeFolder() {
   // Reset state
   fileSidebar.classList.remove("open");
@@ -200,6 +228,14 @@ export function closeFolder() {
   sessionStorage.removeItem("gd_token");
   idbSet("dirHandle", null);
   idbSet("activeFile", null);
+
+  // Clean URL
+  const url = new URL(location.href);
+  url.searchParams.delete("driveFolder");
+  url.searchParams.delete("driveFile");
+  url.searchParams.delete("file");
+  url.searchParams.delete("folder");
+  history.replaceState(null, "", url);
 
   cm.setValue("");
   cm.refresh();
@@ -288,6 +324,14 @@ export async function openDriveFile() {
     hideLoading();
     document.getElementById("paneFileName").textContent = picked.name;
     document.title = picked.name + " — Paged.js Editor";
+
+    // Update URL
+    const url = new URL(location.href);
+    url.searchParams.delete("file");
+    url.searchParams.delete("driveFolder");
+    url.searchParams.set("driveFile", picked.id);
+    history.replaceState(null, "", url);
+
     triggerRender();
     status.textContent = "Loaded " + picked.name;
   } catch(e) {
@@ -373,6 +417,10 @@ setOpenFile(async function(idx) {
       renderFileList();
       triggerRender();
       await idbSet("activeFile", entry.name);
+      // Keep driveFolder in URL, add active file name
+      const url = new URL(location.href);
+      if (gdFolderId) url.searchParams.set("driveFolder", gdFolderId);
+      history.replaceState(null, "", url);
       status.textContent = "Loaded " + entry.name;
     } catch(e) {
       hideLoading();

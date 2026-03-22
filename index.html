@@ -34,37 +34,40 @@
       <div class="menu-item" data-menu="file">
         <button class="menu-trigger">File</button>
         <div class="menu-dropdown">
-          <button onclick="openLocalFile()"><span class="menu-label">Open Local File...</span><span class="menu-shortcut">Ctrl+O</span></button>
+          <button onclick="newDocument()"><span class="menu-label">New File</span><span class="menu-shortcut">Ctrl+N</span></button>
+          <div class="menu-divider"></div>
+          <button onclick="openLocalFile()" id="btnOpenLocal"><span class="menu-label">Open Local File...</span><span class="menu-shortcut">Ctrl+O</span></button>
           <button onclick="openDriveFile()"><span class="menu-label">Open Drive File...</span></button>
           <button onclick="openUrl()"><span class="menu-label">Open URL...</span></button>
           <div class="menu-divider"></div>
-          <button onclick="openFolder()"><span class="menu-label">Open Local Folder</span></button>
+          <button onclick="openFolder()" id="btnOpenFolder"><span class="menu-label">Open Local Folder</span></button>
           <button onclick="openGoogleDrive()"><span class="menu-label">Open Drive Folder</span></button>
           <div class="menu-divider"></div>
-          <button onclick="saveCurrentFile()" id="btnSave"><span class="menu-label">Save</span><span class="menu-shortcut">Ctrl+S</span></button>
-          <button onclick="saveAs()"><span class="menu-label">Save As...</span><span class="menu-shortcut">Ctrl+Shift+S</span></button>
+          <button onclick="saveCurrentFile()" id="btnSave" disabled><span class="menu-label">Save</span><span class="menu-shortcut">Ctrl+S</span></button>
+          <button onclick="saveAs()" id="btnSaveAs" disabled><span class="menu-label">Save As...</span><span class="menu-shortcut">Ctrl+Shift+S</span></button>
           <div class="menu-divider"></div>
-          <button onclick="closeFolder()"><span class="menu-label">Close Folder</span></button>
+          <button onclick="closeFile()" id="btnCloseFile" disabled><span class="menu-label">Close File</span></button>
+          <button onclick="closeFolder()" id="btnCloseFolder" disabled><span class="menu-label">Close Folder</span></button>
         </div>
       </div>
 
       <div class="menu-item" data-menu="edit">
         <button class="menu-trigger">Edit</button>
         <div class="menu-dropdown">
-          <button onclick="insertTable()"><span class="menu-label">Insert Table</span></button>
+          <button onclick="insertTable()" id="btnInsertTable" disabled><span class="menu-label">Insert Table</span></button>
           <div class="menu-divider"></div>
-          <button onclick="document.querySelector('.CodeMirror').CodeMirror.undo()"><span class="menu-label">Undo</span><span class="menu-shortcut">Ctrl+Z</span></button>
-          <button onclick="document.querySelector('.CodeMirror').CodeMirror.redo()"><span class="menu-label">Redo</span><span class="menu-shortcut">Ctrl+Shift+Z</span></button>
+          <button onclick="document.querySelector('.CodeMirror').CodeMirror.undo()" id="btnUndo" disabled><span class="menu-label">Undo</span><span class="menu-shortcut">Ctrl+Z</span></button>
+          <button onclick="document.querySelector('.CodeMirror').CodeMirror.redo()" id="btnRedo" disabled><span class="menu-label">Redo</span><span class="menu-shortcut">Ctrl+Shift+Z</span></button>
         </div>
       </div>
 
       <div class="menu-item" data-menu="view">
         <button class="menu-trigger">View</button>
         <div class="menu-dropdown">
-          <button onclick="triggerRender()"><span class="menu-label">Render Preview</span><span class="menu-shortcut">Ctrl+Enter</span></button>
-          <button onclick="openPreviewTab()"><span class="menu-label">Open in New Tab</span></button>
+          <button onclick="triggerRender()" id="btnRender" disabled><span class="menu-label">Render Preview</span><span class="menu-shortcut">Ctrl+Enter</span></button>
+          <button onclick="openPreviewTab()" id="btnPreviewTab" disabled><span class="menu-label">Open in New Tab</span></button>
           <div class="menu-divider"></div>
-          <button onclick="toggleWrap()"><span class="menu-label">Toggle Line Wrap</span></button>
+          <button onclick="toggleWrap()" id="btnToggleWrap" disabled><span class="menu-label">Toggle Line Wrap</span></button>
           <button onclick="document.getElementById('settingsModal').classList.add('open')"><span class="menu-label">Settings</span></button>
         </div>
       </div>
@@ -103,6 +106,58 @@
       </div>
     </div>
   </div>
+
+  <div class="welcome-screen" id="welcomeScreen">
+    <div class="welcome-inner">
+      <h1 class="welcome-logo">BEORN</h1>
+      <p class="welcome-sub">Markdown to PDF Editor</p>
+      <div class="welcome-actions">
+        <div class="welcome-section">
+          <h2>Open</h2>
+          <button onclick="openLocalFile()" id="welcomeOpenLocal">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8"/></svg>
+            <span>Local File</span>
+          </button>
+          <button onclick="openFolder()" id="welcomeOpenFolder">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14l1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
+            <span>Local Folder</span>
+          </button>
+          <button onclick="openDriveFile()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8m-8-6.101A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m8 17l4-4l4 4"/></svg>
+            <span>Drive File</span>
+          </button>
+          <button onclick="openGoogleDrive()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9"/></svg>
+            <span>Drive Folder</span>
+          </button>
+          <button onclick="openUrl()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20a14.5 14.5 0 0 0 0-20M2 12h20"/></svg>
+            <span>From URL</span>
+          </button>
+        </div>
+        <div class="welcome-section">
+          <h2>Create</h2>
+          <button onclick="newDocument()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5M9 15h6m-3 3v-6"/></svg>
+            <span>Blank Document</span>
+          </button>
+          <button onclick="newFromTemplate()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="9" height="7" x="3" y="14" rx="1"/><rect width="5" height="7" x="16" y="14" rx="1"/></svg>
+            <span>BEORN Template</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Hide welcome screen immediately if URL params indicate a file is loading
+    (function() {
+      var p = new URLSearchParams(location.search);
+      if (p.get("file") || p.get("folder") || p.get("driveFile") || p.get("driveFolder")) {
+        document.getElementById("welcomeScreen").classList.add("hidden");
+      }
+    })();
+  </script>
 
   <div class="container">
     <div class="file-sidebar" id="fileSidebar">

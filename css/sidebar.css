@@ -69,13 +69,11 @@
   background: #0096ae;
   opacity: calc(0.3 + var(--prox) * 0.7);
 }
-.outline-item.active {
-  background: rgba(51,115,179,0.08);
-}
+.outline-item.active {}
 .outline-item.active::before { background: #3373b3; }
 /* ── H1: section title — bold, sticky ── */
 .outline-item[data-level="1"] {
-  padding: 14px 10px 6px; margin-top: -4px;
+  padding: 10px 10px 8px; margin-top: -2px;
   font-size: 11.5px; font-weight: 700; color: #a0a0c0; letter-spacing: 0.01em;
   position: sticky; top: 0; z-index: 2;
   background: #171726;
@@ -87,7 +85,7 @@
 }
 /* ── H2: subsection — medium weight, sticky below H1 ── */
 .outline-item[data-level="2"] {
-  padding: 4px 10px 3px 22px; margin-top: -1px;
+  padding: 4px 10px 4px 22px; margin-top: -1px;
   font-size: 11px; font-weight: 500; color: #7c7c9a;
   position: sticky; top: 33px; z-index: 1;
   background: #171726;
@@ -99,7 +97,7 @@
 }
 /* ── H3: sub-subsection — lighter, smaller, sticky ── */
 .outline-item[data-level="3"] {
-  padding: 3px 10px 2px 34px; margin-top: -1px;
+  padding: 3px 10px 3px 34px; margin-top: -1px;
   font-size: 10.5px; font-weight: 400; color: #5c5c78;
   position: sticky; top: 55px; z-index: 0;
   background: #171726;

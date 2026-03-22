@@ -93,6 +93,14 @@ export async function activateFolder(restoreFile) {
   // Persist handle for reload
   await idbSet("dirHandle", dirHandle);
 
+  // Update URL
+  const url = new URL(location.href);
+  url.searchParams.delete("file");
+  url.searchParams.delete("driveFile");
+  url.searchParams.delete("driveFolder");
+  url.searchParams.set("folder", "local");
+  history.replaceState(null, "", url);
+
   await refreshFileList();
 
   // Restore previously active file, or open first
@@ -327,5 +335,9 @@ document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key === "o") {
     e.preventDefault();
     if (typeof window.openLocalFile === "function") window.openLocalFile();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === "n") {
+    e.preventDefault();
+    if (typeof window.newDocument === "function") window.newDocument();
   }
 });

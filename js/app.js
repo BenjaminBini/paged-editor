@@ -16,33 +16,37 @@ import {
 import {
   openFolder, saveCurrentFile, doSaveAs, isDirty,
   activateFolder, setDirHandle, setStorageMode,
-  activeFileIdx, idbGet, setStandaloneHandle,
+  activeFileIdx, storageMode, idbGet, idbSet, setStandaloneHandle,
 } from './file-manager.js';
-import { openGoogleDrive, openDriveFile, tryRestoreGdrive, saveGoogleSettings, closeFolder } from './google-drive.js';
+import { openGoogleDrive, openDriveFile, tryRestoreGdrive, restoreDriveFile, saveGoogleSettings, closeFolder } from './google-drive.js';
 import { closeDiffModal, resolveConflict } from './diff-merge.js';
 import './resize.js'; // self-initializing
 
 // ── Wire hooks ──────────────────────────────────────────────────────────────
 
-// When cm.setValue is called, destroy stale widgets then refresh
+// When cm.setValue is called, destroy stale widgets, refresh, dismiss welcome, update menus
 registerOnSetValue(() => {
+  hideWelcome();
   for (const tw of tableWidgets.values()) destroyTableWidget(tw);
   setTimeout(refreshTableWidgets, 50);
+  setTimeout(updateMenuState, 0);
 });
 
 // When a section finishes rendering in its iframe
+let _scaleTimer = null;
+let _anchorTimer = null;
 registerOnSectionReady((sectionIdx) => {
   const state = getSectionStates()[sectionIdx];
   // Setup click handler for the section that just rendered
   if (state?.frame) {
     setupPreviewClick(state.frame);
   }
-  setTimeout(scalePreview, 300);
-  setTimeout(scalePreview, 1000);
+  // Debounce scale + anchor rebuild to avoid flicker from multiple section-ready events
+  clearTimeout(_scaleTimer);
+  clearTimeout(_anchorTimer);
+  _scaleTimer = setTimeout(scalePreview, 300);
+  _anchorTimer = setTimeout(rebuildAnchorMap, 350);
   setupScrollSync();
-  // Rebuild anchor map after scaling settles (needed for scroll sync)
-  setTimeout(rebuildAnchorMap, 350);
-  setTimeout(rebuildAnchorMap, 1050);
   setTimeout(refreshTableWidgets, 50);
 });
 
@@ -320,6 +324,14 @@ async function openLocalFile() {
     hideLoading();
     document.getElementById("paneFileName").textContent = handle.name;
     document.title = handle.name + " — Paged.js Editor";
+    // Persist handle with unique ID so refresh re-opens the file
+    const fileId = crypto.randomUUID();
+    try {
+      await idbSet("file:" + fileId, handle);
+    } catch(e) { console.warn("Failed to persist file handle:", e); }
+    const url = new URL(location.href);
+    url.searchParams.set("file", fileId);
+    history.replaceState(null, "", url);
     triggerRender();
   } catch(e) {
     hideLoading();
@@ -354,34 +366,216 @@ window.saveGoogleSettings = saveGoogleSettings;
 window.closeDiffModal = closeDiffModal;
 window.resolveConflict = resolveConflict;
 window.closeFolder = closeFolder;
+window.closeFile = closeFile;
+window.newDocument = newDocument;
+window.newFromTemplate = newFromTemplate;
 
-// ── Default content ─────────────────────────────────────────────────────────
+// ── Welcome screen ──────────────────────────────────────────────────────────
 
-let DEFAULT_CONTENT = "";
-fetch("assets/default.md").then(r => r.text()).then(t => { DEFAULT_CONTENT = t; }).catch(() => {});
+const welcomeScreen = document.getElementById("welcomeScreen");
+
+function hideWelcome() {
+  if (welcomeScreen) welcomeScreen.classList.add("hidden");
+}
+
+function showWelcome() {
+  if (welcomeScreen) welcomeScreen.classList.remove("hidden");
+}
+
+// ── Menu state ──────────────────────────────────────────────────────────────
+
+const hasFileSystemAccess = typeof window.showOpenFilePicker === "function";
+
+function updateMenuState() {
+  const hasContent = !!cm.getValue();
+  const hasFile = activeFileIdx >= 0 || isUrlDocument;
+  const hasFolder = storageMode === "local" || storageMode === "gdrive";
+  const canSave = hasFile && !isUrlDocument;
+
+  const set = (id, enabled) => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = !enabled;
+  };
+
+  // File menu
+  set("btnOpenLocal", hasFileSystemAccess);
+  set("btnOpenFolder", hasFileSystemAccess);
+  set("welcomeOpenLocal", hasFileSystemAccess);
+  set("welcomeOpenFolder", hasFileSystemAccess);
+  set("btnSave", canSave);
+  set("btnSaveAs", hasContent);
+  set("btnCloseFile", hasContent);
+  set("btnCloseFolder", hasFolder);
+
+  // Edit menu
+  set("btnInsertTable", hasContent);
+  set("btnUndo", hasContent);
+  set("btnRedo", hasContent);
+
+  // View menu
+  set("btnRender", hasContent);
+  set("btnPreviewTab", hasContent);
+  set("btnToggleWrap", true);
+}
+
+function closeFile() {
+  if (isDirty() && !confirm("Discard unsaved changes?")) return;
+  isUrlDocument = false;
+  setStandaloneHandle(null, "");
+  cm.setValue("");
+  cm.clearHistory();
+  document.getElementById("paneFileName").textContent = "";
+  document.title = "Paged.js Editor";
+  const url = new URL(location.href);
+  url.searchParams.delete("file");
+  url.searchParams.delete("driveFile");
+  history.replaceState(null, "", url);
+  showWelcome();
+  updateMenuState();
+}
+
+const BLANK_FRONTMATTER = `---
+title: ""
+doctype: ""
+---
+
+`;
+
+function newDocument() {
+  hideWelcome();
+  cm.setValue(BLANK_FRONTMATTER);
+  cm.clearHistory();
+  cm.setCursor({ line: 1, ch: 8 }); // inside title quotes
+  cm.focus();
+  document.getElementById("paneFileName").textContent = "";
+  document.title = "New Document — Paged.js Editor";
+}
+
+const BEORN_TEMPLATE = `---
+title: "Project Name — Document Title"
+doctype: "Memoire technique"
+ao_ref: "2024-XXX"
+acheteur: "Client Name"
+---
+
+# Page de garde
+
+# 1. Introduction
+
+## 1.1 Context
+
+Describe the project context here.
+
+## 1.2 Objectives
+
+Outline the main objectives.
+
+# 2. Technical Approach
+
+## 2.1 Architecture
+
+Describe the proposed architecture.
+
+## 2.2 Implementation
+
+Detail the implementation plan.
+
+# 3. Planning
+
+## 3.1 Timeline
+
+Provide the project timeline.
+
+# 4. Team
+
+## 4.1 Key Personnel
+
+Present the team members.
+`;
+
+function newFromTemplate() {
+  hideWelcome();
+  cm.setValue(BEORN_TEMPLATE);
+  cm.clearHistory();
+  cm.focus();
+  document.getElementById("paneFileName").textContent = "";
+  document.title = "New Document — Paged.js Editor";
+  triggerRender();
+}
 
 // ── Restore folder on page load ─────────────────────────────────────────────
 
 async function tryRestore() {
-  // Try local folder first
-  try {
-    const stored = await idbGet("dirHandle");
-    if (stored) {
-      const perm = await stored.requestPermission({ mode: "readwrite" });
-      if (perm === "granted") {
-          setDirHandle(stored);
-        setStorageMode("local");
-        const restoreFile = await idbGet("activeFile");
-        await activateFolder(restoreFile || null);
-        return;
+  // All restore logic is driven by URL params — no params means nothing to restore
+
+  // ?file=<uuid> → local file handle from IndexedDB
+  const fileId = urlParams.get("file");
+  if (fileId && /^[0-9a-f]{8}-/i.test(fileId)) {
+    try {
+      const handle = await idbGet("file:" + fileId);
+      if (handle && handle.kind === "file") {
+        const perm = await handle.requestPermission({ mode: "readwrite" });
+        if (perm === "granted") {
+          showLoading("Loading " + handle.name + "...");
+          const file = await handle.getFile();
+          const text = await file.text();
+          setStandaloneHandle(handle, text);
+          isUrlDocument = false;
+          cm.setValue(text);
+          cm.clearHistory();
+          document.getElementById("paneFileName").textContent = handle.name;
+          document.title = handle.name + " — Paged.js Editor";
+          triggerRender();
+          return;
+        }
       }
-    }
-  } catch(e) {}
-  // Try Google Drive (with stored token from sessionStorage)
-  try {
-    const restored = await tryRestoreGdrive();
-    if (restored) return;
-  } catch(e) { console.log("GDrive restore failed:", e.message); }
+      // Handle not found or permission denied — clear stale param
+      const url = new URL(location.href);
+      url.searchParams.delete("file");
+      history.replaceState(null, "", url);
+    } catch(e) { console.warn("Standalone file restore failed:", e); }
+    return;
+  }
+
+  // ?folder=local → local folder handle from IndexedDB
+  if (urlParams.get("folder") === "local") {
+    try {
+      const stored = await idbGet("dirHandle");
+      if (stored) {
+        const perm = await stored.requestPermission({ mode: "readwrite" });
+        if (perm === "granted") {
+          setDirHandle(stored);
+          setStorageMode("local");
+          const restoreFile = await idbGet("activeFile");
+          await activateFolder(restoreFile || null);
+          return;
+        }
+      }
+      // Handle not found or permission denied — clear stale param
+      const url = new URL(location.href);
+      url.searchParams.delete("folder");
+      history.replaceState(null, "", url);
+    } catch(e) {}
+    return;
+  }
+
+  // ?driveFile=<id> → single Google Drive file
+  const driveFileId = urlParams.get("driveFile");
+  if (driveFileId) {
+    try {
+      const restored = await restoreDriveFile(driveFileId);
+      if (restored) { isUrlDocument = true; return; }
+    } catch(e) { console.warn("Drive file restore failed:", e.message); }
+    return;
+  }
+
+  // ?driveFolder=<id> → Google Drive folder
+  if (urlParams.has("driveFolder")) {
+    try {
+      const restored = await tryRestoreGdrive();
+      if (restored) return;
+    } catch(e) { console.warn("GDrive restore failed:", e.message); }
+  }
 }
 
 // ── Startup ─────────────────────────────────────────────────────────────────
@@ -394,6 +588,10 @@ const viewOnly = urlParams.get("editor") === "false";
 async function tryLoadFromUrl() {
   const fileUrl = urlParams.get("file");
   if (!fileUrl) return false;
+  // Skip if it's a stored handle ID (UUID), not a fetchable URL/path
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(fileUrl)) return false;
+  // Skip if driveFile/driveFolder params are present (handled by tryRestore)
+  if (urlParams.has("driveFile") || urlParams.has("driveFolder")) return false;
   try {
     showLoading("Loading " + fileUrl + "...");
     const r = await fetch(fileUrl);
@@ -432,14 +630,16 @@ pagedReady.then(async () => {
   const loaded = await tryLoadFromUrl();
   if (!loaded) {
     await tryRestore();
-    // If no file was restored, show default content
-    if (activeFileIdx < 0) {
-      cm.setValue(DEFAULT_CONTENT);
-      setTimeout(triggerRender, 100);
-    }
   }
   hideLoading();
+  // Show welcome screen if nothing was loaded
+  if (activeFileIdx < 0 && !cm.getValue()) {
+    showWelcome();
+  } else {
+    hideWelcome();
+  }
   restoreDone = true;
+  updateMenuState();
 }).catch(e => {
   hideLoading();
   if (status) status.textContent = "Startup error: " + e.message;
