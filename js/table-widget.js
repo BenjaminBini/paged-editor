@@ -131,6 +131,14 @@ function makeCell(tag, text) {
   el.textContent = text || "";
   el.addEventListener("keydown", tableWidgetKeydown);
   el.addEventListener("input", onCellInput);
+  el.addEventListener("focus", () => {
+    // Select all text on focus (Tab navigation, click still works naturally)
+    const range = document.createRange();
+    range.selectNodeContents(el);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
   return el;
 }
 
@@ -190,7 +198,7 @@ function createTableWidget(startLine, endLine) {
   toolbar.className = "tw-toolbar";
   const hint = document.createElement("span");
   hint.className = "tw-hint";
-  hint.textContent = "Tab: navigate · Enter: next row";
+  hint.textContent = "Tab: navigate · Enter: next row · Alt+\u2191\u2193: reorder";
   toolbar.appendChild(hint);
   const spacer = document.createElement("span");
   spacer.className = "tw-spacer";
@@ -199,14 +207,17 @@ function createTableWidget(startLine, endLine) {
   const endHandle = cm.getLineHandle(endLine);
   const tw = { startHandle, endHandle, wrapper, widget: null };
 
-  for (const [label, fn] of [
-    ["+ Row", () => { widgetAddRow(tw, tbody); syncWidgetToCM(tw); }],
-    ["− Row", () => { if (tbody.rows.length > 1) { tbody.deleteRow(tbody.rows.length - 1); syncWidgetToCM(tw); tw.widget?.changed(); } }],
-    ["+ Col", () => { widgetAddCol(table); syncWidgetToCM(tw); }],
-    ["− Col", () => { widgetDelCol(table); syncWidgetToCM(tw); }],
+  for (const [label, title, fn] of [
+    ["\u2191", "Move row up", () => { const { row } = getActivePosition(tw); if (row >= 0) { widgetMoveRow(tw, tbody, row, -1); syncWidgetToCM(tw); } }],
+    ["\u2193", "Move row down", () => { const { row } = getActivePosition(tw); if (row >= 0) { widgetMoveRow(tw, tbody, row, 1); syncWidgetToCM(tw); } }],
+    ["+ Row", "Add row after current", () => { const { row } = getActivePosition(tw); widgetAddRow(tw, tbody, row >= 0 ? row : undefined); syncWidgetToCM(tw); }],
+    ["\u2212 Row", "Remove current row", () => { const { row } = getActivePosition(tw); widgetDelRow(tw, tbody, row >= 0 ? row : undefined); syncWidgetToCM(tw); }],
+    ["+ Col", "Add column after current", () => { const { col } = getActivePosition(tw); widgetAddCol(table, col != null ? col : undefined); syncWidgetToCM(tw); }],
+    ["\u2212 Col", "Remove current column", () => { const { col } = getActivePosition(tw); widgetDelCol(table, col != null ? col : undefined); syncWidgetToCM(tw); }],
   ]) {
     const btn = document.createElement("button");
     btn.textContent = label;
+    btn.title = title;
     btn.onclick = fn;
     toolbar.appendChild(btn);
   }
@@ -323,29 +334,86 @@ cm.on("scroll", () => {
   }, 100);
 });
 
-function widgetAddRow(tw, tbody) {
+// Get the active cell's position within the table widget
+function getActivePosition(tw) {
+  const active = tw.wrapper.querySelector("th:focus, td:focus");
+  if (!active) return { row: null, col: null, inBody: false, cell: null };
+  const tr = active.parentElement;
+  const col = Array.from(tr.cells).indexOf(active);
+  const inBody = tr.parentElement.tagName === "TBODY";
+  const row = inBody ? Array.from(tr.parentElement.rows).indexOf(tr) : -1;
+  return { row, col, inBody, cell: active };
+}
+
+function widgetAddRow(tw, tbody, afterIdx) {
   const colCount = tw.wrapper.querySelector("thead tr").cells.length;
   const tr = document.createElement("tr");
   for (let ci = 0; ci < colCount; ci++) tr.appendChild(makeCell("td", ""));
-  tbody.appendChild(tr);
+  if (afterIdx != null && afterIdx >= 0 && afterIdx < tbody.rows.length) {
+    tbody.rows[afterIdx].after(tr);
+  } else {
+    tbody.appendChild(tr);
+  }
   if (tw.widget) tw.widget.changed();
   tr.cells[0].focus();
 }
 
-function widgetAddCol(table) {
-  const thead = table.querySelector("thead");
-  const tbody = table.querySelector("tbody");
-  thead.rows[0].appendChild(makeCell("th", ""));
-  for (const tr of tbody.rows) tr.appendChild(makeCell("td", ""));
+function widgetDelRow(tw, tbody, rowIdx) {
+  if (tbody.rows.length <= 1) return;
+  const idx = rowIdx != null ? rowIdx : tbody.rows.length - 1;
+  if (idx < 0 || idx >= tbody.rows.length) return;
+  tbody.deleteRow(idx);
+  if (tw.widget) tw.widget.changed();
+  // Focus nearest row
+  const focusIdx = Math.min(idx, tbody.rows.length - 1);
+  if (tbody.rows[focusIdx]?.cells[0]) tbody.rows[focusIdx].cells[0].focus();
 }
 
-function widgetDelCol(table) {
+function widgetAddCol(table, afterIdx) {
+  const thead = table.querySelector("thead");
+  const tbody = table.querySelector("tbody");
+  const insertAt = afterIdx != null ? afterIdx + 1 : thead.rows[0].cells.length;
+  const headRow = thead.rows[0];
+  const newTh = makeCell("th", "");
+  if (insertAt >= headRow.cells.length) {
+    headRow.appendChild(newTh);
+  } else {
+    headRow.insertBefore(newTh, headRow.cells[insertAt]);
+  }
+  for (const tr of tbody.rows) {
+    const newTd = makeCell("td", "");
+    if (insertAt >= tr.cells.length) {
+      tr.appendChild(newTd);
+    } else {
+      tr.insertBefore(newTd, tr.cells[insertAt]);
+    }
+  }
+}
+
+function widgetDelCol(table, colIdx) {
   const thead = table.querySelector("thead");
   const tbody = table.querySelector("tbody");
   if (thead.rows[0].cells.length <= 1) return;
-  const last = thead.rows[0].cells.length - 1;
-  thead.rows[0].deleteCell(last);
-  for (const tr of tbody.rows) { if (tr.cells.length > last) tr.deleteCell(last); }
+  const idx = colIdx != null ? colIdx : thead.rows[0].cells.length - 1;
+  if (idx < 0 || idx >= thead.rows[0].cells.length) return;
+  thead.rows[0].deleteCell(idx);
+  for (const tr of tbody.rows) { if (tr.cells.length > idx) tr.deleteCell(idx); }
+}
+
+function widgetMoveRow(tw, tbody, fromIdx, direction) {
+  const toIdx = fromIdx + direction;
+  if (fromIdx < 0 || fromIdx >= tbody.rows.length) return;
+  if (toIdx < 0 || toIdx >= tbody.rows.length) return;
+  const row = tbody.rows[fromIdx];
+  if (direction < 0) {
+    tbody.insertBefore(row, tbody.rows[toIdx]);
+  } else {
+    tbody.rows[toIdx].after(row);
+  }
+  if (tw.widget) tw.widget.changed();
+  // Keep focus on the moved row
+  const focusCol = getActivePosition(tw).col || 0;
+  if (row.cells[focusCol]) row.cells[focusCol].focus();
 }
 
 function tableWidgetKeydown(e) {
@@ -365,6 +433,22 @@ function tableWidgetKeydown(e) {
         const tw = findOwnerWidget(cell);
         if (tw) { widgetAddRow(tw, table.querySelector("tbody")); syncWidgetToCM(tw); }
       }
+    }
+  } else if (e.key === "ArrowUp" && e.altKey) {
+    e.preventDefault();
+    const cell = e.target;
+    const tw = findOwnerWidget(cell);
+    if (tw) {
+      const { row } = getActivePosition(tw);
+      if (row >= 0) { widgetMoveRow(tw, cell.closest("table").querySelector("tbody"), row, -1); syncWidgetToCM(tw); }
+    }
+  } else if (e.key === "ArrowDown" && e.altKey) {
+    e.preventDefault();
+    const cell = e.target;
+    const tw = findOwnerWidget(cell);
+    if (tw) {
+      const { row } = getActivePosition(tw);
+      if (row >= 0) { widgetMoveRow(tw, cell.closest("table").querySelector("tbody"), row, 1); syncWidgetToCM(tw); }
     }
   } else if (e.key === "Escape") {
     e.preventDefault();
