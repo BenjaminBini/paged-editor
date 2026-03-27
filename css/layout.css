@@ -8,7 +8,7 @@
 }
 .welcome-screen.hidden { display: none; }
 .welcome-inner {
-  text-align: center; max-width: 560px; padding: 40px;
+  text-align: center; max-width: 720px; width: 100%; padding: 40px;
 }
 .welcome-logo {
   font-family: "Montserrat", sans-serif; font-weight: 800;
@@ -53,41 +53,19 @@
   text-align: left; margin-top: 28px; width: 100%;
   border-top: 1px solid #1a1a2e; padding-top: 20px;
 }
-.welcome-recent-section h2 {
+.welcome-recent-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px;
+}
+.welcome-recent-grid h3 {
   font-size: 9px; font-weight: 600; color: #475569;
   text-transform: uppercase; letter-spacing: 0.08em;
   margin: 0 0 6px; padding: 0;
 }
-
-/* ── Recent list (VS Code style) ── */
-.welcome-recent-label {
-  font-size: 8px; font-weight: 600; color: #3a4555;
-  text-transform: uppercase; letter-spacing: 0.06em;
-  padding: 6px 0 3px; margin: 0;
-}
-.welcome-recent-label:first-child { padding-top: 0; }
 .recent-link {
-  display: flex; align-items: baseline; gap: 0;
-  width: 100%; padding: 1px 2px;
-  background: none; border: none; border-radius: 3px;
+  display: block; padding: 1px 0;
   color: #5a9ec7; font-size: 11.5px; font-weight: 400;
-  cursor: pointer; transition: color 0.1s; margin: 0;
-  text-align: left; text-decoration: none; line-height: 1.6;
-}
-.recent-link:hover {
-  color: #7ec0ee;
-}
-.recent-link .recent-name {
+  cursor: pointer; transition: color 0.1s;
+  text-decoration: none; line-height: 1.7;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.recent-link .recent-path {
-  font-size: 10px; color: #3a4555; margin-left: 6px;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  flex-shrink: 1; min-width: 0;
-}
-.recent-link:hover .recent-path { color: #566778; }
-.recent-link svg {
-  flex-shrink: 0; opacity: 0.3; margin-right: 5px;
-  position: relative; top: 2px;
-}
-.recent-link:hover svg { opacity: 0.5; }
+.recent-link:hover { color: #7ec0ee; }
