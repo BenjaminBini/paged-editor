@@ -1,0 +1,16 @@
+{
+  "name": "paged-editor",
+  "version": "1.0.0",
+  "description": "Markdown to PDF editor with Paged.js",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "echo 'TODO: add electron-builder config'"
+  },
+  "devDependencies": {
+    "electron": "^41.0.4"
+  },
+  "dependencies": {
+    "marked": "^15.0.7"
+  }
+}
