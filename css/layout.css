@@ -44,3 +44,36 @@
   transition: opacity 0.15s;
 }
 .welcome-section button:hover svg { opacity: 1; }
+
+/* ── Recent list (VS Code style) ── */
+.welcome-recent-label {
+  font-size: 9px; font-weight: 600; color: #475569;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 8px 0 4px; margin: 0;
+}
+.welcome-recent-label:first-child { padding-top: 0; }
+.welcome-section .recent-link {
+  display: flex; align-items: baseline; gap: 0;
+  width: 100%; padding: 3px 4px;
+  background: none; border: none; border-radius: 4px;
+  color: #7eb8e0; font-size: 12px; font-weight: 400;
+  cursor: pointer; transition: all 0.1s; margin: 0;
+  text-align: left; text-decoration: none;
+}
+.welcome-section .recent-link:hover {
+  background: #1e293b; color: #9dd4ff; border-color: transparent;
+}
+.welcome-section .recent-link .recent-name {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.welcome-section .recent-link .recent-path {
+  font-size: 10px; color: #475569; margin-left: 6px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  flex-shrink: 1; min-width: 0;
+}
+.welcome-section .recent-link:hover .recent-path { color: #64748b; }
+.welcome-section .recent-link svg {
+  flex-shrink: 0; opacity: 0.5; margin-right: 6px;
+  position: relative; top: 2px;
+}
+.welcome-section .recent-link:hover svg { opacity: 0.8; }
