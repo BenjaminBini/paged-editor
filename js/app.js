@@ -533,8 +533,7 @@ async function buildRecentUI() {
       for (const f of recentFolders) {
         const link = document.createElement("a");
         link.className = "recent-link";
-        link.textContent = f.split("/").pop();
-        link.title = f;
+        link.textContent = f;
         link.href = "#";
         link.onclick = (e) => { e.preventDefault(); openFolderByPath(f); };
         welcomeFolders.appendChild(link);
@@ -542,8 +541,7 @@ async function buildRecentUI() {
       for (const f of recentFiles) {
         const link = document.createElement("a");
         link.className = "recent-link";
-        link.textContent = f.split("/").pop();
-        link.title = f;
+        link.textContent = f;
         link.href = "#";
         link.onclick = (e) => { e.preventDefault(); openFilePath(f); };
         welcomeFiles.appendChild(link);
