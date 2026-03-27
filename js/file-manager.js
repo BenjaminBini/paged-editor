@@ -168,13 +168,21 @@ export async function openFolder() {
   await activateFolder();
 }
 
+export async function openFolderByPath(dirPath) {
+  folderPath = dirPath;
+  await activateFolder();
+}
+
 export async function activateFolder(restoreFile) {
   folderNameEl.textContent = folderPath.split("/").pop() || folderPath;
   fileSidebar.classList.add("open");
   btnSave.style.display = "";
   cm.refresh();
 
-  await api.setAppState({ lastFolder: folderPath });
+  // Persist and add to recent folders
+  const state = await api.getAppState();
+  const recentFolders = [folderPath, ...(state.recentFolders || []).filter(f => f !== folderPath)].slice(0, 10);
+  await api.setAppState({ lastFolder: folderPath, recentFolders });
 
   await refreshFileList();
 

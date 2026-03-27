@@ -4,7 +4,7 @@ const fs = require("fs/promises");
 
 // ── App state persistence ────────────────────────────────────────────────────
 const STATE_FILE = path.join(app.getPath("userData"), "app-state.json");
-let appState = { lastFolder: null, lastFile: null, recentFiles: [] };
+let appState = { lastFolder: null, lastFile: null, recentFiles: [], recentFolders: [] };
 
 async function loadAppState() {
   try {
@@ -98,21 +98,39 @@ ipcMain.handle("set-app-state", async (_e, partial) => {
 // ── Native menu ──────────────────────────────────────────────────────────────
 
 function buildMenu() {
-  const recentSubmenu = appState.recentFiles.length > 0
+  const recentFiles = appState.recentFiles || [];
+  const recentFolders = appState.recentFolders || [];
+  const hasRecent = recentFiles.length > 0 || recentFolders.length > 0;
+
+  const recentSubmenu = hasRecent
     ? [
-        ...appState.recentFiles.map(f => ({
-          label: path.basename(f),
-          sublabel: f,
-          click: () => mainWindow.webContents.send("open-file-path", f),
-        })),
+        ...(recentFolders.length > 0 ? [
+          { label: "Folders", enabled: false },
+          ...recentFolders.map(f => ({
+            label: path.basename(f),
+            sublabel: f,
+            click: () => mainWindow.webContents.send("open-folder-path", f),
+          })),
+        ] : []),
+        ...(recentFolders.length > 0 && recentFiles.length > 0 ? [{ type: "separator" }] : []),
+        ...(recentFiles.length > 0 ? [
+          { label: "Files", enabled: false },
+          ...recentFiles.map(f => ({
+            label: path.basename(f),
+            sublabel: f,
+            click: () => mainWindow.webContents.send("open-file-path", f),
+          })),
+        ] : []),
         { type: "separator" },
         { label: "Clear Recent", click: () => {
           appState.recentFiles = [];
+          appState.recentFolders = [];
           saveAppState();
           buildMenu();
+          mainWindow.webContents.send("recent-cleared");
         }},
       ]
-    : [{ label: "No Recent Files", enabled: false }];
+    : [{ label: "No Recent Items", enabled: false }];
 
   const template = [
     ...(process.platform === "darwin" ? [{

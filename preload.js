@@ -16,7 +16,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       "menu-new", "menu-open-file", "menu-open-folder",
       "menu-save", "menu-save-as", "menu-close-file", "menu-close-folder",
       "menu-insert-table", "menu-render", "menu-preview-tab", "menu-toggle-wrap", "menu-toggle-cover",
-      "open-file-path",
+      "open-file-path", "open-folder-path", "recent-cleared",
     ];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => callback(...args));

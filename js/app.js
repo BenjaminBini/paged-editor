@@ -12,7 +12,7 @@ import {
   setTableRangesDirty, twSyncing, tableWidgets, destroyTableWidget,
 } from './table-widget.js';
 import {
-  openFolder, doSaveAs, doSave, isDirty,
+  openFolder, openFolderByPath, doSaveAs, doSave, isDirty,
   activateFolder, closeFolder,
   setStandaloneFile, activeFileIdx, folderPath, standaloneFilePath,
 } from './file-manager.js';
@@ -273,6 +273,7 @@ async function openFilePath(filePath) {
     const state = await api.getAppState();
     const recent = [filePath, ...(state.recentFiles || []).filter(f => f !== filePath)].slice(0, 10);
     await api.setAppState({ lastFile: filePath, recentFiles: recent });
+    buildRecentUI();
     status.textContent = "Loaded " + name;
   } catch (e) {
     hideLoading();
@@ -466,6 +467,85 @@ async function tryRestore() {
   return false;
 }
 
+// ── Recent items UI ─────────────────────────────────────────────────────────
+
+async function buildRecentUI() {
+  const state = await api.getAppState();
+  const recentFiles = state.recentFiles || [];
+  const recentFolders = state.recentFolders || [];
+
+  // File menu submenu
+  const container = document.getElementById("recentMenuContainer");
+  const menu = document.getElementById("recentMenu");
+  if (container && menu) {
+    if (recentFiles.length === 0 && recentFolders.length === 0) {
+      container.style.display = "none";
+    } else {
+      container.style.display = "";
+      menu.innerHTML = "";
+      if (recentFolders.length > 0) {
+        const label = document.createElement("div");
+        label.className = "submenu-section-label";
+        label.textContent = "Folders";
+        menu.appendChild(label);
+        for (const f of recentFolders) {
+          const btn = document.createElement("button");
+          btn.textContent = f.split("/").pop();
+          btn.title = f;
+          btn.onclick = () => openFolderByPath(f);
+          menu.appendChild(btn);
+        }
+      }
+      if (recentFolders.length > 0 && recentFiles.length > 0) {
+        const div = document.createElement("div");
+        div.className = "menu-divider";
+        menu.appendChild(div);
+      }
+      if (recentFiles.length > 0) {
+        const label = document.createElement("div");
+        label.className = "submenu-section-label";
+        label.textContent = "Files";
+        menu.appendChild(label);
+        for (const f of recentFiles) {
+          const btn = document.createElement("button");
+          btn.textContent = f.split("/").pop();
+          btn.title = f;
+          btn.onclick = () => openFilePath(f);
+          menu.appendChild(btn);
+        }
+      }
+    }
+  }
+
+  // Welcome screen
+  const welcomeRecent = document.getElementById("welcomeRecent");
+  const welcomeFolders = document.getElementById("welcomeRecentFolders");
+  const welcomeFiles = document.getElementById("welcomeRecentFiles");
+  if (welcomeRecent && welcomeFolders && welcomeFiles) {
+    if (recentFiles.length === 0 && recentFolders.length === 0) {
+      welcomeRecent.style.display = "none";
+    } else {
+      welcomeRecent.style.display = "";
+      welcomeFolders.innerHTML = "";
+      welcomeFiles.innerHTML = "";
+      for (const f of recentFolders) {
+        const btn = document.createElement("button");
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14l1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg><span>' + f.split("/").pop() + '</span>';
+        btn.title = f;
+        btn.onclick = () => openFolderByPath(f);
+        welcomeFolders.appendChild(btn);
+      }
+      for (const f of recentFiles) {
+        const btn = document.createElement("button");
+        btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8"/></svg><span>' + f.split("/").pop() + '</span>';
+        btn.title = f;
+        btn.onclick = () => openFilePath(f);
+        welcomeFiles.appendChild(btn);
+      }
+    }
+  }
+}
+
 // ── Wire Electron menu events ───────────────────────────────────────────────
 
 if (api?.on) {
@@ -485,6 +565,8 @@ if (api?.on) {
   api.on("menu-toggle-wrap", () => toggleWrap());
   api.on("menu-toggle-cover", () => toggleCover());
   api.on("open-file-path", (filePath) => openFilePath(filePath));
+  api.on("open-folder-path", (folderPath) => openFolderByPath(folderPath));
+  api.on("recent-cleared", () => buildRecentUI());
 }
 
 // ── Warn before closing with unsaved changes ────────────────────────────────
@@ -508,6 +590,7 @@ pagedReady.then(async () => {
   }
   restoreDone = true;
   updateMenuState();
+  buildRecentUI();
 }).catch(e => {
   hideLoading();
   if (status) status.textContent = "Startup error: " + e.message;
