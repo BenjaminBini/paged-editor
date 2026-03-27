@@ -9,7 +9,7 @@
 }
 .table-widget table {
   border-collapse: collapse; table-layout: auto;
-  min-width: 100%;
+  width: auto; max-width: 100%;
 }
 .table-widget th, .table-widget td {
   border: 1px solid #2d2d3f; padding: 4px 12px; font-size: 12px;
