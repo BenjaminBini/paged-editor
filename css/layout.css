@@ -45,6 +45,16 @@
 }
 .welcome-section button:hover svg { opacity: 1; }
 
+/* ── Recent section (below actions) ── */
+.welcome-recent-section {
+  text-align: left; margin-top: 32px; max-width: 480px;
+}
+.welcome-recent-section h2 {
+  font-size: 10px; font-weight: 600; color: #475569;
+  text-transform: uppercase; letter-spacing: 0.08em;
+  margin: 0 0 8px; padding: 0 4px;
+}
+
 /* ── Recent list (VS Code style) ── */
 .welcome-recent-label {
   font-size: 9px; font-weight: 600; color: #475569;
