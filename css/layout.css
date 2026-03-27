@@ -8,82 +8,86 @@
 }
 .welcome-screen.hidden { display: none; }
 .welcome-inner {
-  text-align: center; max-width: 520px; padding: 40px;
+  text-align: center; max-width: 560px; padding: 40px;
 }
 .welcome-logo {
   font-family: "Montserrat", sans-serif; font-weight: 800;
-  font-size: 36px; color: #fff; letter-spacing: 0.08em; margin: 0 0 4px;
+  font-size: 28px; color: #fff; letter-spacing: 0.08em; margin: 0 0 4px;
 }
 .welcome-sub {
-  font-size: 13px; color: #64748b; margin: 0 0 40px;
+  font-size: 12px; color: #4a5568; margin: 0 0 36px;
   font-weight: 400; letter-spacing: 0.02em;
 }
+
+/* ── Action grid ── */
 .welcome-actions {
-  display: flex; gap: 40px; text-align: left;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 24px 32px;
+  text-align: left;
 }
 .welcome-section h2 {
-  font-size: 10px; font-weight: 600; color: #475569;
+  font-size: 9px; font-weight: 600; color: #475569;
   text-transform: uppercase; letter-spacing: 0.08em;
-  margin: 0 0 10px; padding: 0 4px;
+  margin: 0 0 8px; padding: 0;
 }
 .welcome-section button {
-  display: flex; align-items: center; gap: 10px;
-  width: 100%; padding: 10px 14px;
-  background: transparent; border: 1px solid #1e293b; border-radius: 8px;
-  color: #94a3b8; font-size: 13px; font-weight: 500;
-  cursor: pointer; transition: all 0.15s; margin-bottom: 6px;
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 7px 12px;
+  background: transparent; border: 1px solid #1e293b; border-radius: 6px;
+  color: #8899aa; font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s; margin-bottom: 4px;
 }
 .welcome-section button:hover:not(:disabled) {
-  background: #1e293b; color: #e2e8f0; border-color: #334155;
+  background: #1a2233; color: #c8d6e5; border-color: #2d3f55;
 }
 .welcome-section button:disabled {
   opacity: 0.35; cursor: default;
 }
 .welcome-section button svg {
-  flex-shrink: 0; opacity: 0.7;
+  flex-shrink: 0; opacity: 0.4; width: 15px; height: 15px;
   transition: opacity 0.15s;
 }
-.welcome-section button:hover svg { opacity: 1; }
+.welcome-section button:hover svg { opacity: 0.7; }
 
 /* ── Recent section (below actions) ── */
 .welcome-recent-section {
-  text-align: left; margin-top: 32px; max-width: 480px;
+  text-align: left; margin-top: 28px; width: 100%;
+  border-top: 1px solid #1a1a2e; padding-top: 20px;
 }
 .welcome-recent-section h2 {
-  font-size: 10px; font-weight: 600; color: #475569;
+  font-size: 9px; font-weight: 600; color: #475569;
   text-transform: uppercase; letter-spacing: 0.08em;
-  margin: 0 0 8px; padding: 0 4px;
+  margin: 0 0 6px; padding: 0;
 }
 
 /* ── Recent list (VS Code style) ── */
 .welcome-recent-label {
-  font-size: 9px; font-weight: 600; color: #475569;
+  font-size: 8px; font-weight: 600; color: #3a4555;
   text-transform: uppercase; letter-spacing: 0.06em;
-  padding: 8px 0 4px; margin: 0;
+  padding: 6px 0 3px; margin: 0;
 }
 .welcome-recent-label:first-child { padding-top: 0; }
-.welcome-section .recent-link {
+.recent-link {
   display: flex; align-items: baseline; gap: 0;
-  width: 100%; padding: 3px 4px;
-  background: none; border: none; border-radius: 4px;
-  color: #7eb8e0; font-size: 12px; font-weight: 400;
-  cursor: pointer; transition: all 0.1s; margin: 0;
-  text-align: left; text-decoration: none;
+  width: 100%; padding: 1px 2px;
+  background: none; border: none; border-radius: 3px;
+  color: #5a9ec7; font-size: 11.5px; font-weight: 400;
+  cursor: pointer; transition: color 0.1s; margin: 0;
+  text-align: left; text-decoration: none; line-height: 1.6;
 }
-.welcome-section .recent-link:hover {
-  background: #1e293b; color: #9dd4ff; border-color: transparent;
+.recent-link:hover {
+  color: #7ec0ee;
 }
-.welcome-section .recent-link .recent-name {
+.recent-link .recent-name {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.welcome-section .recent-link .recent-path {
-  font-size: 10px; color: #475569; margin-left: 6px;
+.recent-link .recent-path {
+  font-size: 10px; color: #3a4555; margin-left: 6px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   flex-shrink: 1; min-width: 0;
 }
-.welcome-section .recent-link:hover .recent-path { color: #64748b; }
-.welcome-section .recent-link svg {
-  flex-shrink: 0; opacity: 0.5; margin-right: 6px;
+.recent-link:hover .recent-path { color: #566778; }
+.recent-link svg {
+  flex-shrink: 0; opacity: 0.3; margin-right: 5px;
   position: relative; top: 2px;
 }
-.welcome-section .recent-link:hover svg { opacity: 0.8; }
+.recent-link:hover svg { opacity: 0.5; }
