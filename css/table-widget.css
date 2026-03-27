@@ -1,15 +1,17 @@
 .table-widget {
-  background: #181825; border: 1px solid #3373b3; border-radius: 8px;
-  margin: 4px 22px; padding: 0;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+  margin: 4px 22px;
+  padding: 0;
   overflow: hidden;
 }
 .table-widget .tw-table-scroll {
   overflow-x: auto;
 }
 .table-widget table {
-  border-collapse: collapse; table-layout: auto;
-  width: auto; max-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  width: auto;
+  max-width: 100%;
+  overflow: hidden;
 }
 .table-widget th, .table-widget td {
   border: 1px solid #2d2d3f; padding: 4px 12px; font-size: 12px;
@@ -28,8 +30,13 @@
   background: #2a2a4a; outline: 2px solid #3373b3; outline-offset: -2px;
 }
 .table-widget .tw-toolbar {
-  display: flex; gap: 4px; padding: 4px 8px; background: #11111b;
-  border-top: 1px solid #2d2d3f; align-items: center;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #11111b;
+  border: 1px solid #2d2d3f;
+  align-items: center;
+  border-top: 0px;
 }
 .table-widget .tw-toolbar button {
   background: #2d2d3f; color: #a0a0c0; border: none; border-radius: 4px;
