@@ -333,6 +333,7 @@ function widgetMatchesCM(tw) {
 // Lazy-load on scroll (reuses findAllTableRanges cache)
 let twScrollTimer = null;
 cm.on("scroll", () => {
+  if (!tableEditorEnabled) return;
   clearTimeout(twScrollTimer);
   twScrollTimer = setTimeout(() => {
     const ranges = findAllTableRanges();
