@@ -3,7 +3,7 @@
 import { cm, status, toggleWrap, registerOnSetValue, showLoading, hideLoading } from './editor.js';
 import {
   pagedReady, triggerRender, scalePreview, openPreviewTab,
-  registerOnSectionReady, getSectionStates,
+  registerOnSectionReady, getSectionStates, toggleCover,
   clearRenderTimeout, scheduleRender,
 } from './render.js';
 import { setupPreviewClick, setupScrollSync, rebuildAnchorMap } from './sync.js';
@@ -301,6 +301,7 @@ window.insertTable = insertTable;
 window.triggerRender = triggerRender;
 window.openPreviewTab = openPreviewTab;
 window.toggleWrap = toggleWrap;
+window.toggleCover = toggleCover;
 window.closeDiffModal = closeDiffModal;
 window.resolveConflict = resolveConflict;
 window.closeFolder = closeFolder;
@@ -481,6 +482,7 @@ if (api?.on) {
   api.on("menu-render", () => triggerRender());
   api.on("menu-preview-tab", () => openPreviewTab());
   api.on("menu-toggle-wrap", () => toggleWrap());
+  api.on("menu-toggle-cover", () => toggleCover());
   api.on("open-file-path", (filePath) => openFilePath(filePath));
 }
 

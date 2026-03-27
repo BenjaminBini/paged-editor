@@ -145,7 +145,13 @@
     <div class="resize-handle" id="resizeHandle"></div>
 
     <div class="preview-pane" id="previewPane">
-      <div class="pane-header">Preview (Paged.js)</div>
+      <div class="pane-header">
+        Preview (Paged.js)
+        <div id="btnCover" class="wrap-toggle active" onclick="toggleCover()" title="Toggle cover &amp; sommaire">
+          <span>Cover</span>
+          <div class="wrap-track"><div class="wrap-thumb"></div></div>
+        </div>
+      </div>
       <div id="preview-container">
         <div id="preview-wrapper">
           <!-- Section iframes are created dynamically by render.js -->

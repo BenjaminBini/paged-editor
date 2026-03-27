@@ -15,7 +15,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     const validChannels = [
       "menu-new", "menu-open-file", "menu-open-folder",
       "menu-save", "menu-save-as", "menu-close-file", "menu-close-folder",
-      "menu-insert-table", "menu-render", "menu-preview-tab", "menu-toggle-wrap",
+      "menu-insert-table", "menu-render", "menu-preview-tab", "menu-toggle-wrap", "menu-toggle-cover",
       "open-file-path",
     ];
     if (validChannels.includes(channel)) {

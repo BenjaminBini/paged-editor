@@ -769,6 +769,17 @@ export function getSectionStates() {
   return sectionStates;
 }
 
+let coverVisible = true;
+
+export function toggleCover() {
+  coverVisible = !coverVisible;
+  const state = sectionStates[0];
+  if (state?.wrapper) {
+    state.wrapper.style.display = coverVisible ? '' : 'none';
+  }
+  document.getElementById('btnCover')?.classList.toggle('active', coverVisible);
+}
+
 export function getPreviewScale() {
   const containerW = previewContainer.clientWidth - 40;
   return Math.min(1, containerW / A4_WIDTH_PX);

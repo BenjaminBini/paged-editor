@@ -165,6 +165,7 @@ function buildMenu() {
         { label: "Open in New Window", click: () => mainWindow.webContents.send("menu-preview-tab") },
         { type: "separator" },
         { label: "Toggle Line Wrap", click: () => mainWindow.webContents.send("menu-toggle-wrap") },
+        { label: "Toggle Cover & Sommaire", click: () => mainWindow.webContents.send("menu-toggle-cover") },
         { type: "separator" },
         { role: "toggleDevTools" },
         { role: "resetZoom" },
