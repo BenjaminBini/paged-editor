@@ -24,7 +24,8 @@ const api = window.electronAPI;
 // ── Wire hooks ──────────────────────────────────────────────────────────────
 
 registerOnSetValue(() => {
-  hideWelcome();
+  if (cm.getValue()) hideWelcome();
+  else showWelcome();
   for (const tw of tableWidgets.values()) destroyTableWidget(tw);
   setTimeout(refreshTableWidgets, 50);
   setTimeout(updateMenuState, 0);
