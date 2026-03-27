@@ -506,8 +506,11 @@ let renderStartTime = 0;
 
 function ensureSectionSlot(count) {
   while (sectionStates.length < count) {
+    const idx = sectionStates.length;
     const wrapper = document.createElement('div');
     wrapper.className = 'section-wrapper';
+    // Hide cover section when coverVisible is false
+    if (idx === 0 && !coverVisible) wrapper.style.display = 'none';
     previewWrapper.appendChild(wrapper);
     sectionStates.push({
       type: null, hash: null, gen: 0,
@@ -769,7 +772,7 @@ export function getSectionStates() {
   return sectionStates;
 }
 
-let coverVisible = true;
+let coverVisible = false;
 
 export function toggleCover() {
   coverVisible = !coverVisible;
