@@ -11,8 +11,6 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/codemirror@5/mode/markdown/markdown.min.js"></script>
-  <script src="https://apis.google.com/js/api.js"></script>
-  <script src="https://accounts.google.com/gsi/client"></script>
 
   <!-- Modular CSS -->
   <link rel="stylesheet" href="css/reset.css" />
@@ -36,12 +34,8 @@
         <div class="menu-dropdown">
           <button onclick="newDocument()"><span class="menu-label">New File</span><span class="menu-shortcut">Ctrl+N</span></button>
           <div class="menu-divider"></div>
-          <button onclick="openLocalFile()" id="btnOpenLocal"><span class="menu-label">Open Local File...</span><span class="menu-shortcut">Ctrl+O</span></button>
-          <button onclick="openDriveFile()"><span class="menu-label">Open Drive File...</span></button>
-          <button onclick="openUrl()"><span class="menu-label">Open URL...</span></button>
-          <div class="menu-divider"></div>
-          <button onclick="openFolder()" id="btnOpenFolder"><span class="menu-label">Open Local Folder</span></button>
-          <button onclick="openGoogleDrive()"><span class="menu-label">Open Drive Folder</span></button>
+          <button onclick="openLocalFile()" id="btnOpenLocal"><span class="menu-label">Open File...</span><span class="menu-shortcut">Ctrl+O</span></button>
+          <button onclick="openFolder()" id="btnOpenFolder"><span class="menu-label">Open Folder...</span></button>
           <div class="menu-divider"></div>
           <button onclick="saveCurrentFile()" id="btnSave" disabled><span class="menu-label">Save</span><span class="menu-shortcut">Ctrl+S</span></button>
           <button onclick="saveAs()" id="btnSaveAs" disabled><span class="menu-label">Save As...</span><span class="menu-shortcut">Ctrl+Shift+S</span></button>
@@ -68,29 +62,12 @@
           <button onclick="openPreviewTab()" id="btnPreviewTab" disabled><span class="menu-label">Open in New Tab</span></button>
           <div class="menu-divider"></div>
           <button onclick="toggleWrap()" id="btnToggleWrap" disabled><span class="menu-label">Toggle Line Wrap</span></button>
-          <button onclick="document.getElementById('settingsModal').classList.add('open')"><span class="menu-label">Settings</span></button>
         </div>
       </div>
     </nav>
 
     <span id="paneFileName" class="pane-filename"></span>
     <span class="status" id="status">Ready</span>
-  </div>
-
-  <div class="modal-overlay" id="settingsModal">
-    <div class="modal">
-      <h3>Google Drive Settings</h3>
-      <label>Client ID</label>
-      <input id="gdClientId" placeholder="xxxxxx.apps.googleusercontent.com" />
-      <div class="hint">From Google Cloud Console &gt; APIs &amp; Services &gt; Credentials &gt; OAuth 2.0 Client ID (Web application). Add your domain as authorized JavaScript origin.</div>
-      <label>API Key</label>
-      <input id="gdApiKey" placeholder="AIzaSy..." />
-      <div class="hint">From Google Cloud Console &gt; APIs &amp; Services &gt; Credentials &gt; API Key. Restrict to Google Drive API.</div>
-      <div class="btn-row">
-        <button class="btn-cancel" onclick="document.getElementById('settingsModal').classList.remove('open')">Cancel</button>
-        <button class="btn-save" onclick="saveGoogleSettings()">Save</button>
-      </div>
-    </div>
   </div>
 
   <div class="modal-overlay" id="diffModal">
@@ -116,23 +93,11 @@
           <h2>Open</h2>
           <button onclick="openLocalFile()" id="welcomeOpenLocal">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8"/></svg>
-            <span>Local File</span>
+            <span>Open File</span>
           </button>
           <button onclick="openFolder()" id="welcomeOpenFolder">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14l1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
-            <span>Local Folder</span>
-          </button>
-          <button onclick="openDriveFile()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 13v8m-8-6.101A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="m8 17l4-4l4 4"/></svg>
-            <span>Drive File</span>
-          </button>
-          <button onclick="openGoogleDrive()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9"/></svg>
-            <span>Drive Folder</span>
-          </button>
-          <button onclick="openUrl()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20a14.5 14.5 0 0 0 0-20M2 12h20"/></svg>
-            <span>From URL</span>
+            <span>Open Folder</span>
           </button>
         </div>
         <div class="welcome-section">
@@ -149,22 +114,9 @@
       </div>
     </div>
   </div>
-  <script>
-    // Hide welcome screen immediately if URL params indicate a file is loading
-    (function() {
-      var p = new URLSearchParams(location.search);
-      if (p.get("file") || p.get("folder") || p.get("driveFile") || p.get("driveFolder")) {
-        document.getElementById("welcomeScreen").classList.add("hidden");
-      }
-    })();
-  </script>
-
   <div class="container">
     <div class="file-sidebar" id="fileSidebar">
       <div class="sidebar-header">
-        <span id="folderIcon" style="display:none;">
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="12" viewBox="0 0 256 229" style="vertical-align:-1px;margin-right:4px;"><path fill="#0066da" d="m19.354 196.034l11.29 19.5c2.346 4.106 5.718 7.332 9.677 9.678q17.009-21.591 23.68-33.137q6.77-11.717 16.641-36.655q-26.604-3.502-40.32-3.502q-13.165 0-40.322 3.502c0 4.545 1.173 9.09 3.519 13.196z"/><path fill="#ea4335" d="M215.681 225.212c3.96-2.346 7.332-5.572 9.677-9.677l4.692-8.064l22.434-38.855a26.57 26.57 0 0 0 3.518-13.196q-27.315-3.502-40.247-3.502q-13.899 0-40.248 3.502q9.754 25.075 16.422 36.655q6.724 11.683 23.752 33.137"/><path fill="#00832d" d="M128.001 73.311q19.68-23.768 27.125-36.655q5.996-10.377 13.196-33.137C164.363 1.173 159.818 0 155.126 0h-54.25C96.184 0 91.64 1.32 87.68 3.519q9.16 26.103 15.544 37.154q7.056 12.213 24.777 32.638"/><path fill="#2684fc" d="M175.36 155.42H80.642l-40.32 69.792c3.958 2.346 8.503 3.519 13.195 3.519h148.968c4.692 0 9.238-1.32 13.196-3.52z"/><path fill="#00ac47" d="M128.001 73.311L87.681 3.52c-3.96 2.346-7.332 5.571-9.678 9.677L3.519 142.224A26.57 26.57 0 0 0 0 155.42h80.642z"/><path fill="#ffba00" d="m215.242 77.71l-37.243-64.514c-2.345-4.106-5.718-7.331-9.677-9.677l-40.32 69.792l47.358 82.109h80.496c0-4.546-1.173-9.09-3.519-13.196z"/></svg>
-        </span>
         <span class="folder-name" id="folderName">Files</span>
         <button onclick="closeFolder()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:14px;padding:2px 4px;margin-left:auto;" title="Close folder">&times;</button>
       </div>
