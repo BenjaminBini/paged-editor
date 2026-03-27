@@ -253,7 +253,20 @@ export function destroyTableWidget(tw) {
   tableWidgets.delete(tw.startHandle);
 }
 
+let tableEditorEnabled = true;
+
+export function toggleTableEditor() {
+  tableEditorEnabled = !tableEditorEnabled;
+  document.getElementById('btnTableEditor')?.classList.toggle('active', tableEditorEnabled);
+  if (tableEditorEnabled) {
+    refreshTableWidgets();
+  } else {
+    for (const tw of tableWidgets.values()) destroyTableWidget(tw);
+  }
+}
+
 export function refreshTableWidgets() {
+  if (!tableEditorEnabled) return;
   const ranges = findAllTableRanges();
   const rangeByStartHandle = new Map(ranges.map(r => [r.startHandle, r]));
 

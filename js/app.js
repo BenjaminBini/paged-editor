@@ -8,7 +8,7 @@ import {
 } from './render.js';
 import { setupPreviewClick, setupScrollSync, rebuildAnchorMap } from './sync.js';
 import {
-  refreshTableWidgets, insertTable, getTableRangeAt,
+  refreshTableWidgets, insertTable, getTableRangeAt, toggleTableEditor,
   setTableRangesDirty, twSyncing, tableWidgets, destroyTableWidget,
 } from './table-widget.js';
 import {
@@ -302,6 +302,7 @@ window.triggerRender = triggerRender;
 window.openPreviewTab = openPreviewTab;
 window.toggleWrap = toggleWrap;
 window.toggleCover = toggleCover;
+window.toggleTableEditor = toggleTableEditor;
 window.closeDiffModal = closeDiffModal;
 window.resolveConflict = resolveConflict;
 window.closeFolder = closeFolder;
