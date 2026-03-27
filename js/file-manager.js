@@ -1,6 +1,6 @@
 // file-manager.js — file management via Electron IPC
 
-import { cm, editor, status, showLoading, hideLoading } from './editor.js';
+import { cm, status, showLoading, hideLoading } from './editor.js';
 import { triggerRender, escapeHtml } from './render.js';
 import { showDiffModal, threeWayMerge } from './diff-merge.js';
 

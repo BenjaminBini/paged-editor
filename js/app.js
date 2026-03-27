@@ -12,9 +12,9 @@ import {
   setTableRangesDirty, twSyncing, tableWidgets, destroyTableWidget,
 } from './table-widget.js';
 import {
-  openFolder, saveCurrentFile, doSaveAs, doSave, isDirty,
-  activateFolder, openFile, closeFolder, renderFileList,
-  setStandaloneFile, activeFileIdx, folderPath, fileEntries, standaloneFilePath,
+  openFolder, doSaveAs, doSave, isDirty,
+  activateFolder, closeFolder,
+  setStandaloneFile, activeFileIdx, folderPath, standaloneFilePath,
 } from './file-manager.js';
 import { closeDiffModal, resolveConflict } from './diff-merge.js';
 import './resize.js';
@@ -260,7 +260,6 @@ async function openFilePath(filePath) {
   try {
     showLoading("Loading...");
     const text = await api.readFile(filePath);
-    const modTime = await api.getFileModTime(filePath);
     setStandaloneFile(filePath, text);
     cm.setValue(text);
     cm.clearHistory();
