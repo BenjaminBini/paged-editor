@@ -1,48 +1,21 @@
-// file-manager.js — local file management (IndexedDB + File System Access API)
+// file-manager.js — file management via Electron IPC
 
 import { cm, editor, status, showLoading, hideLoading } from './editor.js';
 import { triggerRender, escapeHtml } from './render.js';
 import { showDiffModal, threeWayMerge } from './diff-merge.js';
 
-// ── IndexedDB helpers (persist FileSystemDirectoryHandle) ───────────────────
-
-const IDB_NAME = "paged-editor";
-const IDB_STORE = "state";
-
-function idbOpen() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(IDB_STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function idbSet(key, val) {
-  const db = await idbOpen();
-  const tx = db.transaction(IDB_STORE, "readwrite");
-  tx.objectStore(IDB_STORE).put(val, key);
-  return new Promise(r => { tx.oncomplete = r; });
-}
-
-async function idbGet(key) {
-  const db = await idbOpen();
-  const tx = db.transaction(IDB_STORE, "readonly");
-  const req = tx.objectStore(IDB_STORE).get(key);
-  return new Promise(r => { req.onsuccess = () => r(req.result); });
-}
+const api = window.electronAPI;
 
 // ── File state ───────────────────────────────────────────────────────────────
 
-let dirHandle = null;       // DirectoryHandle for the opened folder
-let fileHandles = [];       // [{name, handle}] sorted
-let activeFileIdx = -1;     // index in fileHandles
-let activeFileName = "";    // name of active file (for restore after reload)
-let savedContent = "";      // content at last save/load (for conflict detection)
-let dirtyFlag = false;      // true when content differs from last save/load
-let localFileModTime = 0;   // lastModified timestamp of file when loaded/saved
-let storageMode = null;     // "local" | "gdrive" | null
-let standaloneHandle = null; // FileHandle for single-file open (no folder)
+let folderPath = null;        // path of opened folder
+let fileEntries = [];         // [{name, path}] sorted
+let activeFileIdx = -1;       // index in fileEntries
+let activeFileName = "";      // name of active file
+let savedContent = "";        // content at last save/load
+let dirtyFlag = false;        // true when content differs from last save/load
+let localFileModTime = 0;     // mtime when file was loaded/saved
+let standaloneFilePath = null; // path for single-file open (no folder)
 
 // ── DOM refs ─────────────────────────────────────────────────────────────────
 
@@ -66,152 +39,115 @@ export function registerRefreshTableWidgets(fn) {
 
 // ── Core functions ───────────────────────────────────────────────────────────
 
-export function isDirty() { return activeFileIdx >= 0 && dirtyFlag; }
+export function isDirty() { return (activeFileIdx >= 0 || standaloneFilePath) && dirtyFlag; }
 
 export async function openFolder() {
-  try {
-    dirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
-  } catch(e) { return; } // user cancelled
-
+  const dirPath = await api.showOpenFolderDialog();
+  if (!dirPath) return;
+  folderPath = dirPath;
   await activateFolder();
 }
 
 export async function activateFolder(restoreFile) {
-  storageMode = "local";
-  folderNameEl.textContent = dirHandle.name;
-  document.getElementById("folderIcon").style.display = "none";
+  folderNameEl.textContent = folderPath.split("/").pop() || folderPath;
   fileSidebar.classList.add("open");
   btnSave.style.display = "";
   cm.refresh();
 
-  // Clear GDrive state so restore picks local
-  localStorage.removeItem("gd_folder_id");
-  localStorage.removeItem("gd_drive_id");
-  localStorage.removeItem("gd_folder_name");
-  sessionStorage.removeItem("gd_token");
-
-  // Persist handle for reload
-  await idbSet("dirHandle", dirHandle);
-
-  // Update URL
-  const url = new URL(location.href);
-  url.searchParams.delete("file");
-  url.searchParams.delete("driveFile");
-  url.searchParams.delete("driveFolder");
-  url.searchParams.set("folder", "local");
-  history.replaceState(null, "", url);
+  await api.setAppState({ lastFolder: folderPath });
 
   await refreshFileList();
 
-  // Restore previously active file, or open first
   let idx = 0;
   if (restoreFile) {
-    const found = fileHandles.findIndex(f => f.name === restoreFile);
+    const found = fileEntries.findIndex(f => f.name === restoreFile);
     if (found >= 0) idx = found;
   }
-  if (fileHandles.length > 0) await openFile(idx);
+  if (fileEntries.length > 0) await openFile(idx);
 }
 
 export async function refreshFileList() {
-  fileHandles = [];
-  for await (const [name, handle] of dirHandle.entries()) {
-    if (handle.kind === "file" && name.endsWith(".md")) {
-      fileHandles.push({ name, handle });
-    }
-  }
-  fileHandles.sort((a, b) => a.name.localeCompare(b.name));
+  fileEntries = await api.readDir(folderPath);
   renderFileList();
 }
 
 export function renderFileList() {
   fileList.innerHTML = "";
-  fileHandles.forEach((f, i) => {
+  fileEntries.forEach((f, i) => {
     const el = document.createElement("div");
     el.className = "file-item" + (i === activeFileIdx ? " active" : "");
     if (i === activeFileIdx && isDirty()) el.classList.add("dirty");
-    el.innerHTML = '<span class="file-icon">📄</span>' + escapeHtml(f.name);
+    el.innerHTML = '<span class="file-icon">\uD83D\uDCC4</span>' + escapeHtml(f.name);
     el.onclick = () => openFile(i);
     fileList.appendChild(el);
   });
 }
 
-export let openFile = async function(idx) {
-  // Save current if dirty
+export async function openFile(idx) {
   if (isDirty()) await doSave();
 
   activeFileIdx = idx;
-  const fh = fileHandles[idx];
-  activeFileName = fh.name;
-  showLoading("Loading " + fh.name + "...");
+  const entry = fileEntries[idx];
+  activeFileName = entry.name;
+  showLoading("Loading " + entry.name + "...");
 
-  // Re-obtain handle from directory to avoid stale getFile() cache
-  let text, file;
   try {
-    const freshHandle = await dirHandle.getFileHandle(fh.name);
-    file = await freshHandle.getFile();
-    text = await file.text();
-  } catch(e) {
-    file = await fh.handle.getFile();
-    text = await file.text();
+    const text = await api.readFile(entry.path);
+    const modTime = await api.getFileModTime(entry.path);
+    savedContent = text;
+    dirtyFlag = false;
+    localFileModTime = modTime;
+    cm.setValue(text);
+    cm.clearHistory();
+    hideLoading();
+    paneFileName.textContent = entry.name;
+    updateTitle(entry.name);
+    renderFileList();
+    triggerRender();
+    await api.setAppState({ lastFile: entry.name });
+    status.textContent = "Loaded " + entry.name;
+  } catch (e) {
+    hideLoading();
+    status.textContent = "Load failed: " + e.message;
   }
-  savedContent = text;
-  dirtyFlag = false;
-  localFileModTime = file.lastModified;
-  cm.setValue(text);
-  cm.clearHistory();
-  hideLoading();
-  paneFileName.textContent = fh.name;
-  document.title = fh.name + " — Paged.js Editor";
-  renderFileList();
-  triggerRender();
+}
 
-  // Remember active file for reload
-  await idbSet("activeFile", fh.name);
-};
-
-export let doSave = async function() {
-  // Standalone file mode (single file opened without folder)
-  if (activeFileIdx < 0 && standaloneHandle) {
+export async function doSave() {
+  // Standalone file mode
+  if (activeFileIdx < 0 && standaloneFilePath) {
     try {
-      const writable = await standaloneHandle.createWritable();
-      await writable.write(cm.getValue());
-      await writable.close();
+      await api.writeFile(standaloneFilePath, cm.getValue());
       savedContent = cm.getValue();
       dirtyFlag = false;
-      const file = await standaloneHandle.getFile();
-      localFileModTime = file.lastModified;
-      status.textContent = "Saved " + standaloneHandle.name;
+      localFileModTime = await api.getFileModTime(standaloneFilePath);
+      status.textContent = "Saved " + standaloneFilePath.split("/").pop();
+      updateTitle(standaloneFilePath.split("/").pop());
     } catch (e) {
       status.textContent = "Save failed: " + e.message;
     }
     return;
   }
+
   if (activeFileIdx < 0) return;
-  const fh = fileHandles[activeFileIdx];
+  const entry = fileEntries[activeFileIdx];
+
   try {
-    // Check if file was modified externally since we loaded/saved it
-    if (localFileModTime && storageMode !== "gdrive") {
-      let currentFile;
-      try {
-        const freshHandle = await dirHandle.getFileHandle(fh.name);
-        currentFile = await freshHandle.getFile();
-      } catch(e) {
-        currentFile = await fh.handle.getFile();
-      }
-      if (currentFile.lastModified > localFileModTime) {
-        status.textContent = "Conflict detected — reviewing changes...";
-        const remoteText = await currentFile.text();
+    // Conflict detection: check if file was modified externally
+    if (localFileModTime) {
+      const currentModTime = await api.getFileModTime(entry.path);
+      if (currentModTime > localFileModTime) {
+        status.textContent = "Conflict detected \u2014 reviewing changes...";
+        const remoteText = await api.readFile(entry.path);
         const localText = cm.getValue();
         if (remoteText !== savedContent) {
-          // Show diff modal — reuse the same one as Google Drive
-          const action = await showDiffModal(localText, remoteText, fh.name);
+          const action = await showDiffModal(localText, remoteText, entry.name);
           if (action === "cancel") { status.textContent = "Save cancelled"; return; }
           if (action === "reload") {
             savedContent = remoteText;
             dirtyFlag = false;
-            localFileModTime = currentFile.lastModified;
+            localFileModTime = currentModTime;
             cm.setValue(remoteText);
-            status.textContent = "Loaded disk version of " + fh.name;
+            status.textContent = "Loaded disk version of " + entry.name;
             renderFileList();
             return;
           }
@@ -219,107 +155,116 @@ export let doSave = async function() {
             const merged = threeWayMerge(savedContent, localText, remoteText);
             cm.setValue(merged.text);
             if (merged.hasConflicts) {
-              status.textContent = "Merged with conflicts — search for <<<<<<< to resolve";
-              return; // don't auto-save, let user resolve conflicts first
+              status.textContent = "Merged with conflicts \u2014 search for <<<<<<< to resolve";
+              return;
             }
-            // Clean merge — fall through to save
           }
-          // action === "force" or clean merge: fall through to save
         }
       }
     }
 
-    const writable = await fh.handle.createWritable();
-    await writable.write(cm.getValue());
-    await writable.close();
+    await api.writeFile(entry.path, cm.getValue());
     savedContent = cm.getValue();
     dirtyFlag = false;
-    // Update mod time after save
-    try {
-      const freshFile = await (await dirHandle.getFileHandle(fh.name)).getFile();
-      localFileModTime = freshFile.lastModified;
-    } catch(e) {}
-    status.textContent = "Saved " + fh.name;
+    localFileModTime = await api.getFileModTime(entry.path);
+    status.textContent = "Saved " + entry.name;
+    updateTitle(entry.name);
     renderFileList();
-  } catch(e) {
+  } catch (e) {
     status.textContent = "Save failed: " + e.message;
   }
-};
+}
 
 export async function saveCurrentFile() {
   await doSave();
 }
 
-// ── Save As (File System Access API) ─────────────────────────────────────────
+// ── Save As ──────────────────────────────────────────────────────────────────
 
 export async function doSaveAs() {
-  try {
-    const handle = await window.showSaveFilePicker({
-      types: [{ description: 'Markdown', accept: { 'text/markdown': ['.md'] } }],
-      suggestedName: activeFileName || 'document.md',
-    });
-    const writable = await handle.createWritable();
-    await writable.write(cm.getValue());
-    await writable.close();
+  const filePath = await api.showSaveDialog(activeFileName || "document.md");
+  if (!filePath) return;
 
-    // Track as standalone file
-    standaloneHandle = handle;
+  try {
+    await api.writeFile(filePath, cm.getValue());
+    standaloneFilePath = filePath;
     savedContent = cm.getValue();
     dirtyFlag = false;
-    const file = await handle.getFile();
-    localFileModTime = file.lastModified;
-
-    const name = handle.name;
+    localFileModTime = await api.getFileModTime(filePath);
+    const name = filePath.split("/").pop();
     paneFileName.textContent = name;
-    document.title = name + " — Paged.js Editor";
+    updateTitle(name);
     status.textContent = "Saved as " + name;
-    renderFileList();
+    api.setAppState({ lastFile: filePath });
+    addRecentFile(filePath);
   } catch (e) {
-    if (e.name !== 'AbortError') status.textContent = "Save As failed: " + e.message;
+    status.textContent = "Save As failed: " + e.message;
   }
 }
 
 // ── Standalone file support ──────────────────────────────────────────────────
 
-export function setStandaloneHandle(handle, content) {
-  standaloneHandle = handle;
+export function setStandaloneFile(filePath, content) {
+  standaloneFilePath = filePath;
   savedContent = content;
   dirtyFlag = false;
   localFileModTime = 0;
-  // Not in folder mode, but enable save
   activeFileIdx = -1;
 }
 
-// ── Setters for google-drive.js (mutates module-level variables) ─────────────
+// ── Close folder ─────────────────────────────────────────────────────────────
 
-export function setOpenFile(fn)        { openFile = fn; }
-export function setDoSave(fn)          { doSave = fn; }
-export function setStorageMode(m)      { storageMode = m; }
-export function setDirHandle(h)        { dirHandle = h; }
-export function setActiveFileIdx(i)    { activeFileIdx = i; }
-export function setActiveFileName(n)   { activeFileName = n; }
-export function setSavedContent(c)     { savedContent = c; }
-export function setDirtyFlag(f)        { dirtyFlag = f; }
-export function setFileHandles(h)      { fileHandles = h; }
-export function setLocalFileModTime(t) { localFileModTime = t; }
+export function closeFolder() {
+  fileSidebar.classList.remove("open");
+  fileEntries = [];
+  activeFileIdx = -1;
+  activeFileName = "";
+  savedContent = "";
+  dirtyFlag = false;
+  folderPath = null;
+  standaloneFilePath = null;
+  paneFileName.textContent = "";
+  updateTitle(null);
+  cm.setValue("");
+  cm.refresh();
+  triggerRender();
+  api.setAppState({ lastFolder: null, lastFile: null });
+}
 
-// ── Named re-exports for consumers ───────────────────────────────────────────
+// ── Title helper ─────────────────────────────────────────────────────────────
 
-export { idbSet, idbGet };
-export { dirHandle, fileHandles, activeFileIdx, activeFileName, savedContent, dirtyFlag, storageMode };
+function updateTitle(fileName) {
+  const title = fileName ? fileName + " \u2014 BEORN Editor" : "BEORN Editor";
+  document.title = title;
+  api.setTitle(title);
+}
 
-// ── Dirty tracking ────────────────────────────────────────────────────────────
+// ── Recent files helper ──────────────────────────────────────────────────────
 
-// Update only the active file's indicator, not the whole list
+async function addRecentFile(filePath) {
+  const state = await api.getAppState();
+  const recent = [filePath, ...(state.recentFiles || []).filter(f => f !== filePath)].slice(0, 10);
+  await api.setAppState({ recentFiles: recent });
+}
+
+// ── Dirty tracking ───────────────────────────────────────────────────────────
+
 cm.on("change", () => {
-  if (activeFileIdx < 0) return;
+  if (activeFileIdx < 0 && !standaloneFilePath) return;
   dirtyFlag = true;
-  const activeEl = fileList.children[activeFileIdx];
-  if (!activeEl) return;
-  activeEl.classList.add("dirty");
+  const name = activeFileName || (standaloneFilePath && standaloneFilePath.split("/").pop()) || "";
+  if (name) {
+    const title = "\u2022 " + name + " \u2014 BEORN Editor";
+    document.title = title;
+    api.setTitle(title);
+  }
+  if (activeFileIdx >= 0) {
+    const activeEl = fileList.children[activeFileIdx];
+    if (activeEl) activeEl.classList.add("dirty");
+  }
 });
 
-// ── Ctrl+S / Cmd+S to save ────────────────────────────────────────────────────
+// ── Keyboard shortcuts ───────────────────────────────────────────────────────
 
 document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "S") {
@@ -329,8 +274,8 @@ document.addEventListener("keydown", e => {
   }
   if ((e.ctrlKey || e.metaKey) && e.key === "s") {
     e.preventDefault();
-    if (activeFileIdx >= 0 || standaloneHandle) doSave();
-    else doSaveAs(); // No file open yet — prompt Save As
+    if (activeFileIdx >= 0 || standaloneFilePath) doSave();
+    else doSaveAs();
   }
   if ((e.ctrlKey || e.metaKey) && e.key === "o") {
     e.preventDefault();
@@ -341,3 +286,7 @@ document.addEventListener("keydown", e => {
     if (typeof window.newDocument === "function") window.newDocument();
   }
 });
+
+// ── Exports ──────────────────────────────────────────────────────────────────
+
+export { activeFileIdx, activeFileName, savedContent, dirtyFlag, folderPath, fileEntries, standaloneFilePath };
