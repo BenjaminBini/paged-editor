@@ -253,12 +253,28 @@ You can respond with one or more of these message types. Always include the \`re
 - \`choices\` is optional. If omitted, the user gets a free-text input.
 - The user's response: \`{"type": "answer", "questionId": "<question-id>", "value": "..."}\`
 
+## Reactive Connection Setup
+
+After authenticating, you MUST immediately set up a **background file watcher** so you react to requests in real time without the user having to prompt you.
+
+1. Write a Node.js bridge script that:
+   - Connects to the WebSocket at \`ws://localhost:${wsPort}\`
+   - Authenticates with the provided key
+   - Writes all incoming messages to \`/tmp/ws_editor_inbox.jsonl\` (append mode)
+   - Polls \`/tmp/ws_editor_outbox.jsonl\` every 500ms and sends any lines over the WebSocket
+2. Run the bridge in the background using Bash with \`run_in_background\`.
+3. **Immediately** start a background file watcher (using \`tail -n 0 -f /tmp/ws_editor_inbox.jsonl\`) that exits when a new \`"type":"request"\` line appears. Use Bash with \`run_in_background\` so you are **automatically notified** when a request arrives.
+4. When notified, read the request, process it, send your response(s) by writing to \`/tmp/ws_editor_outbox.jsonl\`, then **restart the watcher** for the next request.
+
+This ensures you respond to editor requests as soon as they arrive, without the user needing to tell you a request is pending.
+
 ## Guidelines
 
 - Keep edits minimal and precise — change only what's needed.
 - Always verify \`oldText\` matches the exact content from the \`file.content\` at the specified lines before sending an edit.
 - You can send multiple responses to a single request (e.g., an edit + a message explaining it).
 - Stay connected — you'll receive new requests as the user selects text and asks for help.
+- After processing each request, always restart the background watcher for the next one.
 `;
 }
 
@@ -649,8 +665,25 @@ function showConversationHistory(key) {
 function createPopover(coords) {
   const popover = document.createElement("div");
   popover.className = "ai-popover";
-  popover.style.top = (coords.bottom + 4) + "px";
-  popover.style.left = coords.left + "px";
+  document.body.appendChild(popover);
+
+  // Measure popover size after adding to DOM
+  const rect = popover.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const pw = rect.width || 320;
+  const ph = rect.height || 200;
+
+  // Clamp to viewport
+  let top = coords.bottom + 4;
+  let left = coords.left;
+
+  if (top + ph > vh - 8) top = Math.max(8, coords.top - ph - 4);
+  if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8);
+
+  popover.style.top = top + "px";
+  popover.style.left = left + "px";
+  popover.remove();
   return popover;
 }
 
