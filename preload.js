@@ -11,12 +11,18 @@ contextBridge.exposeInMainWorld("electronAPI", {
   setTitle: (title) => ipcRenderer.invoke("set-title", title),
   getAppState: () => ipcRenderer.invoke("get-app-state"),
   setAppState: (partial) => ipcRenderer.invoke("set-app-state", partial),
+  // AI agent collaboration
+  getWsPort: () => ipcRenderer.invoke("get-ws-port"),
+  generateAgentKey: () => ipcRenderer.invoke("generate-agent-key"),
+  revokeAgentKey: (key) => ipcRenderer.invoke("revoke-agent-key", key),
+  sendToAgent: (key, message) => ipcRenderer.invoke("send-to-agent", key, message),
   on: (channel, callback) => {
     const validChannels = [
       "menu-new", "menu-open-file", "menu-open-folder",
       "menu-save", "menu-save-as", "menu-close-file", "menu-close-folder",
       "menu-insert-table", "menu-render", "menu-preview-tab", "menu-toggle-wrap", "menu-toggle-cover",
       "open-file-path", "open-folder-path", "recent-cleared",
+      "agent-connected", "agent-disconnected", "agent-message",
     ];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => callback(...args));
