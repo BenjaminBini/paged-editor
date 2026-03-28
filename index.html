@@ -21,6 +21,7 @@
   <link rel="stylesheet" href="css/table-widget.css" />
   <link rel="stylesheet" href="css/preview.css" />
   <link rel="stylesheet" href="css/modals.css" />
+  <link rel="stylesheet" href="css/ai-collab.css" />
   <link rel="stylesheet" href="css/resize.css" />
 </head>
 <body>
@@ -142,6 +143,14 @@
         <div class="outline-header">Outline</div>
         <div class="outline-list" id="outlineList"></div>
       </div>
+
+      <div class="agent-section" id="agentSection" style="display:none;">
+        <div class="agent-header">
+          <span>Agents</span>
+          <button id="btnAddAgent" title="Add an AI agent">+</button>
+        </div>
+        <div class="agent-list" id="agentList"></div>
+      </div>
     </div>
     <div class="editor-pane" id="editorPane">
       <div class="pane-header">
@@ -177,6 +186,21 @@
         <div id="preview-wrapper">
           <!-- Section iframes are created dynamically by render.js -->
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI collaboration elements -->
+  <button class="spark-btn" id="sparkBtn" title="Ask AI agent">&#9733; AI</button>
+
+  <div class="modal-overlay" id="agentModal">
+    <div class="modal" style="width:600px;">
+      <h3>Add an AI Agent</h3>
+      <p style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Copy this prompt and paste it into your AI agent (e.g. Claude Code). The agent will connect automatically.</p>
+      <pre class="agent-prompt-text" id="agentPromptText"></pre>
+      <div class="btn-row">
+        <button class="btn-cancel" id="btnCloseAgentModal">Close</button>
+        <button class="btn-save" id="btnCopyPrompt">Copy Prompt</button>
       </div>
     </div>
   </div>

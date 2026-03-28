@@ -14,9 +14,10 @@ import {
 import {
   openFolder, openFolderByPath, doSaveAs, doSave, isDirty,
   activateFolder, closeFolder,
-  setStandaloneFile, activeFileIdx, folderPath, standaloneFilePath,
+  setStandaloneFile, activeFileIdx, folderPath, standaloneFilePath, fileEntries,
 } from './file-manager.js';
 import { closeDiffModal, resolveConflict } from './diff-merge.js';
+import { init as initAiCollab, addAgent } from './ai-collab.js';
 import './resize.js';
 
 const api = window.electronAPI;
@@ -311,6 +312,7 @@ window.closeFolder = closeFolder;
 window.closeFile = closeFile;
 window.newDocument = newDocument;
 window.newFromTemplate = newFromTemplate;
+window.addAgent = addAgent;
 
 // ── Welcome screen ──────────────────────────────────────────────────────────
 
@@ -595,6 +597,9 @@ pagedReady.then(async () => {
   restoreDone = true;
   updateMenuState();
   buildRecentUI();
+
+  // Initialize AI agent collaboration
+  initAiCollab(cm, () => standaloneFilePath || (activeFileIdx >= 0 && fileEntries[activeFileIdx]?.path) || null);
 }).catch(e => {
   hideLoading();
   if (status) status.textContent = "Startup error: " + e.message;
