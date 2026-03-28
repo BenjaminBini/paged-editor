@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   setAppState: (partial) => ipcRenderer.invoke("set-app-state", partial),
   // AI agent collaboration
   getWsPort: () => ipcRenderer.invoke("get-ws-port"),
+  getWsHost: () => ipcRenderer.invoke("get-ws-host"),
   generateAgentKey: () => ipcRenderer.invoke("generate-agent-key"),
   revokeAgentKey: (key) => ipcRenderer.invoke("revoke-agent-key", key),
   sendToAgent: (key, message) => ipcRenderer.invoke("send-to-agent", key, message),

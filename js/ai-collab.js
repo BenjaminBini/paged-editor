@@ -8,6 +8,7 @@ const agents = new Map();       // key -> { name, connected: true }
 const pendingKeys = new Map();  // key -> { created: Date }
 const conversations = new Map(); // key -> [{ type, ...data }]
 let wsPort = 0;
+let wsHost = "localhost";
 
 // ── External dependencies (set by app.js) ───────────────────────────────────
 
@@ -18,6 +19,7 @@ export function init(cm, getFilePath) {
   _cm = cm;
   _getFilePath = getFilePath;
   api.getWsPort().then(port => { wsPort = port; });
+  api.getWsHost().then(host => { wsHost = host; });
 
   // Listen for agent events from main process
   api.on("agent-connected", ({ key, name }) => {
@@ -69,6 +71,8 @@ function handleAgentMessage(key, msg) {
     conv.push({ type: "question", ...msg });
     conversations.set(key, conv);
     showQuestionPopover(key, msg);
+  } else if (msg.type === "status") {
+    updateWaitingStatus(key, msg);
   }
 }
 
@@ -193,7 +197,7 @@ You are connecting to a Markdown editor as a collaborative AI agent.
 
 ## Connection
 
-1. Open a WebSocket connection to: \`ws://localhost:${wsPort}\`
+1. Open a WebSocket connection to: \`ws://${wsHost}:${wsPort}\`
 2. Send an authentication message:
 \`\`\`json
 {"type": "auth", "key": "${key}", "name": "YOUR_NAME_HERE"}
@@ -240,6 +244,13 @@ You can respond with one or more of these message types. Always include the \`re
 {"type": "message", "requestId": "<request-id>", "text": "Your message here"}
 \`\`\`
 
+**Status** — update the user on your progress (shown in the waiting popover):
+\`\`\`json
+{"type": "status", "requestId": "<request-id>", "text": "Searching DCE documents..."}
+\`\`\`
+- Send a status update as soon as you receive a request (\`"Received, processing..."\`) so the user knows you're working on it.
+- Send additional status updates for each major step (e.g., \`"Analyzing context..."\`, \`"Searching documentation..."\`, \`"Writing edit..."\`).
+
 **Question** — ask the user (optionally with choices):
 \`\`\`json
 {
@@ -258,7 +269,7 @@ You can respond with one or more of these message types. Always include the \`re
 After authenticating, you MUST immediately set up a **background file watcher** so you react to requests in real time without the user having to prompt you.
 
 1. Write a Node.js bridge script that:
-   - Connects to the WebSocket at \`ws://localhost:${wsPort}\`
+   - Connects to the WebSocket at \`ws://${wsHost}:${wsPort}\`
    - Authenticates with the provided key
    - Writes all incoming messages to \`/tmp/ws_editor_inbox.jsonl\` (append mode)
    - Polls \`/tmp/ws_editor_outbox.jsonl\` every 500ms and sends any lines over the WebSocket
@@ -270,9 +281,10 @@ This ensures you respond to editor requests as soon as they arrive, without the 
 
 ## Guidelines
 
+- **Always send a status update immediately** when you start processing a request, before doing any work. This is critical for the user experience — it confirms reception.
 - Keep edits minimal and precise — change only what's needed.
 - Always verify \`oldText\` matches the exact content from the \`file.content\` at the specified lines before sending an edit.
-- You can send multiple responses to a single request (e.g., an edit + a message explaining it).
+- You can send multiple responses to a single request (e.g., status + edit + message explaining it).
 - Stay connected — you'll receive new requests as the user selects text and asks for help.
 - After processing each request, always restart the background watcher for the next one.
 `;
@@ -509,6 +521,17 @@ function showWaitingPopover(agentKey, requestId, selection, coords) {
 
   document.body.appendChild(popover);
   activePopover = popover;
+}
+
+function updateWaitingStatus(key, msg) {
+  // Update the waiting popover in-place if it matches
+  if (!activePopover) return;
+  if (msg.requestId && activePopover.dataset.requestId !== msg.requestId) return;
+
+  const waitingEl = activePopover.querySelector(".ai-popover-waiting");
+  if (waitingEl) {
+    waitingEl.innerHTML = `<div class="ai-spinner"></div> ${escapeHtml(msg.text)}`;
+  }
 }
 
 // ── Agent response popovers ─────────────────────────────────────────────────

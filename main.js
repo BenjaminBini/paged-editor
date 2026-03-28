@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs/promises");
+const os = require("os");
 const { WebSocketServer } = require("ws");
 const crypto = require("crypto");
 
@@ -104,6 +105,7 @@ ipcMain.handle("set-app-state", async (_e, partial) => {
 });
 
 ipcMain.handle("get-ws-port", () => wsPort);
+ipcMain.handle("get-ws-host", () => os.hostname());
 
 ipcMain.handle("generate-agent-key", () => {
   const key = crypto.randomUUID();
@@ -238,8 +240,8 @@ app.whenReady().then(async () => {
   createWindow();
   buildMenu();
 
-  // Start WebSocket server on random available port
-  wss = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+  // Start WebSocket server on all interfaces (supports remote agents)
+  wss = new WebSocketServer({ host: "0.0.0.0", port: 0 });
   await new Promise((resolve) => wss.on("listening", resolve));
   wsPort = wss.address().port;
   console.log("AI collab WebSocket server on port", wsPort);
