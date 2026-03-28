@@ -240,6 +240,7 @@ app.whenReady().then(async () => {
 
   // Start WebSocket server on random available port
   wss = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+  await new Promise((resolve) => wss.on("listening", resolve));
   wsPort = wss.address().port;
   console.log("AI collab WebSocket server on port", wsPort);
 
