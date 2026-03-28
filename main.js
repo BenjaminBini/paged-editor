@@ -1,10 +1,18 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs/promises");
+const { WebSocketServer } = require("ws");
+const crypto = require("crypto");
 
 // ── App state persistence ────────────────────────────────────────────────────
 const STATE_FILE = path.join(app.getPath("userData"), "app-state.json");
 let appState = { lastFolder: null, lastFile: null, recentFiles: [], recentFolders: [] };
+
+// ── Agent keys & WebSocket ──────────────────────────────────────────────────
+const agentKeys = new Map(); // key -> { used: false }
+let wss = null;
+let wsPort = 0;
+const agentConnections = new Map(); // key -> { ws, name }
 
 async function loadAppState() {
   try {
@@ -93,6 +101,32 @@ ipcMain.handle("set-app-state", async (_e, partial) => {
   Object.assign(appState, partial);
   await saveAppState();
   if (partial.recentFiles !== undefined || partial.lastFile !== undefined) buildMenu();
+});
+
+ipcMain.handle("get-ws-port", () => wsPort);
+
+ipcMain.handle("generate-agent-key", () => {
+  const key = crypto.randomUUID();
+  agentKeys.set(key, { used: false });
+  return key;
+});
+
+ipcMain.handle("revoke-agent-key", (_e, key) => {
+  agentKeys.delete(key);
+  const conn = agentConnections.get(key);
+  if (conn) {
+    conn.ws.close();
+    agentConnections.delete(key);
+  }
+});
+
+ipcMain.handle("send-to-agent", (_e, key, message) => {
+  const conn = agentConnections.get(key);
+  if (conn && conn.ws.readyState === 1) {
+    conn.ws.send(JSON.stringify(message));
+    return true;
+  }
+  return false;
 });
 
 // ── Native menu ──────────────────────────────────────────────────────────────
@@ -203,6 +237,45 @@ app.whenReady().then(async () => {
   await loadAppState();
   createWindow();
   buildMenu();
+
+  // Start WebSocket server on random available port
+  wss = new WebSocketServer({ host: "127.0.0.1", port: 0 });
+  wsPort = wss.address().port;
+  console.log("AI collab WebSocket server on port", wsPort);
+
+  wss.on("connection", (ws) => {
+    let authenticatedKey = null;
+
+    ws.on("message", (raw) => {
+      let msg;
+      try { msg = JSON.parse(raw); } catch { return; }
+
+      if (!authenticatedKey) {
+        if (msg.type === "auth" && msg.key && agentKeys.has(msg.key) && !agentKeys.get(msg.key).used) {
+          authenticatedKey = msg.key;
+          agentKeys.get(msg.key).used = true;
+          const name = msg.name || "Agent";
+          agentConnections.set(msg.key, { ws, name });
+          ws.send(JSON.stringify({ type: "auth_ok" }));
+          mainWindow?.webContents.send("agent-connected", { key: msg.key, name });
+        } else {
+          ws.send(JSON.stringify({ type: "auth_error", message: "Invalid or already used key" }));
+          ws.close();
+        }
+        return;
+      }
+
+      // Authenticated — forward to renderer
+      mainWindow?.webContents.send("agent-message", { key: authenticatedKey, message: msg });
+    });
+
+    ws.on("close", () => {
+      if (authenticatedKey) {
+        agentConnections.delete(authenticatedKey);
+        mainWindow?.webContents.send("agent-disconnected", { key: authenticatedKey });
+      }
+    });
+  });
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

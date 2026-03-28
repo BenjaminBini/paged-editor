@@ -11,6 +11,7 @@
     "electron": "^41.0.4"
   },
   "dependencies": {
-    "marked": "^15.0.7"
+    "marked": "^15.0.7",
+    "ws": "^8.20.0"
   }
 }
