@@ -280,12 +280,6 @@ function renderAgentList() {
   const connected = getConnectedAgents();
   const pending = pendingKeys.size;
 
-  if (connected.length === 0 && pending === 0) {
-    agentSection.style.display = "none";
-    return;
-  }
-
-  agentSection.style.display = "";
   agentList.innerHTML = "";
 
   for (const { key, name } of connected) {
