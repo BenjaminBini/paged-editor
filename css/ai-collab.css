@@ -41,7 +41,16 @@
 
 .agent-name {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  flex: 1; cursor: pointer;
 }
+
+.agent-disconnect {
+  background: none; border: none; color: #64748b; cursor: pointer;
+  font-size: 14px; line-height: 1; padding: 0 2px; flex-shrink: 0;
+  opacity: 0; transition: opacity 0.15s, color 0.15s;
+}
+.agent-item:hover .agent-disconnect { opacity: 1; }
+.agent-disconnect:hover { color: #f38ba8; }
 
 /* ── Agent prompt modal ────────────────────────────────────────────────────── */
 
@@ -50,6 +59,73 @@
   padding: 12px; color: #cdd6f4; font-size: 11px; line-height: 1.5;
   font-family: "JetBrains Mono", monospace;
   max-height: 400px; overflow-y: auto; white-space: pre-wrap; word-break: break-word;
+}
+
+/* ── Agent modal status & success animation ───────────────────────────────── */
+
+.agent-modal-status {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 12px; margin-bottom: 12px;
+  background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+  font-size: 12px; color: #94a3b8;
+}
+
+.agent-modal-status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #f0a840; animation: pulse 1.5s infinite;
+  flex-shrink: 0;
+}
+
+.agent-modal-success {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 48px 24px;
+}
+
+.agent-success-check {
+  width: 96px; height: 96px; margin-bottom: 20px;
+  transform: scale(0);
+}
+
+.agent-success-svg { width: 100%; height: 100%; }
+
+.agent-success-circle {
+  stroke-dasharray: 151;
+  stroke-dashoffset: 151;
+}
+
+.agent-success-path {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+}
+
+.agent-success-label {
+  font-size: 16px; font-weight: 700; color: #a6e3a1;
+  opacity: 0;
+}
+
+/* Animations only play when .animate is added by JS */
+.agent-modal-success.animate { animation: agent-success-fade-in 0.3s ease-out; }
+.agent-modal-success.animate .agent-success-check { animation: agent-success-scale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+.agent-modal-success.animate .agent-success-circle { animation: agent-success-circle-draw 0.6s ease-out forwards; }
+.agent-modal-success.animate .agent-success-path { animation: agent-success-check-draw 0.4s 0.4s ease-out forwards; }
+.agent-modal-success.animate .agent-success-label { animation: agent-success-fade-in 0.3s 0.5s ease-out forwards; }
+
+@keyframes agent-success-scale {
+  0% { transform: scale(0); }
+  100% { transform: scale(1); }
+}
+
+@keyframes agent-success-circle-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes agent-success-check-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes agent-success-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 /* ── Spark IA button ───────────────────────────────────────────────────────── */

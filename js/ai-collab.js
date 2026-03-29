@@ -248,6 +248,15 @@ export function getConnectedAgents() {
   return result;
 }
 
+// ── Disconnect agent ────────────────────────────────────────────────────────
+
+function disconnectAgent(key) {
+  api.revokeAgentKey(key);
+  agents.delete(key);
+  pendingKeys.delete(key);
+  renderAgentList();
+}
+
 // ── Prompt template ─────────────────────────────────────────────────────────
 
 function buildAgentPrompt(key) {
@@ -280,8 +289,12 @@ function renderAgentList() {
   for (const { key, name } of connected) {
     const el = document.createElement("div");
     el.className = "agent-item connected";
-    el.innerHTML = `<span class="agent-dot"></span><span class="agent-name">${escapeHtml(name)}</span>`;
-    el.onclick = () => showConversationHistory(key);
+    el.innerHTML = `<span class="agent-dot"></span><span class="agent-name">${escapeHtml(name)}</span><button class="agent-disconnect" title="Disconnect agent">&times;</button>`;
+    el.querySelector(".agent-name").onclick = () => showConversationHistory(key);
+    el.querySelector(".agent-disconnect").onclick = (e) => {
+      e.stopPropagation();
+      disconnectAgent(key);
+    };
     agentList.appendChild(el);
   }
 
@@ -306,6 +319,20 @@ const agentModalSuccess = document.getElementById("agentModalSuccess");
 let currentModalKey = null;
 
 if (btnCloseAgentModal) btnCloseAgentModal.onclick = () => closeAgentModal();
+
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  // Close modals & overlays in priority order
+  const diffModal = document.getElementById("agentDiffModal");
+  if (diffModal?.classList.contains("open")) {
+    diffModal.classList.remove("open");
+    if (agentDiffResolve) { agentDiffResolve("reject"); agentDiffResolve = null; }
+    return;
+  }
+  const historyOverlay = document.querySelector(".ai-history-overlay");
+  if (historyOverlay) { historyOverlay.remove(); return; }
+  if (agentModal?.classList.contains("open")) { closeAgentModal(); return; }
+});
 
 function showAgentPromptModal(key) {
   if (!agentModal || !agentPromptText) return;
