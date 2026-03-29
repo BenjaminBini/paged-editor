@@ -1,5 +1,5 @@
 import { cm } from './editor.js';
-import { scalePreview, getSectionFrames } from './render.js';
+import { scalePreview, getPreviewFrame } from './render.js';
 
 // ── Resize handle ────────────────────────────────────────────────────
 const handle = document.getElementById("resizeHandle");
@@ -13,8 +13,8 @@ handle.addEventListener("mousedown", e => {
   handle.classList.add("active");
   document.body.style.cursor = "col-resize";
   document.body.style.userSelect = "none";
-  // Block all section iframes from stealing mouse events during drag
-  for (const frame of getSectionFrames()) frame.style.pointerEvents = "none";
+  const frame = getPreviewFrame();
+  if (frame) frame.style.pointerEvents = "none";
   e.preventDefault();
 });
 document.addEventListener("mousemove", e => {
@@ -35,7 +35,8 @@ document.addEventListener("mouseup", () => {
     handle.classList.remove("active");
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
-    for (const frame of getSectionFrames()) frame.style.pointerEvents = "";
+    const frame = getPreviewFrame();
+    if (frame) frame.style.pointerEvents = "";
     cm.refresh();
     scalePreview();
   }

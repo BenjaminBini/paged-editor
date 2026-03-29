@@ -1,10 +1,9 @@
 // sync.js — Source-line-based scroll synchronization
 // Uses data-source-line attributes injected during markdown rendering
 // to build an anchor map for bidirectional scroll position mapping.
-// Stops syncing when scrolled past the last anchor (document extremes).
 
 import { cm, previewContainer } from './editor.js';
-import { getSectionStates, getPreviewScale } from './render.js';
+import { getPreviewFrame, getPreviewScale } from './render.js';
 
 // ── Anchor map ──────────────────────────────────────────────────────────────
 
@@ -12,7 +11,7 @@ let anchorMap = []; // [{line: number, y: number}]
 
 function computeElementY(el, frame) {
   const scale = getPreviewScale();
-  const wrapper = frame.closest('.section-wrapper');
+  const wrapper = frame.closest('.section-wrapper') || frame.parentElement;
   if (!wrapper) return 0;
 
   const elRect = el.getBoundingClientRect();
@@ -27,22 +26,19 @@ function computeElementY(el, frame) {
 
 export function rebuildAnchorMap() {
   anchorMap = [];
-  const states = getSectionStates();
+  const frame = getPreviewFrame();
+  if (!frame) return;
 
-  for (const state of states) {
-    const frame = state.frame;
-    if (!frame) continue;
-    try {
-      const doc = frame.contentDocument;
-      if (!doc) continue;
-      const els = doc.querySelectorAll('[data-source-line]');
-      for (const el of els) {
-        const line = parseInt(el.dataset.sourceLine, 10);
-        if (isNaN(line)) continue;
-        anchorMap.push({ line, y: computeElementY(el, frame) });
-      }
-    } catch (e) { /* iframe not ready */ }
-  }
+  try {
+    const doc = frame.contentDocument;
+    if (!doc) return;
+    const els = doc.querySelectorAll('[data-source-line]');
+    for (const el of els) {
+      const line = parseInt(el.dataset.sourceLine, 10);
+      if (isNaN(line)) continue;
+      anchorMap.push({ line, y: computeElementY(el, frame) });
+    }
+  } catch (e) { /* iframe not ready */ }
 
   anchorMap.sort((a, b) => a.line - b.line);
 }
@@ -96,8 +92,8 @@ function yToLine(targetY) {
 
 // ── Sync state ──────────────────────────────────────────────────────────────
 
-let toPreview = false;  // editor→preview in progress, suppress preview→editor
-let toEditor = false;   // preview→editor in progress, suppress editor→preview
+let toPreview = false;
+let toEditor = false;
 let pvTimer = null;
 let edTimer = null;
 
@@ -140,7 +136,7 @@ function syncPreviewToEditor() {
   edTimer = setTimeout(() => { toEditor = false; }, 80);
 }
 
-// ── Click preview → set cursor (no scroll) ──────────────────────────────────
+// ── Click preview → set cursor ──────────────────────────────────────────────
 
 export function setupPreviewClick(frame) {
   try {

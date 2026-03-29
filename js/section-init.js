@@ -2,7 +2,7 @@
 // Handles page breaks, heading orphan prevention, then runs Paged.js and signals completion.
 // Mermaid diagrams are pre-rendered in the MD phase (main page DOM), not here.
 //
-// Expects window.__sectionIndex and window.__sectionGen to be set before this runs.
+// Expects window.__gen to be set before this runs.
 
 (async function() {
   // ── Page break replacement ──
@@ -49,8 +49,7 @@
   // ── Signal completion ──
   window.parent.postMessage({
     type: "section-ready",
-    index: window.__sectionIndex,
-    gen: window.__sectionGen,
+    gen: window.__gen,
     pages: document.querySelectorAll(".pagedjs_page").length
   }, "*");
 })();

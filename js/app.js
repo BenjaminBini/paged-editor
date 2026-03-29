@@ -14,8 +14,7 @@ import {
   scalePreview,
   openPreviewTab,
   registerOnSectionReady,
-  getSectionStates,
-  toggleCover,
+  getPreviewFrame,
   clearRenderTimeout,
   scheduleRender,
 } from "./render.js";
@@ -161,9 +160,9 @@ registerOnSetValue(() => {
 
 let _scaleTimer = null;
 let _anchorTimer = null;
-registerOnSectionReady((sectionIdx) => {
-  const state = getSectionStates()[sectionIdx];
-  if (state?.frame) setupPreviewClick(state.frame);
+registerOnSectionReady(() => {
+  const frame = getPreviewFrame();
+  if (frame) setupPreviewClick(frame);
   clearTimeout(_scaleTimer);
   clearTimeout(_anchorTimer);
   _scaleTimer = setTimeout(scalePreview, 300);
@@ -266,6 +265,127 @@ cm.on("change", () => {
   clearTimeout(gutterTimer);
   gutterTimer = setTimeout(updateGutterMarkers, 400);
 });
+
+// ── Page break decorations (inline replacement, cursor-aware) ─────────────
+
+let _pageBreakMarks = []; // {line, mark}
+
+function applyPageBreakMarks() {
+  for (const pm of _pageBreakMarks) pm.mark.clear();
+  _pageBreakMarks = [];
+
+  const cursorLine = cm.getCursor().line;
+
+  for (let i = 0; i < cm.lineCount(); i++) {
+    const text = cm.getLine(i).trim();
+    if (text !== '/newpage' && text !== '\\newpage') continue;
+    if (i === cursorLine) continue; // show raw text when cursor is on line
+
+    const el = document.createElement("span");
+    el.className = "cm-pagebreak-widget";
+    el.innerHTML = '<span class="cm-pagebreak-line"></span>'
+      + '<span class="cm-pagebreak-label">page break</span>'
+      + '<span class="cm-pagebreak-line"></span>'
+      + '<button class="cm-pagebreak-delete" title="Remove page break">\u00d7</button>';
+    el.querySelector(".cm-pagebreak-delete").addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const next = i + 1 < cm.lineCount() ? { line: i + 1, ch: 0 } : { line: i, ch: cm.getLine(i).length };
+      cm.replaceRange("", { line: i, ch: 0 }, next);
+    });
+
+    const lineLen = cm.getLine(i).length;
+    const mark = cm.markText(
+      { line: i, ch: 0 },
+      { line: i, ch: lineLen },
+      { replacedWith: el, handleMouseEvents: true },
+    );
+    _pageBreakMarks.push({ line: i, mark });
+  }
+}
+
+let pageBreakTimer = null;
+cm.on("change", () => {
+  clearTimeout(pageBreakTimer);
+  pageBreakTimer = setTimeout(applyPageBreakMarks, 150);
+});
+cm.on("cursorActivity", () => {
+  // Re-apply immediately so cursor line gets raw text
+  applyPageBreakMarks();
+});
+setTimeout(applyPageBreakMarks, 200);
+
+// ── Heading number badges (inline, replacing # symbols) ───────────────────
+// markText replaces "# " / "## " / "### " with a badge showing the computed
+// section number. The mark is removed when the cursor is on that line so the
+// raw markdown is editable.
+
+let _headingMarks = []; // {line, mark}
+let _cursorLine = -1;
+
+function computeHeadingLabels() {
+  const labels = []; // {line, depth, label, hashLen}
+  let partieNum = 0;
+  for (let i = 0; i < cm.lineCount(); i++) {
+    const m = cm.getLine(i).match(/^#\s+(?:\d+\.?\s+)?Partie\s+(\d+)/i);
+    if (m) { partieNum = parseInt(m[1], 10); break; }
+  }
+  if (!partieNum) return labels;
+
+  let h2Count = 0, h3Count = 0;
+  for (let i = 0; i < cm.lineCount(); i++) {
+    const line = cm.getLine(i);
+    const m = line.match(/^(#{1,3}) /);
+    if (!m) continue;
+    const depth = m[1].length;
+    let label = '';
+    if (depth === 1) { label = 'P' + partieNum; h2Count = 0; h3Count = 0; }
+    else if (depth === 2) { h2Count++; h3Count = 0; label = partieNum + '.' + h2Count; }
+    else if (depth === 3) { h3Count++; label = partieNum + '.' + h2Count + '.' + h3Count; }
+    if (label) labels.push({ line: i, depth, label, hashLen: m[1].length + 1 }); // +1 for the space
+  }
+  return labels;
+}
+
+function applyHeadingMarks() {
+  // Clear old marks
+  for (const hm of _headingMarks) hm.mark.clear();
+  _headingMarks = [];
+
+  const labels = computeHeadingLabels();
+  const cursorLine = cm.getCursor().line;
+
+  for (const { line, depth, label, hashLen } of labels) {
+    if (line === cursorLine) continue; // don't replace on cursor line
+
+    const badge = document.createElement("span");
+    badge.className = "cm-heading-badge";
+    badge.dataset.level = String(depth);
+    badge.textContent = label;
+
+    const mark = cm.markText(
+      { line, ch: 0 },
+      { line, ch: hashLen },
+      { replacedWith: badge, handleMouseEvents: true },
+    );
+    _headingMarks.push({ line, mark });
+  }
+}
+
+let headingBadgeTimer = null;
+function scheduleHeadingBadges() {
+  clearTimeout(headingBadgeTimer);
+  headingBadgeTimer = setTimeout(applyHeadingMarks, 150);
+}
+cm.on("change", scheduleHeadingBadges);
+cm.on("cursorActivity", () => {
+  const cur = cm.getCursor().line;
+  if (cur !== _cursorLine) {
+    _cursorLine = cur;
+    applyHeadingMarks(); // immediate — no debounce on cursor move
+  }
+});
+setTimeout(applyHeadingMarks, 200);
 
 // ── Format table button visibility ─────────────────────────────────────────
 
@@ -696,7 +816,7 @@ window.insertTable = insertTable;
 window.triggerRender = triggerRender;
 window.openPreviewTab = openPreviewTab;
 window.toggleWrap = toggleWrap;
-window.toggleCover = toggleCover;
+window.toggleCover = () => {}; // no-op: single-section mode
 window.toggleTableEditor = toggleTableEditor;
 window.closeDiffModal = closeDiffModal;
 window.resolveConflict = resolveConflict;
@@ -1005,7 +1125,7 @@ if (api?.on) {
   api.on("menu-render", () => triggerRender());
   api.on("menu-preview-tab", () => openPreviewTab());
   api.on("menu-toggle-wrap", () => toggleWrap());
-  api.on("menu-toggle-cover", () => toggleCover());
+  api.on("menu-toggle-cover", () => {}); // no-op: single-section mode
   api.on("open-file-path", (filePath) => openFilePath(filePath));
   api.on("open-folder-path", (folderPath) => openFolderByPathAndLoad(folderPath));
   api.on("recent-cleared", () => buildRecentUI());

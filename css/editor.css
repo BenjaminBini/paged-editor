@@ -56,6 +56,58 @@
 .editor-pane .cm-tag { color: #f38ba8 !important; }
 .editor-pane .cm-attribute { color: #89b4fa !important; }
 .editor-pane .cm-def { color: #89dceb !important; }
+/* ── Page break inline widget ── */
+.cm-pagebreak-widget {
+  display: inline-flex; align-items: center; gap: 8px;
+  width: 100%; cursor: text; position: relative;
+}
+.cm-pagebreak-line {
+  flex: 1; height: 0;
+  border-top: 1.5px dashed rgba(137, 180, 250, 0.3);
+  border-bottom: 1.5px dashed rgba(137, 180, 250, 0.3);
+  min-width: 16px;
+}
+.cm-pagebreak-label {
+  font-family: "Montserrat", sans-serif;
+  font-size: 8px; font-weight: 600;
+  letter-spacing: 0.15em; text-transform: uppercase;
+  color: rgba(137, 180, 250, 0.45);
+  flex-shrink: 0; padding: 0 2px;
+  line-height: 1;
+}
+.cm-pagebreak-delete {
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  width: 16px; height: 16px; border-radius: 3px;
+  background: transparent; border: none; cursor: pointer;
+  color: transparent; font-size: 13px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.cm-pagebreak-widget:hover .cm-pagebreak-delete { color: #585b70; }
+.cm-pagebreak-delete:hover { color: #f38ba8 !important; background: rgba(243, 139, 168, 0.12); }
+/* ── Heading number badges (inline, replacing # symbols) ── */
+.CodeMirror-line span:has(> .CodeMirror-widget .cm-heading-badge) {
+  display: inline-flex; align-items: center;
+}
+.cm-heading-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: "Montserrat", "SF Mono", monospace;
+  font-weight: 700; line-height: 1;
+  padding: 2px 6px; border-radius: 4px;
+  margin-right: 6px; white-space: nowrap;
+  cursor: text;
+}
+.cm-heading-badge[data-level="1"] {
+  background: rgba(240, 168, 64, 0.18); color: #f0a840;
+  font-size: 12px; padding: 2px 7px; border-radius: 5px;
+}
+.cm-heading-badge[data-level="2"] {
+  background: rgba(224, 192, 112, 0.14); color: #e0c070;
+  font-size: 11px;
+}
+.cm-heading-badge[data-level="3"] {
+  background: rgba(200, 216, 128, 0.10); color: #c8d880;
+  font-size: 10px;
+}
 /* Hide text content of table lines; line widgets (siblings) stay visible */
 .tw-hidden-text { height: 0 !important; overflow: hidden !important; padding: 0 !important; margin: 0 !important; }
 .tw-hidden-gutter { visibility: hidden !important; }

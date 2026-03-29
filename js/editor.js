@@ -10,6 +10,7 @@ export const cm = CodeMirror.fromTextArea(document.getElementById("editor-textar
   tabSize: 2,
   indentWithTabs: false,
   theme: "default",
+  gutters: ["CodeMirror-linenumbers"],
 });
 
 // ── setValue hook ─────────────────────────────────────────────────────────────
