@@ -628,6 +628,7 @@ window.closeFolder = () => {
   closeFolder();
   renderFileList();
   updateMenuState();
+  if (!hasOpenTabs()) showWelcome();
 };
 window.closeFile = closeCurrentTab;
 window.newDocument = newDocument;
