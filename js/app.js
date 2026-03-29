@@ -69,7 +69,7 @@ import {
   getSessionState,
   findTabByPath,
 } from "./tab-bar.js";
-import { closeDiffModal, resolveConflict } from "./diff-merge.js";
+import { closeDiffModal, resolveConflict, computeDiff } from "./diff-merge.js";
 import { init as initAiCollab, addAgent } from "./ai-collab.js";
 import "./resize.js";
 
@@ -221,20 +221,44 @@ function updateGutterMarkers() {
 
   const savedLines = (tab.savedContent || "").split("\n");
   const currentLines = cm.getValue().split("\n");
+  const diff = computeDiff(savedLines, currentLines);
 
-  // Simple LCS-free approach: compare line by line up to min length
-  const minLen = Math.min(savedLines.length, currentLines.length);
+  // Walk the diff to find modified and added lines in current content.
+  // A "del" followed by "add" at the same position = modified line.
+  // A standalone "add" = new line.
+  const modifiedLines = new Set();
+  const addedLines = new Set();
 
-  for (let i = 0; i < minLen; i++) {
-    if (savedLines[i] !== currentLines[i]) {
-      cm.addLineClass(i, "gutter", GUTTER_MODIFIED);
+  let i = 0;
+  while (i < diff.length) {
+    if (diff[i].type === "del") {
+      // Collect consecutive deletes
+      const delStart = i;
+      while (i < diff.length && diff[i].type === "del") i++;
+      // Collect consecutive adds following
+      const addStart = i;
+      while (i < diff.length && diff[i].type === "add") i++;
+      const addEnd = i;
+      // Pair them: min(dels, adds) are modifications, rest are pure add/del
+      const delCount = addStart - delStart;
+      const addCount = addEnd - addStart;
+      const paired = Math.min(delCount, addCount);
+      for (let j = 0; j < paired; j++) {
+        modifiedLines.add(diff[addStart + j].newLine - 1);
+      }
+      for (let j = paired; j < addCount; j++) {
+        addedLines.add(diff[addStart + j].newLine - 1);
+      }
+    } else if (diff[i].type === "add") {
+      addedLines.add(diff[i].newLine - 1);
+      i++;
+    } else {
+      i++;
     }
   }
 
-  // Lines beyond saved length are "added"
-  for (let i = savedLines.length; i < currentLines.length; i++) {
-    cm.addLineClass(i, "gutter", GUTTER_ADDED);
-  }
+  for (const line of modifiedLines) cm.addLineClass(line, "gutter", GUTTER_MODIFIED);
+  for (const line of addedLines) cm.addLineClass(line, "gutter", GUTTER_ADDED);
 }
 
 cm.on("change", () => {
