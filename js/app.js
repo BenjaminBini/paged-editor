@@ -668,6 +668,8 @@ async function doSave() {
     if (result.action === "reload") {
       cm.setValue(result.content);
       markActiveTabClean(result.content, result.modTime);
+      updateGutterMarkers();
+      renderFileList();
       status.textContent = "Loaded disk version of " + tab.name;
       return;
     }
@@ -682,6 +684,8 @@ async function doSave() {
       await writeFile(tab.path, cm.getValue());
       const modTime = await getFileModTime(tab.path);
       markActiveTabClean(cm.getValue(), modTime);
+      updateGutterMarkers();
+      renderFileList();
       status.textContent = "Saved " + tab.name;
       return;
     }
@@ -690,6 +694,7 @@ async function doSave() {
     markActiveTabClean(content, result.modTime);
     updateTitle(tab.name, false);
     updateGutterMarkers();
+    renderFileList();
     status.textContent = "Saved " + tab.name;
   } catch (e) {
     status.textContent = "Save failed: " + e.message;
@@ -711,6 +716,8 @@ async function doSaveAs() {
     updateActiveTabPath(filePath, name);
     markActiveTabClean(cm.getValue(), modTime);
     updateTitle(name, false);
+    updateGutterMarkers();
+    renderFileList();
     status.textContent = "Saved as " + name;
     addRecentFile(filePath);
   } catch (e) {
