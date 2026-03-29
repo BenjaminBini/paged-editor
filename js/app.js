@@ -1,32 +1,77 @@
 // app.js — Main orchestrator (Electron version)
 
-import { cm, status, toggleWrap, registerOnSetValue, showLoading, hideLoading } from './editor.js';
 import {
-  pagedReady, triggerRender, scalePreview, openPreviewTab,
-  registerOnSectionReady, getSectionStates, toggleCover,
-  clearRenderTimeout, scheduleRender,
-} from './render.js';
-import { setupPreviewClick, setupScrollSync, rebuildAnchorMap } from './sync.js';
+  cm,
+  status,
+  toggleWrap,
+  registerOnSetValue,
+  showLoading,
+  hideLoading,
+} from "./editor.js";
 import {
-  refreshTableWidgets, insertTable, getTableRangeAt, toggleTableEditor,
-  setTableRangesDirty, twSyncing, tableWidgets, destroyTableWidget,
-} from './table-widget.js';
+  pagedReady,
+  triggerRender,
+  scalePreview,
+  openPreviewTab,
+  registerOnSectionReady,
+  getSectionStates,
+  toggleCover,
+  clearRenderTimeout,
+  scheduleRender,
+} from "./render.js";
 import {
-  openFolder, openFolderByPath, closeFolder, renderFileList,
-  readFile, writeFile, getFileModTime, saveWithConflictDetection,
-  showSaveAsDialog, showOpenFileDialog, addRecentFile,
-  applyPrettify, updateTitle, getFolderPath, getFileEntries,
-  setOnFileClick, setGetActiveFilePath, setIsFileDirty,
-} from './file-manager.js';
+  setupPreviewClick,
+  setupScrollSync,
+  rebuildAnchorMap,
+} from "./sync.js";
 import {
-  openTab, closeActiveTab, getActiveTab, getTabs,
-  hasOpenTabs, markActiveTabDirty, markActiveTabClean,
-  updateActiveTabPath, isActiveTabDirty,
-  onTabSwitch, onAllTabsClosed, getSessionState, findTabByPath,
-} from './tab-bar.js';
-import { closeDiffModal, resolveConflict } from './diff-merge.js';
-import { init as initAiCollab, addAgent } from './ai-collab.js';
-import './resize.js';
+  refreshTableWidgets,
+  insertTable,
+  getTableRangeAt,
+  toggleTableEditor,
+  setTableRangesDirty,
+  twSyncing,
+  tableWidgets,
+  destroyTableWidget,
+} from "./table-widget.js";
+import {
+  openFolder,
+  openFolderByPath,
+  closeFolder,
+  renderFileList,
+  readFile,
+  writeFile,
+  getFileModTime,
+  saveWithConflictDetection,
+  showSaveAsDialog,
+  showOpenFileDialog,
+  addRecentFile,
+  applyPrettify,
+  updateTitle,
+  getFolderPath,
+  getFileEntries,
+  setOnFileClick,
+  setGetActiveFilePath,
+  setIsFileDirty,
+} from "./file-manager.js";
+import {
+  openTab,
+  closeActiveTab,
+  getActiveTab,
+  getTabs,
+  hasOpenTabs,
+  markActiveTabDirty,
+  markActiveTabClean,
+  updateActiveTabPath,
+  isActiveTabDirty,
+  onTabSwitch,
+  onAllTabsClosed,
+  getSessionState,
+  findTabByPath,
+} from "./tab-bar.js";
+import { closeDiffModal, resolveConflict } from "./diff-merge.js";
+import { init as initAiCollab, addAgent } from "./ai-collab.js";
+import "./resize.js";
 
 const api = window.electronAPI;
 
@@ -134,13 +179,15 @@ let restoreDone = false;
 let twRefreshTimer = null;
 
 cm.on("change", () => {
-  if (!restoreDone || twSyncing) return;
-  setTableRangesDirty();
+  if (!restoreDone) return;
   clearRenderTimeout();
   status.textContent = "Typing...";
   scheduleRender(800);
-  clearTimeout(twRefreshTimer);
-  twRefreshTimer = setTimeout(refreshTableWidgets, 200);
+  if (!twSyncing) {
+    setTableRangesDirty();
+    clearTimeout(twRefreshTimer);
+    twRefreshTimer = setTimeout(refreshTableWidgets, 200);
+  }
 });
 
 // ── Dirty tracking ─────────────────────────────────────────────────────────
@@ -160,7 +207,9 @@ cm.on("change", () => {
 const btnFormatTable = document.getElementById("btnFormatTable");
 if (btnFormatTable) {
   cm.on("cursorActivity", () => {
-    btnFormatTable.style.display = getTableRangeAt(cm.getCursor().line) ? "" : "none";
+    btnFormatTable.style.display = getTableRangeAt(cm.getCursor().line)
+      ? ""
+      : "none";
   });
 }
 
@@ -175,24 +224,31 @@ function buildOutline() {
   outlineHeadings = [];
   for (let i = 0; i < cm.lineCount(); i++) {
     const m = cm.getLine(i)?.match(/^(#{1,4}) (.+)/);
-    if (m) outlineHeadings.push({ line: i, level: m[1].length, text: m[2].trim() });
+    if (m)
+      outlineHeadings.push({ line: i, level: m[1].length, text: m[2].trim() });
   }
 
   if (!outlineList) return;
-  if (stuckObserver) { stuckObserver.disconnect(); stuckObserver = null; }
+  if (stuckObserver) {
+    stuckObserver.disconnect();
+    stuckObserver = null;
+  }
 
-  outlineList.innerHTML = '';
+  outlineList.innerHTML = "";
   const stickyItems = [];
 
   outlineHeadings.forEach((h, idx) => {
-    const el = document.createElement('div');
-    el.className = 'outline-item';
+    const el = document.createElement("div");
+    el.className = "outline-item";
     el.dataset.level = h.level;
     el.dataset.idx = idx;
     el.textContent = h.text;
     el.onclick = () => {
       cm.setCursor({ line: h.line, ch: 0 });
-      cm.scrollIntoView({ line: h.line, ch: 0 }, cm.getScrollInfo().clientHeight / 3);
+      cm.scrollIntoView(
+        { line: h.line, ch: 0 },
+        cm.getScrollInfo().clientHeight / 3,
+      );
       cm.focus();
     };
     outlineList.appendChild(el);
@@ -202,22 +258,22 @@ function buildOutline() {
   if (stickyItems.length > 0) {
     stuckObserver = new IntersectionObserver(
       (entries) => {
-        entries.forEach(entry => {
-          entry.target.classList.toggle('stuck', entry.intersectionRatio < 1);
+        entries.forEach((entry) => {
+          entry.target.classList.toggle("stuck", entry.intersectionRatio < 1);
         });
       },
-      { root: outlineList, threshold: 1.0 }
+      { root: outlineList, threshold: 1.0 },
     );
-    stickyItems.forEach(el => stuckObserver.observe(el));
+    stickyItems.forEach((el) => stuckObserver.observe(el));
   }
 
   if (outlineSection && outlineHeadings.length > 0) {
-    outlineSection.style.display = '';
+    outlineSection.style.display = "";
   }
   updateOutlineHighlight();
 }
 
-let lastVisibleRange = '';
+let lastVisibleRange = "";
 
 function updateOutlineHighlight() {
   if (!outlineList || outlineHeadings.length === 0) return;
@@ -227,10 +283,14 @@ function updateOutlineHighlight() {
   const topLine = cm.lineAtHeight(info.top, "local");
   const bottomLine = cm.lineAtHeight(info.top + info.clientHeight, "local");
 
-  let firstVisible = -1, lastVisible = -1;
+  let firstVisible = -1,
+    lastVisible = -1;
   for (let i = 0; i < outlineHeadings.length; i++) {
     const sectionStart = outlineHeadings[i].line;
-    const sectionEnd = (i + 1 < outlineHeadings.length) ? outlineHeadings[i + 1].line - 1 : cm.lineCount() - 1;
+    const sectionEnd =
+      i + 1 < outlineHeadings.length
+        ? outlineHeadings[i + 1].line - 1
+        : cm.lineCount() - 1;
     if (sectionEnd >= topLine && sectionStart <= bottomLine) {
       if (firstVisible < 0) firstVisible = i;
       lastVisible = i;
@@ -239,7 +299,10 @@ function updateOutlineHighlight() {
 
   let activeIdx = -1;
   for (let i = outlineHeadings.length - 1; i >= 0; i--) {
-    if (outlineHeadings[i].line <= cursorLine) { activeIdx = i; break; }
+    if (outlineHeadings[i].line <= cursorLine) {
+      activeIdx = i;
+      break;
+    }
   }
 
   const centerLine = cm.lineAtHeight(info.top + info.clientHeight / 2, "local");
@@ -247,7 +310,10 @@ function updateOutlineHighlight() {
   if (firstVisible >= 0 && lastVisible >= firstVisible) {
     for (let i = firstVisible; i <= lastVisible; i++) {
       const headLine = outlineHeadings[i].line;
-      const nextLine = (i + 1 < outlineHeadings.length) ? outlineHeadings[i + 1].line : cm.lineCount();
+      const nextLine =
+        i + 1 < outlineHeadings.length
+          ? outlineHeadings[i + 1].line
+          : cm.lineCount();
       const sectionMid = (headLine + nextLine) / 2;
       const halfSpan = Math.max(1, (bottomLine - topLine) / 2);
       const dist = Math.abs(sectionMid - centerLine) / halfSpan;
@@ -255,23 +321,25 @@ function updateOutlineHighlight() {
     }
   }
 
-  const visKey = firstVisible + ':' + lastVisible + ':' + activeIdx + ':' + centerLine;
+  const visKey =
+    firstVisible + ":" + lastVisible + ":" + activeIdx + ":" + centerLine;
   if (visKey === lastVisibleRange) return;
   lastVisibleRange = visKey;
 
-  const items = outlineList.querySelectorAll('.outline-item');
+  const items = outlineList.querySelectorAll(".outline-item");
   items.forEach((el, i) => {
-    el.classList.toggle('active', i === activeIdx);
-    const isVisible = i >= firstVisible && i <= lastVisible && i !== activeIdx;
-    el.classList.toggle('visible', isVisible);
-    el.style.setProperty('--prox', isVisible ? proximity[i].toFixed(2) : '0');
+    el.classList.toggle("active", i === activeIdx);
+    const isVisible = i >= firstVisible && i <= lastVisible;
+    el.classList.toggle("visible", isVisible);
+    el.style.setProperty("--prox", isVisible ? proximity[i].toFixed(2) : "0");
   });
 
   if (firstVisible >= 0 && items[firstVisible] && items[lastVisible]) {
     const firstEl = items[firstVisible];
     const lastEl = items[lastVisible];
     const rangeTop = firstEl.offsetTop - outlineList.offsetTop;
-    const rangeBottom = lastEl.offsetTop - outlineList.offsetTop + lastEl.offsetHeight;
+    const rangeBottom =
+      lastEl.offsetTop - outlineList.offsetTop + lastEl.offsetHeight;
     const rangeCenter = (rangeTop + rangeBottom) / 2;
     outlineList.scrollTop = rangeCenter - outlineList.clientHeight / 2;
   }
@@ -289,11 +357,11 @@ setTimeout(buildOutline, 200);
 // ── Desktop-style menu bar ─────────────────────────────────────────────────
 
 (function initMenubar() {
-  const menubar = document.querySelector('.menubar');
+  const menubar = document.querySelector(".menubar");
   if (!menubar) return;
 
-  const backdrop = document.createElement('div');
-  backdrop.className = 'menu-backdrop';
+  const backdrop = document.createElement("div");
+  backdrop.className = "menu-backdrop";
   document.body.appendChild(backdrop);
 
   let openMenu = null;
@@ -301,46 +369,53 @@ setTimeout(buildOutline, 200);
   function openItem(item) {
     if (openMenu === item) return;
     closeAll();
-    item.classList.add('open');
-    backdrop.classList.add('active');
+    item.classList.add("open");
+    backdrop.classList.add("active");
     openMenu = item;
   }
 
   function closeAll() {
-    if (openMenu) openMenu.classList.remove('open');
-    backdrop.classList.remove('active');
+    if (openMenu) openMenu.classList.remove("open");
+    backdrop.classList.remove("active");
     openMenu = null;
   }
 
-  menubar.querySelectorAll('.menu-trigger').forEach(trigger => {
-    trigger.addEventListener('click', e => {
+  menubar.querySelectorAll(".menu-trigger").forEach((trigger) => {
+    trigger.addEventListener("click", (e) => {
       e.stopPropagation();
-      const item = trigger.closest('.menu-item');
-      if (openMenu === item) { closeAll(); } else { openItem(item); }
+      const item = trigger.closest(".menu-item");
+      if (openMenu === item) {
+        closeAll();
+      } else {
+        openItem(item);
+      }
     });
   });
 
-  menubar.querySelectorAll('.menu-item').forEach(item => {
-    item.addEventListener('mouseenter', () => {
+  menubar.querySelectorAll(".menu-item").forEach((item) => {
+    item.addEventListener("mouseenter", () => {
       if (openMenu && openMenu !== item) openItem(item);
     });
   });
 
-  menubar.querySelectorAll('.menu-dropdown button').forEach(btn => {
-    btn.addEventListener('click', () => closeAll());
+  menubar.querySelectorAll(".menu-dropdown button").forEach((btn) => {
+    btn.addEventListener("click", () => closeAll());
   });
 
-  backdrop.addEventListener('click', closeAll);
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && openMenu) closeAll();
+  backdrop.addEventListener("click", closeAll);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && openMenu) closeAll();
   });
 })();
 
 // ── Drag & drop .md files ──────────────────────────────────────────────────
 
 const cmEl = cm.getWrapperElement();
-cmEl.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
-cmEl.addEventListener("drop", e => {
+cmEl.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "copy";
+});
+cmEl.addEventListener("drop", (e) => {
   const file = e.dataTransfer.files && e.dataTransfer.files[0];
   if (file && file.name.endsWith(".md") && file.path) {
     e.preventDefault();
@@ -395,7 +470,10 @@ async function doSave() {
 
   try {
     const result = await saveWithConflictDetection(
-      tab.path, content, tab.savedContent, tab.localFileModTime
+      tab.path,
+      content,
+      tab.savedContent,
+      tab.localFileModTime,
     );
 
     if (result.action === "cancel") {
@@ -411,7 +489,8 @@ async function doSave() {
     if (result.action === "merge") {
       cm.setValue(result.content);
       if (result.hasConflicts) {
-        status.textContent = "Merged with conflicts \u2014 search for <<<<<<< to resolve";
+        status.textContent =
+          "Merged with conflicts \u2014 search for <<<<<<< to resolve";
         return;
       }
       // Fall through to save the merged content
@@ -476,7 +555,10 @@ function showUnsavedDialog(fileName) {
 
     overlay.addEventListener("click", (e) => {
       const action = e.target.dataset?.action;
-      if (action) { overlay.remove(); resolve(action); }
+      if (action) {
+        overlay.remove();
+        resolve(action);
+      }
     });
 
     document.addEventListener("keydown", function onKey(e) {
@@ -673,7 +755,7 @@ async function tryRestore() {
       if (openTabNames.length > 0) {
         for (const tabInfo of openTabNames) {
           const name = typeof tabInfo === "string" ? tabInfo : tabInfo.name;
-          const entry = entries.find(e => e.name === name);
+          const entry = entries.find((e) => e.name === name);
           if (entry) {
             const content = await readFile(entry.path);
             const modTime = await getFileModTime(entry.path);
@@ -682,7 +764,7 @@ async function tryRestore() {
         }
         // Switch to previously active tab
         if (activeTabName) {
-          const entry = entries.find(e => e.name === activeTabName);
+          const entry = entries.find((e) => e.name === activeTabName);
           if (entry) {
             const idx = findTabByPath(entry.path);
             if (idx >= 0) openTab(entry.path, entry.name);
@@ -690,7 +772,7 @@ async function tryRestore() {
         }
       } else if (state.lastFile) {
         // Legacy: restore single file
-        const entry = entries.find(e => e.name === state.lastFile);
+        const entry = entries.find((e) => e.name === state.lastFile);
         if (entry) {
           const content = await readFile(entry.path);
           const modTime = await getFileModTime(entry.path);
@@ -781,7 +863,10 @@ async function buildRecentUI() {
         link.className = "recent-link";
         link.textContent = f;
         link.href = "#";
-        link.onclick = (e) => { e.preventDefault(); openFolderByPath(f); };
+        link.onclick = (e) => {
+          e.preventDefault();
+          openFolderByPath(f);
+        };
         welcomeFolders.appendChild(link);
       }
       for (const f of recentFiles) {
@@ -789,7 +874,10 @@ async function buildRecentUI() {
         link.className = "recent-link";
         link.textContent = f;
         link.href = "#";
-        link.onclick = (e) => { e.preventDefault(); openFilePath(f); };
+        link.onclick = (e) => {
+          e.preventDefault();
+          openFilePath(f);
+        };
         welcomeFiles.appendChild(link);
       }
     }
@@ -798,7 +886,7 @@ async function buildRecentUI() {
 
 // ── Keyboard shortcuts ─────────────────────────────────────────────────────
 
-document.addEventListener("keydown", e => {
+document.addEventListener("keydown", (e) => {
   if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "S") {
     e.preventDefault();
     doSaveAs();
@@ -848,7 +936,7 @@ if (api?.on) {
 
 // ── Warn before closing with unsaved changes ───────────────────────────────
 
-window.addEventListener("beforeunload", e => {
+window.addEventListener("beforeunload", (e) => {
   if (isActiveTabDirty()) {
     e.preventDefault();
     e.returnValue = "";
@@ -857,26 +945,28 @@ window.addEventListener("beforeunload", e => {
 
 // ── Startup ────────────────────────────────────────────────────────────────
 
-pagedReady.then(async () => {
-  const hasStartupPath = await api.hasStartupPath();
-  const loaded = hasStartupPath ? false : await tryRestore();
-  hideLoading();
-  if (!loaded && !hasOpenTabs()) {
-    showWelcome();
-  } else {
-    hideWelcome();
-  }
-  restoreDone = true;
-  updateMenuState();
-  buildRecentUI();
+pagedReady
+  .then(async () => {
+    const hasStartupPath = await api.hasStartupPath();
+    const loaded = hasStartupPath ? false : await tryRestore();
+    hideLoading();
+    if (!loaded && !hasOpenTabs()) {
+      showWelcome();
+    } else {
+      hideWelcome();
+    }
+    restoreDone = true;
+    updateMenuState();
+    buildRecentUI();
 
-  // Initialize AI agent collaboration
-  initAiCollab(cm, () => {
-    const tab = getActiveTab();
-    return tab ? tab.path : null;
+    // Initialize AI agent collaboration
+    initAiCollab(cm, () => {
+      const tab = getActiveTab();
+      return tab ? tab.path : null;
+    });
+  })
+  .catch((e) => {
+    hideLoading();
+    if (status) status.textContent = "Startup error: " + e.message;
+    console.error("pagedReady failed:", e);
   });
-}).catch(e => {
-  hideLoading();
-  if (status) status.textContent = "Startup error: " + e.message;
-  console.error("pagedReady failed:", e);
-});
