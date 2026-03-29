@@ -397,10 +397,7 @@ function disconnectAgent(key) {
 // ── Prompt template ─────────────────────────────────────────────────────────
 
 function buildAgentPrompt(key) {
-  return `Connect to the paged editor by calling editor_connect with:
-- url: ws://${wsHost}:${wsPort}
-- key: ${key}
-`;
+  return `/editor-connect ws://${wsHost}:${wsPort} ${key}`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
