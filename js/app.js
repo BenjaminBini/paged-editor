@@ -96,6 +96,7 @@ onTabSwitch((tab) => {
   triggerRender();
   setTimeout(buildOutline, 50);
   setTimeout(refreshTableWidgets, 150);
+  setTimeout(updateGutterMarkers, 50);
   updateMenuState();
   schedulePersist();
 });
@@ -200,6 +201,46 @@ cm.on("change", () => {
   if (tab) updateTitle(tab.name, true);
   clearTimeout(sidebarDirtyTimer);
   sidebarDirtyTimer = setTimeout(renderFileList, 300);
+});
+
+// ── Gutter change markers ──────────────────────────────────────────────────
+
+let gutterTimer = null;
+const GUTTER_MODIFIED = "gutter-modified";
+const GUTTER_ADDED = "gutter-added";
+
+function updateGutterMarkers() {
+  const tab = getActiveTab();
+  if (!tab) return;
+
+  // Clear all existing markers
+  cm.eachLine((lineHandle) => {
+    cm.removeLineClass(lineHandle, "gutter", GUTTER_MODIFIED);
+    cm.removeLineClass(lineHandle, "gutter", GUTTER_ADDED);
+  });
+
+  const savedLines = (tab.savedContent || "").split("\n");
+  const currentLines = cm.getValue().split("\n");
+
+  // Simple LCS-free approach: compare line by line up to min length
+  const minLen = Math.min(savedLines.length, currentLines.length);
+
+  for (let i = 0; i < minLen; i++) {
+    if (savedLines[i] !== currentLines[i]) {
+      cm.addLineClass(i, "gutter", GUTTER_MODIFIED);
+    }
+  }
+
+  // Lines beyond saved length are "added"
+  for (let i = savedLines.length; i < currentLines.length; i++) {
+    cm.addLineClass(i, "gutter", GUTTER_ADDED);
+  }
+}
+
+cm.on("change", () => {
+  if (!hasOpenTabs()) return;
+  clearTimeout(gutterTimer);
+  gutterTimer = setTimeout(updateGutterMarkers, 400);
 });
 
 // ── Format table button visibility ─────────────────────────────────────────
@@ -504,6 +545,7 @@ async function doSave() {
     // Normal save
     markActiveTabClean(content, result.modTime);
     updateTitle(tab.name, false);
+    updateGutterMarkers();
     status.textContent = "Saved " + tab.name;
   } catch (e) {
     status.textContent = "Save failed: " + e.message;

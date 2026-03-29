@@ -30,7 +30,9 @@
   font-size: 13px !important; line-height: 1.7 !important;
 }
 .editor-pane .CodeMirror-gutters { background: #1e1e2e !important; border-right: 1px solid #2d2d3f !important; }
-.editor-pane .CodeMirror-linenumber { color: #4a4a6a !important; }
+.editor-pane .CodeMirror-linenumber { color: #4a4a6a !important; border-left: 2px solid transparent; }
+.gutter-modified .CodeMirror-linenumber { border-left-color: #89b4fa !important; }
+.gutter-added .CodeMirror-linenumber { border-left-color: #a6e3a1 !important; }
 .editor-pane .cm-cursor-gutter .CodeMirror-linenumber { background: #3373b3 !important; color: #fff !important; border-radius: 2px; }
 .editor-pane .CodeMirror-cursor { border-left-color: #cdd6f4 !important; }
 .editor-pane .CodeMirror-selected { background: #364a6e !important; }
