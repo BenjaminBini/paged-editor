@@ -28,10 +28,6 @@
   background: #1e1e2e; color: #cdd6f4; border-left-color: #3373b3;
   font-weight: 600;
 }
-.file-list .file-item.dirty::after {
-  content: ""; width: 6px; height: 6px; border-radius: 50%;
-  background: #f0a840; flex-shrink: 0; margin-left: auto;
-}
 .file-list .file-icon { font-size: 11px; opacity: 0.5; }
 
 /* ── Outline panel ── */
