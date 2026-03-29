@@ -69,10 +69,9 @@
   background: #0096ae;
   opacity: calc(0.3 + var(--prox) * 0.7);
 }
-.outline-item.active::after {
-  content: ""; width: 4px; height: 4px; border-radius: 50%;
-  background: #3373b3; flex-shrink: 0; margin-left: 4px; display: inline-block;
-  vertical-align: middle;
+.outline-item.active::before {
+  background: #3373b3; width: 4px; border-radius: 2px;
+  top: 25%; bottom: 25%;
 }
 /* ── H1: section title — bold, sticky ── */
 .outline-item[data-level="1"] {
