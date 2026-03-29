@@ -223,6 +223,7 @@ function buildMenu() {
         { label: "Toggle Line Wrap", click: () => mainWindow.webContents.send("menu-toggle-wrap") },
         { label: "Toggle Cover & Sommaire", click: () => mainWindow.webContents.send("menu-toggle-cover") },
         { type: "separator" },
+        { role: "reload" },
         { role: "toggleDevTools" },
         { role: "resetZoom" },
         { role: "zoomIn" },
@@ -253,12 +254,14 @@ async function handlePathArg(pathStr) {
 }
 
 function extractPathFromArgs(argv) {
-  // Skip: electron binary, main.js, flags (--), paged:// URLs
+  // Skip: electron binary, main.js, flags (--), paged:// URLs, app root dir
+  const appRoot = path.resolve(__dirname);
   for (const arg of argv.slice(1)) {
     if (arg.startsWith("--") || arg.startsWith("-")) continue;
     if (arg.endsWith("main.js") || arg.endsWith("electron")) continue;
     if (arg.startsWith("paged://")) continue;
     if (arg === ".") continue; // "." is the app root in `electron .`, not a user path
+    if (path.resolve(arg) === appRoot) continue; // skip app root passed by CLI
     return arg;
   }
   return null;
