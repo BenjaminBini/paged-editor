@@ -19,6 +19,7 @@
 .modal .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
 .modal button { padding: 6px 16px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; }
 .modal .btn-cancel { background: #334155; color: #e2e8f0; }
+.modal .btn-discard { background: #f38ba8; color: #1e1e2e; }
 .modal .btn-save { background: #3373b3; color: #fff; }
 
 .diff-modal {
@@ -38,6 +39,8 @@
 .diff-modal .diff-del { background: rgba(243,139,168,0.15); color: #f38ba8; text-decoration: line-through; }
 .diff-modal .diff-ctx { color: #6c7086; }
 .diff-modal .diff-hdr { color: #89b4fa; font-weight: 700; margin-top: 8px; }
+.diff-modal .diff-del .diff-word { background: rgba(243,139,168,0.35); border-radius: 2px; padding: 0 1px; }
+.diff-modal .diff-add .diff-word { background: rgba(166,227,161,0.35); border-radius: 2px; padding: 0 1px; }
 .diff-modal .btn-row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; flex-shrink: 0; }
 .diff-modal button { padding: 8px 18px; border-radius: 6px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; }
 .diff-modal .btn-cancel { background: #334155; color: #e2e8f0; }

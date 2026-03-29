@@ -444,12 +444,57 @@ async function doSaveAs() {
   }
 }
 
-// ── Close active tab (with auto-save) ──────────────────────────────────────
+// ── Unsaved changes dialog ─────────────────────────────────────────────────
+
+function showUnsavedDialog(fileName) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement("div");
+    overlay.className = "modal-overlay open";
+
+    overlay.innerHTML = `
+      <div class="modal">
+        <h3>Unsaved Changes</h3>
+        <p style="color:#94a3b8;margin-bottom:4px;">
+          <strong style="color:#cdd6f4;">${fileName}</strong> has unsaved changes.
+        </p>
+        <div class="btn-row">
+          <button class="btn-cancel" data-action="cancel">Keep open</button>
+          <button class="btn-discard" data-action="discard">Discard</button>
+          <button class="btn-save" data-action="save">Save</button>
+        </div>
+      </div>
+    `;
+
+    overlay.addEventListener("click", (e) => {
+      const action = e.target.dataset?.action;
+      if (action) { overlay.remove(); resolve(action); }
+    });
+
+    document.addEventListener("keydown", function onKey(e) {
+      if (e.key === "Escape") {
+        document.removeEventListener("keydown", onKey);
+        overlay.remove();
+        resolve("cancel");
+      }
+    });
+
+    document.body.appendChild(overlay);
+  });
+}
+
+// ── Close active tab ───────────────────────────────────────────────────────
 
 async function closeCurrentTab() {
   const tab = getActiveTab();
   if (!tab) return;
-  if (tab.dirty && tab.path) await doSave();
+
+  if (tab.dirty) {
+    const action = await showUnsavedDialog(tab.name || "Untitled");
+    if (action === "cancel") return;
+    if (action === "save") await doSave();
+    // "discard" falls through
+  }
+
   closeActiveTab();
 }
 
