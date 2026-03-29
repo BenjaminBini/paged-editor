@@ -35,8 +35,16 @@
   })();
 
   // ── Run Paged.js ──
-  var paged = new Paged.Previewer();
-  await paged.preview();
+  // Wrapped in try/catch: if this iframe was removed from the DOM mid-render
+  // (due to a newer render superseding it), Paged.js will throw when trying
+  // to measure detached elements. That's expected — the result is stale anyway.
+  try {
+    var paged = new Paged.Previewer();
+    await paged.preview();
+  } catch(e) {
+    if (!document.defaultView) return; // iframe was detached, silently bail
+    throw e; // real error, re-throw
+  }
 
   // ── Signal completion ──
   window.parent.postMessage({
