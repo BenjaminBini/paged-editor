@@ -233,58 +233,153 @@ function buildMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+// ── Deep link / CLI path handling ───────────────────────────────────────────
+
+async function handlePathArg(pathStr) {
+  if (!pathStr || !mainWindow) return;
+  try {
+    const resolved = path.resolve(pathStr);
+    const stat = await fs.stat(resolved);
+    if (stat.isDirectory()) {
+      mainWindow.webContents.send("open-folder-path", resolved);
+    } else if (stat.isFile()) {
+      mainWindow.webContents.send("open-file-path", resolved);
+    }
+  } catch (e) {
+    console.error("Failed to open path:", pathStr, e.message);
+  }
+}
+
+function extractPathFromArgs(argv) {
+  // Skip: electron binary, main.js, flags (--), paged:// URLs
+  for (const arg of argv.slice(1)) {
+    if (arg.startsWith("--") || arg.startsWith("-")) continue;
+    if (arg.endsWith("main.js") || arg.endsWith("electron")) continue;
+    if (arg.startsWith("paged://")) continue;
+    if (arg === ".") continue;
+    return arg;
+  }
+  return null;
+}
+
+function handleProtocolUrl(url) {
+  // paged:///absolute/path/to/thing → extract path
+  let pathStr;
+  try {
+    const parsed = new URL(url);
+    pathStr = decodeURIComponent(parsed.pathname);
+  } catch {
+    console.error("Invalid paged:// URL:", url);
+    return;
+  }
+  if (pathStr) handlePathArg(pathStr);
+}
+
 // ── Lifecycle ────────────────────────────────────────────────────────────────
 
-app.whenReady().then(async () => {
-  await loadAppState();
-  createWindow();
-  buildMenu();
+const gotTheLock = app.requestSingleInstanceLock();
 
-  // Start WebSocket server on all interfaces (supports remote agents)
-  wss = new WebSocketServer({ host: "0.0.0.0", port: 0 });
-  await new Promise((resolve) => wss.on("listening", resolve));
-  wsPort = wss.address().port;
-  console.log("AI collab WebSocket server on port", wsPort);
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", (_event, argv) => {
+    // Focus the existing window
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+    // Handle path or protocol URL from second instance
+    const protocolUrl = argv.find(a => a.startsWith("paged://"));
+    if (protocolUrl) {
+      handleProtocolUrl(protocolUrl);
+    } else {
+      const pathArg = extractPathFromArgs(argv);
+      if (pathArg) handlePathArg(pathArg);
+    }
+  });
 
-  wss.on("connection", (ws) => {
-    let authenticatedKey = null;
+  // Register paged:// protocol (must happen before ready on macOS)
+  if (process.defaultApp) {
+    app.setAsDefaultProtocolClient("paged", process.execPath, [path.resolve(process.argv[1])]);
+  } else {
+    app.setAsDefaultProtocolClient("paged");
+  }
 
-    ws.on("message", (raw) => {
-      let msg;
-      try { msg = JSON.parse(raw); } catch { return; }
+  // macOS: protocol URL arrives via open-url event
+  app.on("open-url", (event, url) => {
+    event.preventDefault();
+    if (mainWindow) {
+      handleProtocolUrl(url);
+    } else {
+      app.whenReady().then(() => {
+        mainWindow.webContents.once("did-finish-load", () => handleProtocolUrl(url));
+      });
+    }
+  });
 
-      if (!authenticatedKey) {
-        if (msg.type === "auth" && msg.key && agentKeys.has(msg.key) && !agentKeys.get(msg.key).used) {
-          authenticatedKey = msg.key;
-          agentKeys.get(msg.key).used = true;
-          const name = msg.name || "Agent";
-          agentConnections.set(msg.key, { ws, name });
-          ws.send(JSON.stringify({ type: "auth_ok" }));
-          mainWindow?.webContents.send("agent-connected", { key: msg.key, name });
-        } else {
-          ws.send(JSON.stringify({ type: "auth_error", message: "Invalid or already used key" }));
-          ws.close();
+  app.whenReady().then(async () => {
+    await loadAppState();
+    createWindow();
+    buildMenu();
+
+    // Handle path arg from initial launch
+    const pathArg = extractPathFromArgs(process.argv);
+    if (pathArg) {
+      mainWindow.webContents.once("did-finish-load", () => handlePathArg(pathArg));
+    }
+
+    // Handle protocol URL from initial launch (Linux/Windows)
+    const protocolUrl = process.argv.find(a => a.startsWith("paged://"));
+    if (protocolUrl) {
+      mainWindow.webContents.once("did-finish-load", () => handleProtocolUrl(protocolUrl));
+    }
+
+    // Start WebSocket server on all interfaces (supports remote agents)
+    wss = new WebSocketServer({ host: "0.0.0.0", port: 0 });
+    await new Promise((resolve) => wss.on("listening", resolve));
+    wsPort = wss.address().port;
+    console.log("AI collab WebSocket server on port", wsPort);
+
+    wss.on("connection", (ws) => {
+      let authenticatedKey = null;
+
+      ws.on("message", (raw) => {
+        let msg;
+        try { msg = JSON.parse(raw); } catch { return; }
+
+        if (!authenticatedKey) {
+          if (msg.type === "auth" && msg.key && agentKeys.has(msg.key) && !agentKeys.get(msg.key).used) {
+            authenticatedKey = msg.key;
+            agentKeys.get(msg.key).used = true;
+            const name = msg.name || "Agent";
+            agentConnections.set(msg.key, { ws, name });
+            ws.send(JSON.stringify({ type: "auth_ok" }));
+            mainWindow?.webContents.send("agent-connected", { key: msg.key, name });
+          } else {
+            ws.send(JSON.stringify({ type: "auth_error", message: "Invalid or already used key" }));
+            ws.close();
+          }
+          return;
         }
-        return;
-      }
 
-      // Authenticated — forward to renderer
-      mainWindow?.webContents.send("agent-message", { key: authenticatedKey, message: msg });
+        // Authenticated — forward to renderer
+        mainWindow?.webContents.send("agent-message", { key: authenticatedKey, message: msg });
+      });
+
+      ws.on("close", () => {
+        if (authenticatedKey) {
+          agentConnections.delete(authenticatedKey);
+          mainWindow?.webContents.send("agent-disconnected", { key: authenticatedKey });
+        }
+      });
     });
 
-    ws.on("close", () => {
-      if (authenticatedKey) {
-        agentConnections.delete(authenticatedKey);
-        mainWindow?.webContents.send("agent-disconnected", { key: authenticatedKey });
-      }
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) createWindow();
     });
   });
 
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  app.on("window-all-closed", () => {
+    if (process.platform !== "darwin") app.quit();
   });
-});
-
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") app.quit();
-});
+}
