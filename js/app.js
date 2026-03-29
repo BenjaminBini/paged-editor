@@ -422,12 +422,24 @@ function buildOutline() {
   outlineList.innerHTML = "";
   const stickyItems = [];
 
+  // Compute hierarchical numbering (1, 1.1, 1.1.1, etc.)
+  const counters = [0, 0, 0, 0]; // levels 1-4
+  const numbers = outlineHeadings.map((h) => {
+    const lvl = h.level - 1; // 0-based
+    counters[lvl]++;
+    // Reset deeper levels
+    for (let k = lvl + 1; k < counters.length; k++) counters[k] = 0;
+    return counters.slice(0, lvl + 1).join(".");
+  });
+
   outlineHeadings.forEach((h, idx) => {
     const el = document.createElement("div");
     el.className = "outline-item";
     el.dataset.level = h.level;
     el.dataset.idx = idx;
-    el.textContent = h.text;
+    // Strip existing leading number (e.g. "1.2 Foo" → "Foo") to avoid duplication
+    const cleanText = h.text.replace(/^[\d.]+\s*/, "");
+    el.textContent = numbers[idx] + " " + cleanText;
     el.onclick = () => {
       cm.setCursor({ line: h.line, ch: 0 });
       cm.scrollIntoView(
