@@ -1,5 +1,7 @@
 // ai-collab.js — AI agent collaboration module
 
+import { computeDiff, renderDiffHtml } from './diff-merge.js';
+
 const api = window.electronAPI;
 
 // ── State ───────────────────────────────────────────────────────────────────
@@ -27,6 +29,10 @@ export function init(cm, getFilePath) {
     pendingKeys.delete(key);
     conversations.set(key, conversations.get(key) || []);
     renderAgentList();
+    // If the modal is open waiting for this agent, show success animation
+    if (currentModalKey === key) {
+      showAgentModalConnected();
+    }
   });
 
   api.on("agent-disconnected", ({ key }) => {
@@ -87,7 +93,6 @@ function applyEdit(key, msg) {
   const currentText = _cm.getRange(from, to);
 
   if (currentText !== msg.oldText) {
-    // Reject — tell agent
     api.sendToAgent(key, {
       type: "edit_error",
       requestId: msg.requestId,
@@ -101,22 +106,77 @@ function applyEdit(key, msg) {
     return;
   }
 
-  // Apply the edit
-  _cm.replaceRange(msg.newText, from, to);
+  // Show diff review modal instead of auto-applying
+  const agent = agents.get(key);
+  const agentName = agent ? agent.name : "Agent";
+  showAgentDiffModal(agentName, currentText, msg.newText, msg.lineStart, msg.lineEnd)
+    .then(action => {
+      if (action === "accept") {
+        // Re-verify text hasn't changed while modal was open
+        const nowText = _cm.getRange(from, to);
+        if (nowText !== msg.oldText) {
+          api.sendToAgent(key, {
+            type: "edit_error",
+            requestId: msg.requestId,
+            message: "Content changed while review was pending",
+          });
+          return;
+        }
 
-  // Flash highlight on changed lines
-  const newLineEnd = msg.lineStart + msg.newText.split("\n").length - 1;
-  for (let i = msg.lineStart; i <= newLineEnd; i++) {
-    _cm.addLineClass(i, "background", "ai-edit-flash");
-  }
-  setTimeout(() => {
-    for (let i = msg.lineStart; i <= newLineEnd; i++) {
-      _cm.removeLineClass(i, "background", "ai-edit-flash");
-    }
-  }, 1500);
+        _cm.replaceRange(msg.newText, from, to);
 
-  // Confirm to agent
-  api.sendToAgent(key, { type: "edit_ok", requestId: msg.requestId });
+        // Flash highlight on changed lines
+        const newLineEnd = msg.lineStart + msg.newText.split("\n").length - 1;
+        for (let i = msg.lineStart; i <= newLineEnd; i++) {
+          _cm.addLineClass(i, "background", "ai-edit-flash");
+        }
+        setTimeout(() => {
+          for (let i = msg.lineStart; i <= newLineEnd; i++) {
+            _cm.removeLineClass(i, "background", "ai-edit-flash");
+          }
+        }, 1500);
+
+        api.sendToAgent(key, { type: "edit_ok", requestId: msg.requestId });
+      } else {
+        api.sendToAgent(key, {
+          type: "edit_error",
+          requestId: msg.requestId,
+          message: "Edit rejected by user",
+        });
+      }
+    });
+}
+
+// ── Agent diff review modal ────────────────────────────────────────────────
+
+let agentDiffResolve = null;
+
+function showAgentDiffModal(agentName, oldText, newText, lineStart, lineEnd) {
+  const modal = document.getElementById("agentDiffModal");
+  const title = document.getElementById("agentDiffTitle");
+  const hint = document.getElementById("agentDiffHint");
+  const container = document.getElementById("agentDiffContainer");
+  const acceptBtn = document.getElementById("agentDiffAccept");
+  const rejectBtn = document.getElementById("agentDiffReject");
+
+  const oldLines = oldText.split("\n");
+  const newLines = newText.split("\n");
+  const diff = computeDiff(oldLines, newLines);
+
+  title.textContent = `Edit proposed by ${agentName}`;
+  hint.textContent = `Lines ${lineStart + 1}–${lineEnd + 1} — review the changes below.`;
+  container.innerHTML = renderDiffHtml(diff);
+  modal.classList.add("open");
+
+  // Scroll the diff container to the first change
+  const firstChange = container.querySelector(".diff-add, .diff-del");
+  if (firstChange) firstChange.scrollIntoView({ block: "center" });
+
+  return new Promise(resolve => {
+    agentDiffResolve = resolve;
+    acceptBtn.onclick = () => { modal.classList.remove("open"); resolve("accept"); };
+    rejectBtn.onclick = () => { modal.classList.remove("open"); resolve("reject"); };
+  });
 }
 
 // ── Send request to agent ───────────────────────────────────────────────────
@@ -191,102 +251,9 @@ export function getConnectedAgents() {
 // ── Prompt template ─────────────────────────────────────────────────────────
 
 function buildAgentPrompt(key) {
-  return `# AI Agent Collaboration — Paged Editor
-
-You are connecting to a Markdown editor as a collaborative AI agent.
-
-## Connection
-
-1. Open a WebSocket connection to: \`ws://${wsHost}:${wsPort}\`
-2. Send an authentication message:
-\`\`\`json
-{"type": "auth", "key": "${key}", "name": "YOUR_NAME_HERE"}
-\`\`\`
-3. Wait for \`{"type": "auth_ok"}\` before proceeding.
-
-## Protocol
-
-You will receive **request** messages from the user:
-\`\`\`json
-{
-  "type": "request",
-  "id": "<unique-id>",
-  "prompt": "User's instruction",
-  "selection": {
-    "text": "selected text",
-    "lineStart": 10, "lineEnd": 12,
-    "chStart": 0, "chEnd": 15
-  },
-  "context": { "before": "lines before", "after": "lines after" },
-  "file": { "path": "/path/to/file.md", "name": "file.md", "content": "full content" }
-}
-\`\`\`
-
-### Responding
-
-You can respond with one or more of these message types. Always include the \`requestId\` matching the request's \`id\`.
-
-**Edit** — replace text in the editor:
-\`\`\`json
-{
-  "type": "edit",
-  "requestId": "<request-id>",
-  "lineStart": 10, "lineEnd": 12,
-  "oldText": "exact current text at those lines",
-  "newText": "replacement text"
-}
-\`\`\`
-- \`oldText\` MUST exactly match what is currently at \`lineStart\`–\`lineEnd\` (the full content of those lines). If it doesn't match, the edit is rejected.
-- The editor will confirm with \`{"type": "edit_ok"}\` or \`{"type": "edit_error", "message": "..."}\`.
-
-**Message** — display text to the user:
-\`\`\`json
-{"type": "message", "requestId": "<request-id>", "text": "Your message here"}
-\`\`\`
-
-**Status** — update the user on your progress (shown in the waiting popover):
-\`\`\`json
-{"type": "status", "requestId": "<request-id>", "text": "Searching DCE documents..."}
-\`\`\`
-- Send a status update as soon as you receive a request (\`"Received, processing..."\`) so the user knows you're working on it.
-- Send additional status updates for each major step (e.g., \`"Analyzing context..."\`, \`"Searching documentation..."\`, \`"Writing edit..."\`).
-
-**Question** — ask the user (optionally with choices):
-\`\`\`json
-{
-  "type": "question",
-  "requestId": "<request-id>",
-  "id": "<unique-question-id>",
-  "text": "Your question?",
-  "choices": ["Option A", "Option B"]
-}
-\`\`\`
-- \`choices\` is optional. If omitted, the user gets a free-text input.
-- The user's response: \`{"type": "answer", "questionId": "<question-id>", "value": "..."}\`
-
-## Reactive Connection Setup
-
-After authenticating, you MUST immediately set up a **background file watcher** so you react to requests in real time without the user having to prompt you.
-
-1. Write a Node.js bridge script that:
-   - Connects to the WebSocket at \`ws://${wsHost}:${wsPort}\`
-   - Authenticates with the provided key
-   - Writes all incoming messages to \`/tmp/ws_editor_inbox.jsonl\` (append mode)
-   - Polls \`/tmp/ws_editor_outbox.jsonl\` every 500ms and sends any lines over the WebSocket
-2. Run the bridge in the background using Bash with \`run_in_background\`.
-3. **Immediately** start a background file watcher (using \`tail -n 0 -f /tmp/ws_editor_inbox.jsonl\`) that exits when a new \`"type":"request"\` line appears. Use Bash with \`run_in_background\` so you are **automatically notified** when a request arrives.
-4. When notified, read the request, process it, send your response(s) by writing to \`/tmp/ws_editor_outbox.jsonl\`, then **restart the watcher** for the next request.
-
-This ensures you respond to editor requests as soon as they arrive, without the user needing to tell you a request is pending.
-
-## Guidelines
-
-- **Always send a status update immediately** when you start processing a request, before doing any work. This is critical for the user experience — it confirms reception.
-- Keep edits minimal and precise — change only what's needed.
-- Always verify \`oldText\` matches the exact content from the \`file.content\` at the specified lines before sending an edit.
-- You can send multiple responses to a single request (e.g., status + edit + message explaining it).
-- Stay connected — you'll receive new requests as the user selects text and asks for help.
-- After processing each request, always restart the background watcher for the next one.
+  return `Connect to the paged editor by calling editor_connect with:
+- url: ws://${wsHost}:${wsPort}
+- key: ${key}
 `;
 }
 
@@ -333,12 +300,20 @@ const agentModal = document.getElementById("agentModal");
 const agentPromptText = document.getElementById("agentPromptText");
 const btnCopyPrompt = document.getElementById("btnCopyPrompt");
 const btnCloseAgentModal = document.getElementById("btnCloseAgentModal");
+const agentModalContent = document.getElementById("agentModalContent");
+const agentModalSuccess = document.getElementById("agentModalSuccess");
+
+let currentModalKey = null;
 
 if (btnCloseAgentModal) btnCloseAgentModal.onclick = () => closeAgentModal();
 
 function showAgentPromptModal(key) {
   if (!agentModal || !agentPromptText) return;
+  currentModalKey = key;
   agentPromptText.textContent = buildAgentPrompt(key);
+  // Reset to prompt view
+  if (agentModalContent) agentModalContent.hidden = false;
+  if (agentModalSuccess) agentModalSuccess.hidden = true;
   agentModal.classList.add("open");
 
   if (btnCopyPrompt) {
@@ -350,8 +325,26 @@ function showAgentPromptModal(key) {
   }
 }
 
+function showAgentModalConnected() {
+  if (!agentModalContent || !agentModalSuccess) return;
+  agentModalContent.hidden = true;
+  // Re-trigger animations: remove class, force reflow, add class
+  agentModalSuccess.classList.remove("animate");
+  agentModalSuccess.hidden = false;
+  void agentModalSuccess.offsetHeight; // force reflow
+  agentModalSuccess.classList.add("animate");
+  // Auto-close after animation plays
+  setTimeout(() => closeAgentModal(), 1800);
+}
+
 function closeAgentModal() {
   if (agentModal) agentModal.classList.remove("open");
+  currentModalKey = null;
+  if (agentModalContent) agentModalContent.hidden = false;
+  if (agentModalSuccess) {
+    agentModalSuccess.hidden = true;
+    agentModalSuccess.classList.remove("animate");
+  }
 }
 
 // ── Spark IA button ─────────────────────────────────────────────────────────
@@ -472,7 +465,7 @@ function showSparkPrompt(agentKey, selection) {
     if (e.key === "Escape") removeActivePopover();
   });
 
-  document.body.appendChild(popover);
+  clampPopover(popover);
   activePopover = popover;
   setTimeout(() => input.focus(), 10);
 }
@@ -501,7 +494,7 @@ function showAgentPicker(connectedAgents, selection) {
     list.appendChild(btn);
   }
 
-  document.body.appendChild(popover);
+  clampPopover(popover);
   activePopover = popover;
 }
 
@@ -519,7 +512,7 @@ function showWaitingPopover(agentKey, requestId, selection, coords) {
   popover.dataset.requestId = requestId;
   popover.dataset.agentKey = agentKey;
 
-  document.body.appendChild(popover);
+  clampPopover(popover);
   activePopover = popover;
 }
 
@@ -540,6 +533,9 @@ function showAgentPopover(key, msg) {
   const agent = agents.get(key);
   const agentName = agent ? agent.name : "Agent";
 
+  // Always remove any existing popover before showing a new one
+  removeActivePopover();
+
   // If there's already an active popover waiting for this request, replace it
   if (activePopover && activePopover.dataset.requestId === msg.requestId) {
     const coords = {
@@ -557,7 +553,7 @@ function showAgentPopover(key, msg) {
       </div>
     `;
     popover.querySelector(".ai-popover-cancel").onclick = () => removeActivePopover();
-    document.body.appendChild(popover);
+    clampPopover(popover);
     activePopover = popover;
     return;
   }
@@ -573,13 +569,16 @@ function showAgentPopover(key, msg) {
     </div>
   `;
   popover.querySelector(".ai-popover-cancel").onclick = () => removeActivePopover();
-  document.body.appendChild(popover);
+  clampPopover(popover);
   activePopover = popover;
 }
 
 function showQuestionPopover(key, msg) {
   const agent = agents.get(key);
   const agentName = agent ? agent.name : "Agent";
+
+  // Always remove any existing popover before showing a new one
+  removeActivePopover();
 
   // Replace waiting popover if matching
   let coords;
@@ -634,7 +633,7 @@ function showQuestionPopover(key, msg) {
     };
   }
 
-  document.body.appendChild(popover);
+  clampPopover(popover);
   activePopover = popover;
 }
 
@@ -688,26 +687,28 @@ function showConversationHistory(key) {
 function createPopover(coords) {
   const popover = document.createElement("div");
   popover.className = "ai-popover";
+  popover._coords = coords;          // stash for clampPopover
+  return popover;
+}
+
+function clampPopover(popover) {
+  const coords = popover._coords || { bottom: 200, left: 400, top: 180 };
   document.body.appendChild(popover);
 
-  // Measure popover size after adding to DOM
   const rect = popover.getBoundingClientRect();
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   const pw = rect.width || 320;
   const ph = rect.height || 200;
 
-  // Clamp to viewport
   let top = coords.bottom + 4;
   let left = coords.left;
 
-  if (top + ph > vh - 8) top = Math.max(8, coords.top - ph - 4);
+  if (top + ph > vh - 8) top = Math.max(8, (coords.top || coords.bottom - 20) - ph - 4);
   if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8);
 
   popover.style.top = top + "px";
   popover.style.left = left + "px";
-  popover.remove();
-  return popover;
 }
 
 // ── Utility ─────────────────────────────────────────────────────────────────

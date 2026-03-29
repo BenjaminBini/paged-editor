@@ -13,7 +13,7 @@ import {
 } from './table-widget.js';
 import {
   openFolder, openFolderByPath, doSaveAs, doSave, isDirty,
-  activateFolder, closeFolder,
+  closeFolder,
   setStandaloneFile, activeFileIdx, folderPath, standaloneFilePath, fileEntries,
 } from './file-manager.js';
 import { closeDiffModal, resolveConflict } from './diff-merge.js';
@@ -449,12 +449,11 @@ async function tryRestore() {
 
   if (state.lastFolder) {
     try {
-      folderPath = state.lastFolder;
-      await activateFolder(state.lastFile || null);
+      await openFolderByPath(state.lastFolder, state.lastFile || null);
       return true;
     } catch (e) {
       console.warn("Folder restore failed:", e);
-      folderPath = null;
+      closeFolder();
     }
   }
 

@@ -90,6 +90,18 @@
     </div>
   </div>
 
+  <div class="modal-overlay" id="agentDiffModal">
+    <div class="diff-modal">
+      <h3 id="agentDiffTitle">Agent edit proposal</h3>
+      <div class="diff-hint" id="agentDiffHint">An agent wants to modify your document. Review the changes below.</div>
+      <div class="diff-container" id="agentDiffContainer"></div>
+      <div class="btn-row">
+        <button class="btn-cancel" id="agentDiffReject">Reject</button>
+        <button class="btn-save" id="agentDiffAccept">Accept</button>
+      </div>
+    </div>
+  </div>
+
   <div class="welcome-screen" id="welcomeScreen">
     <div class="welcome-inner">
       <h1 class="welcome-logo">BEORN</h1>
@@ -195,12 +207,27 @@
 
   <div class="modal-overlay" id="agentModal">
     <div class="modal" style="width:600px;">
-      <h3>Add an AI Agent</h3>
-      <p style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Copy this prompt and paste it into your AI agent (e.g. Claude Code). The agent will connect automatically.</p>
-      <pre class="agent-prompt-text" id="agentPromptText"></pre>
-      <div class="btn-row">
-        <button class="btn-cancel" id="btnCloseAgentModal">Close</button>
-        <button class="btn-save" id="btnCopyPrompt">Copy Prompt</button>
+      <div id="agentModalContent">
+        <h3>Add an AI Agent</h3>
+        <p style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Copy this prompt and paste it into your AI agent (e.g. Claude Code). The agent will connect automatically.</p>
+        <div id="agentModalStatus" class="agent-modal-status">
+          <div class="agent-modal-status-dot"></div>
+          <span>Waiting for connection…</span>
+        </div>
+        <pre class="agent-prompt-text" id="agentPromptText"></pre>
+        <div class="btn-row">
+          <button class="btn-cancel" id="btnCloseAgentModal">Close</button>
+          <button class="btn-save" id="btnCopyPrompt">Copy Prompt</button>
+        </div>
+      </div>
+      <div id="agentModalSuccess" class="agent-modal-success" hidden>
+        <div class="agent-success-check">
+          <svg viewBox="0 0 52 52" class="agent-success-svg">
+            <circle class="agent-success-circle" cx="26" cy="26" r="24" fill="none" stroke="#a6e3a1" stroke-width="2"/>
+            <path class="agent-success-path" fill="none" stroke="#a6e3a1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M15 27l7 7 15-15"/>
+          </svg>
+        </div>
+        <p class="agent-success-label">Agent connected!</p>
       </div>
     </div>
   </div>

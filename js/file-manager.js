@@ -168,9 +168,9 @@ export async function openFolder() {
   await activateFolder();
 }
 
-export async function openFolderByPath(dirPath) {
+export async function openFolderByPath(dirPath, restoreFile) {
   folderPath = dirPath;
-  await activateFolder();
+  await activateFolder(restoreFile);
 }
 
 export async function activateFolder(restoreFile) {
