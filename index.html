@@ -72,7 +72,6 @@
       </div>
     </nav>
 
-    <span id="paneFileName" class="pane-filename"></span>
     <span class="status" id="status">Ready</span>
   </div>
 
@@ -165,14 +164,17 @@
       </div>
     </div>
     <div class="editor-pane" id="editorPane">
-      <div class="pane-header">
-        <div id="btnTableEditor" class="wrap-toggle active" onclick="toggleTableEditor()" title="Toggle table editor">
-          <span>Tables</span>
-          <div class="wrap-track"><div class="wrap-thumb"></div></div>
-        </div>
-        <div id="btnWrap" class="wrap-toggle active" onclick="toggleWrap()" title="Toggle word wrap">
-          <span>Wrap</span>
-          <div class="wrap-track"><div class="wrap-thumb"></div></div>
+      <div class="pane-header" id="tabBar">
+        <div class="tab-bar-tabs" id="tabBarTabs"></div>
+        <div class="tab-bar-controls">
+          <div id="btnTableEditor" class="wrap-toggle active" onclick="toggleTableEditor()" title="Toggle table editor">
+            <span>Tables</span>
+            <div class="wrap-track"><div class="wrap-thumb"></div></div>
+          </div>
+          <div id="btnWrap" class="wrap-toggle active" onclick="toggleWrap()" title="Toggle word wrap">
+            <span>Wrap</span>
+            <div class="wrap-track"><div class="wrap-thumb"></div></div>
+          </div>
         </div>
       </div>
       <div id="editor-wrapper">
@@ -189,10 +191,6 @@
     <div class="preview-pane" id="previewPane">
       <div class="pane-header">
         Preview (Paged.js)
-        <div id="btnCover" class="wrap-toggle" onclick="toggleCover()" title="Toggle cover &amp; sommaire">
-          <span>Cover</span>
-          <div class="wrap-track"><div class="wrap-thumb"></div></div>
-        </div>
       </div>
       <div id="preview-container">
         <div id="preview-wrapper">
