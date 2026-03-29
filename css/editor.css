@@ -62,9 +62,11 @@
   display: flex; align-items: stretch; overflow: hidden; gap: 0;
   min-width: 0; flex: 1;
 }
-.tab-bar-controls {
-  margin-left: auto; display: flex; align-items: center; gap: 6px;
-  flex-shrink: 0; padding: 0 8px;
+/* ── Editor statusbar (bottom) ── */
+.editor-statusbar {
+  height: 26px; background: #2d2d3f; border-top: 1px solid #2d2d3f;
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 10px; flex-shrink: 0;
 }
 .tab {
   display: flex; align-items: center; gap: 6px;

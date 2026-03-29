@@ -166,16 +166,6 @@
     <div class="editor-pane" id="editorPane">
       <div class="pane-header" id="tabBar">
         <div class="tab-bar-tabs" id="tabBarTabs"></div>
-        <div class="tab-bar-controls">
-          <div id="btnTableEditor" class="wrap-toggle active" onclick="toggleTableEditor()" title="Toggle table editor">
-            <span>Tables</span>
-            <div class="wrap-track"><div class="wrap-thumb"></div></div>
-          </div>
-          <div id="btnWrap" class="wrap-toggle active" onclick="toggleWrap()" title="Toggle word wrap">
-            <span>Wrap</span>
-            <div class="wrap-track"><div class="wrap-thumb"></div></div>
-          </div>
-        </div>
       </div>
       <div id="editor-wrapper">
         <div id="editor-loading">
@@ -183,6 +173,16 @@
           <span>Loading...</span>
         </div>
         <textarea id="editor-textarea"></textarea>
+      </div>
+      <div class="editor-statusbar">
+        <div id="btnTableEditor" class="wrap-toggle active" onclick="toggleTableEditor()" title="Toggle table editor">
+          <span>Tables</span>
+          <div class="wrap-track"><div class="wrap-thumb"></div></div>
+        </div>
+        <div id="btnWrap" class="wrap-toggle active" onclick="toggleWrap()" title="Toggle word wrap">
+          <span>Wrap</span>
+          <div class="wrap-track"><div class="wrap-thumb"></div></div>
+        </div>
       </div>
     </div>
 
