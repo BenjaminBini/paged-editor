@@ -597,19 +597,29 @@ async function openLocalFile() {
   await openFilePath(filePath);
 }
 
-// ── Expose globals for onclick handlers in HTML ────────────────────────────
+// ── Open folder and load first file ─────────────────────────────────────────
 
-window.openLocalFile = openLocalFile;
-window.openFolder = async () => {
-  const result = await openFolder();
+async function openFolderAndLoadFirst(result) {
   if (result && result.fileEntries.length > 0) {
-    // Open first file in a tab
     const first = result.fileEntries[0];
     const content = await readFile(first.path);
     const modTime = await getFileModTime(first.path);
     openTab(first.path, first.name, content, modTime);
     hideWelcome();
   }
+}
+
+async function openFolderByPathAndLoad(dirPath) {
+  const result = await openFolderByPath(dirPath);
+  await openFolderAndLoadFirst(result);
+}
+
+// ── Expose globals for onclick handlers in HTML ────────────────────────────
+
+window.openLocalFile = openLocalFile;
+window.openFolder = async () => {
+  const result = await openFolder();
+  await openFolderAndLoadFirst(result);
 };
 window.saveCurrentFile = () => {
   if (hasOpenTabs()) return doSave();
@@ -823,7 +833,7 @@ async function buildRecentUI() {
           const btn = document.createElement("button");
           btn.textContent = f.split("/").pop();
           btn.title = f;
-          btn.onclick = () => openFolderByPath(f);
+          btn.onclick = () => openFolderByPathAndLoad(f);
           menu.appendChild(btn);
         }
       }
@@ -866,7 +876,7 @@ async function buildRecentUI() {
         link.href = "#";
         link.onclick = (e) => {
           e.preventDefault();
-          openFolderByPath(f);
+          openFolderByPathAndLoad(f);
         };
         welcomeFolders.appendChild(link);
       }
@@ -931,7 +941,7 @@ if (api?.on) {
   api.on("menu-toggle-wrap", () => toggleWrap());
   api.on("menu-toggle-cover", () => toggleCover());
   api.on("open-file-path", (filePath) => openFilePath(filePath));
-  api.on("open-folder-path", (folderPath) => openFolderByPath(folderPath));
+  api.on("open-folder-path", (folderPath) => openFolderByPathAndLoad(folderPath));
   api.on("recent-cleared", () => buildRecentUI());
 }
 
