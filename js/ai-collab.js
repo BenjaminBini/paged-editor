@@ -397,7 +397,7 @@ function disconnectAgent(key) {
 // ── Prompt template ─────────────────────────────────────────────────────────
 
 function buildAgentPrompt(key) {
-  return `/editor-connect ws://${wsHost}:${wsPort} ${key}`;
+  return `/ao-analyst:editor-connect ws://${wsHost}:${wsPort} ${key}`;
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
