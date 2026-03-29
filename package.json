@@ -3,12 +3,63 @@
   "version": "1.0.0",
   "description": "Markdown to PDF editor with Paged.js",
   "main": "main.js",
+  "bin": {
+    "paged": "./bin/paged.js"
+  },
   "scripts": {
     "start": "electron .",
-    "build": "echo 'TODO: add electron-builder config'"
+    "build": "electron-builder --mac",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder -mwl"
+  },
+  "build": {
+    "appId": "com.beorn.paged-editor",
+    "productName": "Paged Editor",
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "js/**/*",
+      "css/**/*",
+      "assets/**/*",
+      "node_modules/**/*",
+      "bin/paged.js"
+    ],
+    "protocols": [
+      {
+        "name": "Paged Editor",
+        "schemes": ["paged"]
+      }
+    ],
+    "mac": {
+      "category": "public.app-category.productivity",
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Office"
+    },
+    "dmg": {
+      "title": "Paged Editor",
+      "contents": [
+        { "x": 130, "y": 220 },
+        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+      ]
+    }
   },
   "devDependencies": {
-    "electron": "^41.0.4"
+    "electron": "^41.0.4",
+    "electron-builder": "^26.8.1"
   },
   "dependencies": {
     "marked": "^15.0.7",
