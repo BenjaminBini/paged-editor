@@ -12,16 +12,16 @@ import {
   setTableRangesDirty, twSyncing, tableWidgets, destroyTableWidget,
 } from './table-widget.js';
 import {
-  openFolder, openFolderByPath, closeFolder, refreshFileList, renderFileList,
+  openFolder, openFolderByPath, closeFolder, renderFileList,
   readFile, writeFile, getFileModTime, saveWithConflictDetection,
   showSaveAsDialog, showOpenFileDialog, addRecentFile,
   applyPrettify, updateTitle, getFolderPath, getFileEntries,
-  setOnFileClick, setGetActiveFilePath, registerRefreshTableWidgets,
+  setOnFileClick, setGetActiveFilePath,
 } from './file-manager.js';
 import {
-  openTab, closeActiveTab, getActiveTab, getActiveTabIdx,
-  getTabCount, hasOpenTabs, markActiveTabDirty, markActiveTabClean,
-  updateActiveTabPath, isActiveTabDirty, renderTabBar,
+  openTab, closeActiveTab, getActiveTab,
+  hasOpenTabs, markActiveTabDirty, markActiveTabClean,
+  updateActiveTabPath, isActiveTabDirty,
   onTabSwitch, onAllTabsClosed, getSessionState, findTabByPath,
 } from './tab-bar.js';
 import { closeDiffModal, resolveConflict } from './diff-merge.js';

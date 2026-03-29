@@ -1,6 +1,6 @@
 // file-manager.js — file I/O and folder management (pure I/O, no tab state)
 
-import { cm, status, showLoading, hideLoading } from './editor.js';
+import { cm } from './editor.js';
 import { escapeHtml } from './render.js';
 import { showDiffModal, threeWayMerge } from './diff-merge.js';
 
