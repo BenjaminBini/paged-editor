@@ -1,236 +1,403 @@
 <!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Markdown → Paged.js Editor</title>
-  <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Markdown → Paged.js Editor</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
 
-  <!-- External libs (non-module, loaded as globals) -->
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.css" />
-  <script src="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/codemirror@5/mode/markdown/markdown.min.js"></script>
+    <!-- External libs (non-module, loaded as globals) -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@5/mode/markdown/markdown.min.js"></script>
 
-  <!-- Modular CSS -->
-  <link rel="stylesheet" href="css/reset.css" />
-  <link rel="stylesheet" href="css/layout.css" />
-  <link rel="stylesheet" href="css/toolbar.css" />
-  <link rel="stylesheet" href="css/sidebar.css" />
-  <link rel="stylesheet" href="css/editor.css" />
-  <link rel="stylesheet" href="css/table-widget.css" />
-  <link rel="stylesheet" href="css/preview.css" />
-  <link rel="stylesheet" href="css/modals.css" />
-  <link rel="stylesheet" href="css/ai-collab.css" />
-  <link rel="stylesheet" href="css/resize.css" />
-</head>
-<body>
-  <div class="toolbar">
-    <span class="logo">BEORN</span>
-    <span class="sep"></span>
+    <!-- Modular CSS -->
+    <link rel="stylesheet" href="css/reset.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/toolbar.css" />
+    <link rel="stylesheet" href="css/sidebar.css" />
+    <link rel="stylesheet" href="css/editor.css" />
+    <link rel="stylesheet" href="css/table-widget.css" />
+    <link rel="stylesheet" href="css/preview.css" />
+    <link rel="stylesheet" href="css/modals.css" />
+    <link rel="stylesheet" href="css/ai-collab.css" />
+    <link rel="stylesheet" href="css/resize.css" />
+  </head>
+  <body>
+    <div class="toolbar">
+      <span class="logo">BEORN</span>
+      <span class="sep"></span>
 
-    <nav class="menubar">
-      <div class="menu-item" data-menu="file">
-        <button class="menu-trigger">File</button>
-        <div class="menu-dropdown">
-          <button onclick="newDocument()"><span class="menu-label">New File</span><span class="menu-shortcut">Ctrl+N</span></button>
-          <div class="menu-divider"></div>
-          <button onclick="openLocalFile()" id="btnOpenLocal"><span class="menu-label">Open File...</span><span class="menu-shortcut">Ctrl+O</span></button>
-          <button onclick="openFolder()" id="btnOpenFolder"><span class="menu-label">Open Folder...</span></button>
-          <div class="menu-divider"></div>
-          <div class="menu-submenu-container" id="recentMenuContainer" style="display:none;">
-            <div class="menu-submenu-label">Open Recent</div>
-            <div class="menu-submenu" id="recentMenu"></div>
+      <nav class="menubar">
+        <div class="menu-item" data-menu="file">
+          <button class="menu-trigger">File</button>
+          <div class="menu-dropdown">
+            <button onclick="newDocument()">
+              <span class="menu-label">New File</span
+              ><span class="menu-shortcut">Ctrl+N</span>
+            </button>
             <div class="menu-divider"></div>
-          </div>
-          <button onclick="saveCurrentFile()" id="btnSave" disabled><span class="menu-label">Save</span><span class="menu-shortcut">Ctrl+S</span></button>
-          <button onclick="saveAs()" id="btnSaveAs" disabled><span class="menu-label">Save As...</span><span class="menu-shortcut">Ctrl+Shift+S</span></button>
-          <div class="menu-divider"></div>
-          <button onclick="closeFile()" id="btnCloseFile" disabled><span class="menu-label">Close File</span></button>
-          <button onclick="closeFolder()" id="btnCloseFolder" disabled><span class="menu-label">Close Folder</span></button>
-        </div>
-      </div>
-
-      <div class="menu-item" data-menu="edit">
-        <button class="menu-trigger">Edit</button>
-        <div class="menu-dropdown">
-          <button onclick="insertTable()" id="btnInsertTable" disabled><span class="menu-label">Insert Table</span></button>
-          <div class="menu-divider"></div>
-          <button onclick="document.querySelector('.CodeMirror').CodeMirror.undo()" id="btnUndo" disabled><span class="menu-label">Undo</span><span class="menu-shortcut">Ctrl+Z</span></button>
-          <button onclick="document.querySelector('.CodeMirror').CodeMirror.redo()" id="btnRedo" disabled><span class="menu-label">Redo</span><span class="menu-shortcut">Ctrl+Shift+Z</span></button>
-        </div>
-      </div>
-
-      <div class="menu-item" data-menu="view">
-        <button class="menu-trigger">View</button>
-        <div class="menu-dropdown">
-          <button onclick="triggerRender()" id="btnRender" disabled><span class="menu-label">Render Preview</span><span class="menu-shortcut">Ctrl+Enter</span></button>
-          <button onclick="openPreviewTab()" id="btnPreviewTab" disabled><span class="menu-label">Open in New Tab</span></button>
-          <div class="menu-divider"></div>
-          <button onclick="toggleWrap()" id="btnToggleWrap" disabled><span class="menu-label">Toggle Line Wrap</span></button>
-        </div>
-      </div>
-    </nav>
-
-    <span class="status" id="status">Ready</span>
-  </div>
-
-  <div class="modal-overlay" id="diffModal">
-    <div class="diff-modal">
-      <h3 id="diffTitle">Conflict detected</h3>
-      <div class="diff-hint" id="diffHint">The file was modified on Google Drive since you loaded it. Changes from the remote version are shown below.</div>
-      <div class="diff-container" id="diffContainer"></div>
-      <div class="btn-row">
-        <button class="btn-cancel" onclick="closeDiffModal()">Cancel</button>
-        <button class="btn-reload" onclick="resolveConflict('reload')">Load disk version</button>
-        <button class="btn-merge" onclick="resolveConflict('merge')">Merge</button>
-        <button class="btn-force" onclick="resolveConflict('force')">Overwrite with mine</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="modal-overlay" id="agentDiffModal">
-    <div class="diff-modal">
-      <h3 id="agentDiffTitle">Agent edit proposal</h3>
-      <div class="diff-hint" id="agentDiffHint">An agent wants to modify your document. Review the changes below.</div>
-      <div class="diff-container" id="agentDiffContainer"></div>
-      <div class="btn-row">
-        <button class="btn-cancel" id="agentDiffReject">Reject</button>
-        <button class="btn-save" id="agentDiffAccept">Accept</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="welcome-screen" id="welcomeScreen">
-    <div class="welcome-inner">
-      <h1 class="welcome-logo">BEORN</h1>
-      <p class="welcome-sub">Markdown to PDF Editor</p>
-      <div class="welcome-actions">
-        <div class="welcome-section">
-          <h2>Open</h2>
-          <button onclick="openLocalFile()" id="welcomeOpenLocal">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8"/></svg>
-            <span>Open File</span>
-          </button>
-          <button onclick="openFolder()" id="welcomeOpenFolder">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14l1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
-            <span>Open Folder</span>
-          </button>
-        </div>
-        <div class="welcome-section">
-          <h2>Create</h2>
-          <button onclick="newDocument()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5M9 15h6m-3 3v-6"/></svg>
-            <span>Blank Document</span>
-          </button>
-          <button onclick="newFromTemplate()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="7" x="3" y="3" rx="1"/><rect width="9" height="7" x="3" y="14" rx="1"/><rect width="5" height="7" x="16" y="14" rx="1"/></svg>
-            <span>BEORN Template</span>
-          </button>
-        </div>
-      </div>
-      <div class="welcome-recent-section" id="welcomeRecent" style="display:none;">
-        <div class="welcome-recent-grid">
-          <div>
-            <h3>Recent Folders</h3>
-            <div id="welcomeRecentFolders"></div>
-          </div>
-          <div>
-            <h3>Recent Files</h3>
-            <div id="welcomeRecentFiles"></div>
+            <button onclick="openLocalFile()" id="btnOpenLocal">
+              <span class="menu-label">Open File...</span
+              ><span class="menu-shortcut">Ctrl+O</span>
+            </button>
+            <button onclick="openFolder()" id="btnOpenFolder">
+              <span class="menu-label">Open Folder...</span>
+            </button>
+            <div class="menu-divider"></div>
+            <div
+              class="menu-submenu-container"
+              id="recentMenuContainer"
+              style="display: none"
+            >
+              <div class="menu-submenu-label">Open Recent</div>
+              <div class="menu-submenu" id="recentMenu"></div>
+              <div class="menu-divider"></div>
+            </div>
+            <button onclick="saveCurrentFile()" id="btnSave" disabled>
+              <span class="menu-label">Save</span
+              ><span class="menu-shortcut">Ctrl+S</span>
+            </button>
+            <button onclick="saveAs()" id="btnSaveAs" disabled>
+              <span class="menu-label">Save As...</span
+              ><span class="menu-shortcut">Ctrl+Shift+S</span>
+            </button>
+            <div class="menu-divider"></div>
+            <button onclick="closeFile()" id="btnCloseFile" disabled>
+              <span class="menu-label">Close File</span>
+            </button>
+            <button onclick="closeFolder()" id="btnCloseFolder" disabled>
+              <span class="menu-label">Close Folder</span>
+            </button>
           </div>
         </div>
-      </div>
+
+        <div class="menu-item" data-menu="edit">
+          <button class="menu-trigger">Edit</button>
+          <div class="menu-dropdown">
+            <button onclick="insertTable()" id="btnInsertTable" disabled>
+              <span class="menu-label">Insert Table</span>
+            </button>
+            <div class="menu-divider"></div>
+            <button
+              onclick="document.querySelector('.CodeMirror').CodeMirror.undo()"
+              id="btnUndo"
+              disabled
+            >
+              <span class="menu-label">Undo</span
+              ><span class="menu-shortcut">Ctrl+Z</span>
+            </button>
+            <button
+              onclick="document.querySelector('.CodeMirror').CodeMirror.redo()"
+              id="btnRedo"
+              disabled
+            >
+              <span class="menu-label">Redo</span
+              ><span class="menu-shortcut">Ctrl+Shift+Z</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="menu-item" data-menu="view">
+          <button class="menu-trigger">View</button>
+          <div class="menu-dropdown">
+            <button onclick="triggerRender()" id="btnRender" disabled>
+              <span class="menu-label">Render Preview</span
+              ><span class="menu-shortcut">Ctrl+Enter</span>
+            </button>
+            <button onclick="openPreviewTab()" id="btnPreviewTab" disabled>
+              <span class="menu-label">Open in New Tab</span>
+            </button>
+            <div class="menu-divider"></div>
+            <button onclick="toggleWrap()" id="btnToggleWrap" disabled>
+              <span class="menu-label">Toggle Line Wrap</span>
+            </button>
+          </div>
+        </div>
+      </nav>
+
+      <span class="status" id="status">Ready</span>
     </div>
-  </div>
-  <div class="container">
-    <div class="file-sidebar" id="fileSidebar">
-      <div class="sidebar-header">
-        <span class="folder-name" id="folderName">Files</span>
-        <button onclick="closeFolder()" style="background:none;border:none;color:#64748b;cursor:pointer;font-size:14px;padding:2px 4px;margin-left:auto;" title="Close folder">&times;</button>
-      </div>
-      <div class="file-list" id="fileList"></div>
-      <div class="outline-section" id="outlineSection">
-        <div class="outline-header">Outline</div>
-        <div class="outline-list" id="outlineList"></div>
-      </div>
 
-      <div class="agent-section" id="agentSection">
-        <div class="agent-header">
-          <span>Agents</span>
-          <button id="btnAddAgent" title="Add an AI agent">+</button>
+    <div class="modal-overlay" id="diffModal">
+      <div class="diff-modal">
+        <h3 id="diffTitle">Conflict detected</h3>
+        <div class="diff-hint" id="diffHint">
+          The file was modified on Google Drive since you loaded it. Changes
+          from the remote version are shown below.
         </div>
-        <div class="agent-list" id="agentList"></div>
-      </div>
-    </div>
-    <div class="editor-pane" id="editorPane">
-      <div class="pane-header" id="tabBar">
-        <div class="tab-bar-tabs" id="tabBarTabs"></div>
-      </div>
-      <div id="editor-wrapper">
-        <div id="editor-loading">
-          <div class="spinner"></div>
-          <span>Loading...</span>
-        </div>
-        <textarea id="editor-textarea"></textarea>
-      </div>
-      <div class="editor-statusbar">
-        <div id="btnTableEditor" class="wrap-toggle active" onclick="toggleTableEditor()" title="Toggle table editor">
-          <span>Tables</span>
-          <div class="wrap-track"><div class="wrap-thumb"></div></div>
-        </div>
-        <div id="btnWrap" class="wrap-toggle active" onclick="toggleWrap()" title="Toggle word wrap">
-          <span>Wrap</span>
-          <div class="wrap-track"><div class="wrap-thumb"></div></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="resize-handle" id="resizeHandle"></div>
-
-    <div class="preview-pane" id="previewPane">
-      <div class="pane-header">
-        Preview (Paged.js)
-      </div>
-      <div id="preview-container">
-        <div id="preview-wrapper">
-          <!-- Section iframes are created dynamically by render.js -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- AI collaboration elements -->
-  <button class="spark-btn" id="sparkBtn" title="Ask AI agent">&#9733; AI</button>
-
-  <div class="modal-overlay" id="agentModal">
-    <div class="modal" style="width:600px;">
-      <div id="agentModalContent">
-        <h3>Add an AI Agent</h3>
-        <p style="font-size:12px;color:#94a3b8;margin-bottom:12px;">Copy this prompt and paste it into your AI agent (e.g. Claude Code). The agent will connect automatically.</p>
-        <div id="agentModalStatus" class="agent-modal-status">
-          <div class="agent-modal-status-dot"></div>
-          <span>Waiting for connection…</span>
-        </div>
-        <pre class="agent-prompt-text" id="agentPromptText"></pre>
+        <div class="diff-container" id="diffContainer"></div>
         <div class="btn-row">
-          <button class="btn-cancel" id="btnCloseAgentModal">Close</button>
-          <button class="btn-save" id="btnCopyPrompt">Copy Prompt</button>
+          <button class="btn-cancel" onclick="closeDiffModal()">Cancel</button>
+          <button class="btn-reload" onclick="resolveConflict('reload')">
+            Load disk version
+          </button>
+          <button class="btn-merge" onclick="resolveConflict('merge')">
+            Merge
+          </button>
+          <button class="btn-force" onclick="resolveConflict('force')">
+            Overwrite with mine
+          </button>
         </div>
-      </div>
-      <div id="agentModalSuccess" class="agent-modal-success" hidden>
-        <div class="agent-success-check">
-          <svg viewBox="0 0 52 52" class="agent-success-svg">
-            <circle class="agent-success-circle" cx="26" cy="26" r="24" fill="none" stroke="#a6e3a1" stroke-width="2"/>
-            <path class="agent-success-path" fill="none" stroke="#a6e3a1" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" d="M15 27l7 7 15-15"/>
-          </svg>
-        </div>
-        <p class="agent-success-label">Agent connected!</p>
       </div>
     </div>
-  </div>
 
-  <!-- Single entry point — all logic lives in ES modules -->
-  <script type="module" src="js/app.js"></script>
-</body>
+    <div class="modal-overlay" id="agentDiffModal">
+      <div class="diff-modal">
+        <h3 id="agentDiffTitle">Agent edit proposal</h3>
+        <div class="diff-hint" id="agentDiffHint">
+          An agent wants to modify your document. Review the changes below.
+        </div>
+        <div class="diff-container" id="agentDiffContainer"></div>
+        <div class="btn-row">
+          <button class="btn-cancel" id="agentDiffReject">Reject</button>
+          <button class="btn-save" id="agentDiffAccept">Accept</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="welcome-screen" id="welcomeScreen">
+      <div class="welcome-inner">
+        <h1 class="welcome-logo">BEORN</h1>
+        <p class="welcome-sub">Markdown to PDF Editor</p>
+        <div class="welcome-actions">
+          <div class="welcome-section">
+            <h2>Open</h2>
+            <button onclick="openLocalFile()" id="welcomeOpenLocal">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+                />
+                <path d="M14 2v5a1 1 0 0 0 1 1h5M10 9H8m8 4H8m8 4H8" />
+              </svg>
+              <span>Open File</span>
+            </button>
+            <button onclick="openFolder()" id="welcomeOpenFolder">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="m6 14l1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"
+                />
+              </svg>
+              <span>Open Folder</span>
+            </button>
+          </div>
+          <div class="welcome-section">
+            <h2>Create</h2>
+            <button onclick="newDocument()">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path
+                  d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"
+                />
+                <path d="M14 2v5a1 1 0 0 0 1 1h5M9 15h6m-3 3v-6" />
+              </svg>
+              <span>Blank Document</span>
+            </button>
+            <button onclick="newFromTemplate()">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <rect width="18" height="7" x="3" y="3" rx="1" />
+                <rect width="9" height="7" x="3" y="14" rx="1" />
+                <rect width="5" height="7" x="16" y="14" rx="1" />
+              </svg>
+              <span>BEORN Template</span>
+            </button>
+          </div>
+        </div>
+        <div
+          class="welcome-recent-section"
+          id="welcomeRecent"
+          style="display: none"
+        >
+          <div class="welcome-recent-grid">
+            <div>
+              <h3>Recent Folders</h3>
+              <div id="welcomeRecentFolders"></div>
+            </div>
+            <div>
+              <h3>Recent Files</h3>
+              <div id="welcomeRecentFiles"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="file-sidebar" id="fileSidebar">
+        <div class="sidebar-header">
+          <span class="folder-name" id="folderName">Files</span>
+          <button
+            onclick="closeFolder()"
+            style="
+              background: none;
+              border: none;
+              color: #64748b;
+              cursor: pointer;
+              font-size: 14px;
+              padding: 2px 4px;
+              margin-left: auto;
+            "
+            title="Close folder"
+          >
+            &times;
+          </button>
+        </div>
+        <div class="file-list" id="fileList"></div>
+        <div class="outline-section" id="outlineSection">
+          <div class="outline-header">Outline</div>
+          <div class="outline-list" id="outlineList"></div>
+        </div>
+
+        <div class="agent-section" id="agentSection">
+          <div class="agent-header">
+            <span>Agents</span>
+            <button id="btnAddAgent" title="Add an AI agent">+</button>
+          </div>
+          <div class="agent-list" id="agentList"></div>
+        </div>
+      </div>
+      <div class="editor-pane" id="editorPane">
+        <div class="pane-header" id="tabBar">
+          <div class="tab-bar-tabs" id="tabBarTabs"></div>
+        </div>
+        <div id="editor-wrapper">
+          <div id="editor-loading">
+            <div class="spinner"></div>
+            <span>Loading...</span>
+          </div>
+          <textarea id="editor-textarea"></textarea>
+        </div>
+        <div class="editor-statusbar">
+          <div
+            id="btnTableEditor"
+            class="wrap-toggle active"
+            onclick="toggleTableEditor()"
+            title="Toggle table editor"
+          >
+            <span>Tables Widget</span>
+            <div class="wrap-track"><div class="wrap-thumb"></div></div>
+          </div>
+          <div
+            id="btnWrap"
+            class="wrap-toggle active"
+            onclick="toggleWrap()"
+            title="Toggle word wrap"
+          >
+            <span>Wrap lines</span>
+            <div class="wrap-track"><div class="wrap-thumb"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="resize-handle" id="resizeHandle"></div>
+
+      <div class="preview-pane" id="previewPane">
+        <div class="pane-header">Preview (Paged.js)</div>
+        <div id="preview-container">
+          <div id="preview-wrapper">
+            <!-- Section iframes are created dynamically by render.js -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI collaboration elements -->
+    <button class="spark-btn" id="sparkBtn" title="Ask AI agent">
+      &#9733; AI
+    </button>
+
+    <div class="modal-overlay" id="agentModal">
+      <div class="modal" style="width: 600px">
+        <div id="agentModalContent">
+          <h3>Add an AI Agent</h3>
+          <p style="font-size: 12px; color: #94a3b8; margin-bottom: 12px">
+            Copy this prompt and paste it into your AI agent (e.g. Claude Code).
+            The agent will connect automatically.
+          </p>
+          <div id="agentModalStatus" class="agent-modal-status">
+            <div class="agent-modal-status-dot"></div>
+            <span>Waiting for connection…</span>
+          </div>
+          <pre class="agent-prompt-text" id="agentPromptText"></pre>
+          <div class="btn-row">
+            <button class="btn-cancel" id="btnCloseAgentModal">Close</button>
+            <button class="btn-save" id="btnCopyPrompt">Copy Prompt</button>
+          </div>
+        </div>
+        <div id="agentModalSuccess" class="agent-modal-success" hidden>
+          <div class="agent-success-check">
+            <svg viewBox="0 0 52 52" class="agent-success-svg">
+              <circle
+                class="agent-success-circle"
+                cx="26"
+                cy="26"
+                r="24"
+                fill="none"
+                stroke="#a6e3a1"
+                stroke-width="2"
+              />
+              <path
+                class="agent-success-path"
+                fill="none"
+                stroke="#a6e3a1"
+                stroke-width="3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M15 27l7 7 15-15"
+              />
+            </svg>
+          </div>
+          <p class="agent-success-label">Agent connected!</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Single entry point — all logic lives in ES modules -->
+    <script type="module" src="js/app.js"></script>
+  </body>
 </html>
