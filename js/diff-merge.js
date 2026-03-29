@@ -34,6 +34,53 @@ export function computeDiff(oldLines, newLines) {
   return diff;
 }
 
+// ── Word-level diff for inline highlighting ─────────────────────
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// Tokenize a line into words and whitespace chunks for fine-grained comparison
+function tokenize(line) {
+  return line.match(/\S+|\s+/g) || [];
+}
+
+// LCS-based word diff returning HTML with <span class="diff-word"> around changed tokens
+function renderWordDiff(oldLine, newLine, cls) {
+  const oldToks = tokenize(oldLine);
+  const newToks = tokenize(newLine);
+  const n = oldToks.length, m = newToks.length;
+  // Build LCS table
+  const dp = Array.from({ length: n + 1 }, () => new Int32Array(m + 1));
+  for (let i = 1; i <= n; i++)
+    for (let j = 1; j <= m; j++)
+      dp[i][j] = oldToks[i-1] === newToks[j-1] ? dp[i-1][j-1] + 1 : Math.max(dp[i-1][j], dp[i][j-1]);
+  // Backtrack to produce token-level diff
+  const ops = [];
+  let i = n, j = m;
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && oldToks[i-1] === newToks[j-1]) {
+      ops.unshift({ type: "eq", old: oldToks[i-1], new: newToks[j-1] });
+      i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j-1] >= dp[i-1][j])) {
+      ops.unshift({ type: "add", new: newToks[j-1] });
+      j--;
+    } else {
+      ops.unshift({ type: "del", old: oldToks[i-1] });
+      i--;
+    }
+  }
+  // Render: unchanged tokens as plain text, changed tokens wrapped in <span>
+  if (cls === "diff-del") {
+    return ops.filter(o => o.type !== "add").map(o =>
+      o.type === "del" ? '<span class="diff-word">' + escapeHtml(o.old) + '</span>' : escapeHtml(o.old)
+    ).join("");
+  } else {
+    return ops.filter(o => o.type !== "del").map(o =>
+      o.type === "add" ? '<span class="diff-word">' + escapeHtml(o.new) + '</span>' : escapeHtml(o.new)
+    ).join("");
+  }
+}
+
 export function renderDiffHtml(diff) {
   // Show diff with 3 lines of context around changes
   const CTX = 3;
@@ -44,6 +91,15 @@ export function renderDiffHtml(diff) {
   changeIdx.forEach(i => {
     for (let k = Math.max(0, i - CTX); k <= Math.min(diff.length - 1, i + CTX); k++) visible.add(k);
   });
+  // Pre-compute del/add pairs for word-level highlighting.
+  // A pair is a del immediately followed by an add (modified line).
+  const wordDiffPairs = new Set();
+  for (let i = 0; i < diff.length - 1; i++) {
+    if (diff[i].type === "del" && diff[i+1].type === "add") {
+      wordDiffPairs.add(i);
+      wordDiffPairs.add(i + 1);
+    }
+  }
   let html = "";
   let lastShown = -1;
   diff.forEach((d, i) => {
@@ -53,10 +109,18 @@ export function renderDiffHtml(diff) {
     }
     lastShown = i;
     const prefix = d.type === "add" ? "+" : d.type === "del" ? "-" : " ";
-    const lineNum = d.type === "del" ? d.oldLine : (d.newLine || "");
     const cls = d.type === "add" ? "diff-add" : d.type === "del" ? "diff-del" : "diff-ctx";
-    const escaped = d.text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-    html += '<div class="diff-line ' + cls + '">' + prefix + " " + escaped + "</div>";
+    let content;
+    if (wordDiffPairs.has(i)) {
+      // Render with word-level highlights
+      const pairIdx = d.type === "del" ? i + 1 : i - 1;
+      const oldText = d.type === "del" ? d.text : diff[pairIdx].text;
+      const newText = d.type === "add" ? d.text : diff[pairIdx].text;
+      content = renderWordDiff(oldText, newText, cls);
+    } else {
+      content = escapeHtml(d.text);
+    }
+    html += '<div class="diff-line ' + cls + '">' + prefix + " " + content + "</div>";
   });
   if (!html) html = '<div class="diff-line diff-ctx">(No differences)</div>';
   return html;
