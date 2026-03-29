@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-const { execSync } = require("child_process");
+const { execSync, spawn } = require("child_process");
 const path = require("path");
+const fs = require("fs");
 
 const target = process.argv[2];
 
@@ -17,13 +18,27 @@ if (!target) {
 }
 
 const resolved = path.resolve(target);
-const url = `paged:///${resolved}`;
 
-if (process.platform === "darwin") {
-  execSync(`open "${url}"`);
-} else if (process.platform === "linux") {
-  execSync(`xdg-open "${url}"`);
+// Find the app root (where main.js lives) by walking up from this script
+const appRoot = path.resolve(__dirname, "..");
+const mainJs = path.join(appRoot, "main.js");
+
+if (fs.existsSync(mainJs)) {
+  // Dev mode: launch Electron directly with the path as an argument
+  const electronPath = path.join(appRoot, "node_modules", ".bin", "electron");
+  const child = spawn(electronPath, [appRoot, resolved], {
+    detached: true,
+    stdio: "ignore",
+  });
+  child.unref();
 } else {
-  // Windows
-  execSync(`start "" "${url}"`);
+  // Packaged app: use the paged:// protocol
+  const url = `paged:///${resolved}`;
+  if (process.platform === "darwin") {
+    execSync(`open "${url}"`);
+  } else if (process.platform === "linux") {
+    execSync(`xdg-open "${url}"`);
+  } else {
+    execSync(`start "" "${url}"`);
+  }
 }
