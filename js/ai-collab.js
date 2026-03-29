@@ -41,6 +41,21 @@ export function init(cm, getFilePath) {
       agent.connected = false;
       renderAgentList();
     }
+    // Close popover if it belongs to this agent (e.g. "Thinking..." spinner)
+    if (activePopover && activePopover.dataset.agentKey === key) {
+      removeActivePopover();
+    }
+    // Close the agent prompt modal if it was waiting for this agent
+    if (currentModalKey === key) {
+      closeAgentModal();
+    }
+    // Close the agent diff modal if it was reviewing an edit from this agent
+    if (agentDiffKey === key) {
+      const diffModal = document.getElementById("agentDiffModal");
+      if (diffModal) diffModal.classList.remove("open");
+      if (agentDiffResolve) { agentDiffResolve("reject"); agentDiffResolve = null; }
+      agentDiffKey = null;
+    }
   });
 
   api.on("agent-message", ({ key, message }) => {
@@ -140,7 +155,7 @@ function applyEdit(key, msg) {
   // Show diff review modal instead of auto-applying
   const agent = agents.get(key);
   const agentName = agent ? agent.name : "Agent";
-  showAgentDiffModal(agentName, currentText, msg.newText, msg.lineStart, msg.lineEnd)
+  showAgentDiffModal(key, agentName, currentText, msg.newText, msg.lineStart, msg.lineEnd)
     .then(action => {
       if (action === "accept") {
         // Re-verify text hasn't changed while modal was open
@@ -221,7 +236,7 @@ function applyPatch(key, msg) {
   const agent = agents.get(key);
   const agentName = agent ? agent.name : "Agent";
 
-  showAgentDiffModal(agentName, allOldText, allNewText, firstLine, lastLine)
+  showAgentDiffModal(key, agentName, allOldText, allNewText, firstLine, lastLine)
     .then(action => {
       if (action === "accept") {
         // Apply operations bottom-to-top (already sorted)
@@ -268,8 +283,12 @@ function applyPatch(key, msg) {
 // ── Agent diff review modal ────────────────────────────────────────────────
 
 let agentDiffResolve = null;
+let agentDiffKey = null;
 
-function showAgentDiffModal(agentName, oldText, newText, lineStart, lineEnd) {
+function showAgentDiffModal(agentKey, agentName, oldText, newText, lineStart, lineEnd) {
+  // Dismiss the "Thinking..." / status popover — the diff modal supersedes it
+  removeActivePopover();
+  agentDiffKey = agentKey;
   const modal = document.getElementById("agentDiffModal");
   const title = document.getElementById("agentDiffTitle");
   const hint = document.getElementById("agentDiffHint");
@@ -292,8 +311,8 @@ function showAgentDiffModal(agentName, oldText, newText, lineStart, lineEnd) {
 
   return new Promise(resolve => {
     agentDiffResolve = resolve;
-    acceptBtn.onclick = () => { modal.classList.remove("open"); resolve("accept"); };
-    rejectBtn.onclick = () => { modal.classList.remove("open"); resolve("reject"); };
+    acceptBtn.onclick = () => { modal.classList.remove("open"); agentDiffKey = null; resolve("accept"); };
+    rejectBtn.onclick = () => { modal.classList.remove("open"); agentDiffKey = null; resolve("reject"); };
   });
 }
 
@@ -445,6 +464,7 @@ document.addEventListener("keydown", (e) => {
   if (diffModal?.classList.contains("open")) {
     diffModal.classList.remove("open");
     if (agentDiffResolve) { agentDiffResolve("reject"); agentDiffResolve = null; }
+    agentDiffKey = null;
     return;
   }
   const historyOverlay = document.querySelector(".ai-history-overlay");
