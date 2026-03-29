@@ -8,6 +8,7 @@ const crypto = require("crypto");
 // ── App state persistence ────────────────────────────────────────────────────
 const STATE_FILE = path.join(app.getPath("userData"), "app-state.json");
 let appState = { lastFolder: null, lastFile: null, recentFiles: [], recentFolders: [] };
+let startupPathPending = false;
 
 // ── Agent keys & WebSocket ──────────────────────────────────────────────────
 const agentKeys = new Map(); // key -> { used: false }
@@ -106,6 +107,7 @@ ipcMain.handle("set-app-state", async (_e, partial) => {
 
 ipcMain.handle("get-ws-port", () => wsPort);
 ipcMain.handle("get-ws-host", () => os.hostname());
+ipcMain.handle("has-startup-path", () => startupPathPending);
 
 ipcMain.handle("generate-agent-key", () => {
   const key = crypto.randomUUID();
@@ -256,7 +258,7 @@ function extractPathFromArgs(argv) {
     if (arg.startsWith("--") || arg.startsWith("-")) continue;
     if (arg.endsWith("main.js") || arg.endsWith("electron")) continue;
     if (arg.startsWith("paged://")) continue;
-    if (arg === ".") continue;
+    if (arg === ".") continue; // "." is the app root in `electron .`, not a user path
     return arg;
   }
   return null;
@@ -311,6 +313,7 @@ if (!gotTheLock) {
     if (mainWindow) {
       handleProtocolUrl(url);
     } else {
+      startupPathPending = true;
       app.whenReady().then(() => {
         mainWindow.webContents.once("did-finish-load", () => handleProtocolUrl(url));
       });
@@ -322,16 +325,15 @@ if (!gotTheLock) {
     createWindow();
     buildMenu();
 
-    // Handle path arg from initial launch
+    // Handle path arg or protocol URL from initial launch
     const pathArg = extractPathFromArgs(process.argv);
-    if (pathArg) {
-      mainWindow.webContents.once("did-finish-load", () => handlePathArg(pathArg));
-    }
-
-    // Handle protocol URL from initial launch (Linux/Windows)
     const protocolUrl = process.argv.find(a => a.startsWith("paged://"));
-    if (protocolUrl) {
-      mainWindow.webContents.once("did-finish-load", () => handleProtocolUrl(protocolUrl));
+    if (pathArg || protocolUrl) {
+      startupPathPending = true;
+      mainWindow.webContents.once("did-finish-load", () => {
+        if (protocolUrl) handleProtocolUrl(protocolUrl);
+        else handlePathArg(pathArg);
+      });
     }
 
     // Start WebSocket server on all interfaces (supports remote agents)

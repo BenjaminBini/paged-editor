@@ -586,7 +586,8 @@ window.addEventListener("beforeunload", e => {
 // ── Startup ─────────────────────────────────────────────────────────────────
 
 pagedReady.then(async () => {
-  const loaded = await tryRestore();
+  const hasStartupPath = await api.hasStartupPath();
+  const loaded = hasStartupPath ? false : await tryRestore();
   hideLoading();
   if (!loaded && !cm.getValue()) {
     showWelcome();

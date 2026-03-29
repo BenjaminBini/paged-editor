@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   setTitle: (title) => ipcRenderer.invoke("set-title", title),
   getAppState: () => ipcRenderer.invoke("get-app-state"),
   setAppState: (partial) => ipcRenderer.invoke("set-app-state", partial),
+  hasStartupPath: () => ipcRenderer.invoke("has-startup-path"),
   // AI agent collaboration
   getWsPort: () => ipcRenderer.invoke("get-ws-port"),
   getWsHost: () => ipcRenderer.invoke("get-ws-host"),
