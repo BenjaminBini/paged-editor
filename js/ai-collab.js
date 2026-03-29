@@ -79,6 +79,10 @@ function handleAgentMessage(key, msg) {
     conv.push({ type: "question", ...msg });
     conversations.set(key, conv);
     showQuestionPopover(key, msg);
+  } else if (msg.type === "patch") {
+    conv.push({ type: "patch", ...msg });
+    conversations.set(key, conv);
+    applyPatch(key, msg);
   } else if (msg.type === "status") {
     updateWaitingStatus(key, msg);
   }
@@ -169,6 +173,93 @@ function applyEdit(key, msg) {
           type: "edit_error",
           requestId: msg.requestId,
           message: "Edit rejected by user",
+        });
+      }
+    });
+}
+
+// ── Apply patch (unified diff) ─────────────────────────────────────────────
+
+function applyPatch(key, msg) {
+  if (!_cm) return;
+
+  const hunks = parseUnifiedDiff(msg.patch);
+  if (hunks.length === 0) {
+    api.sendToAgent(key, {
+      type: "edit_error",
+      requestId: msg.requestId,
+      message: "No valid hunks found in the patch",
+    });
+    return;
+  }
+
+  const fileLines = _cm.getValue().split("\n");
+  const ops = patchToOperations(hunks, fileLines);
+
+  // Validate all operations before showing review
+  for (const op of ops) {
+    const currentText = _cm.getRange(
+      { line: op.lineStart, ch: 0 },
+      { line: op.lineEnd, ch: _cm.getLine(op.lineEnd)?.length || 0 }
+    );
+    if (currentText !== op.oldText) {
+      api.sendToAgent(key, {
+        type: "edit_error",
+        requestId: msg.requestId,
+        message: `Patch hunk mismatch at lines ${op.lineStart + 1}-${op.lineEnd + 1}: content has diverged`,
+      });
+      return;
+    }
+  }
+
+  // For the review modal, combine all operations into a single old/new view
+  const allOldText = ops.slice().reverse().map(op => op.oldText).join("\n...\n");
+  const allNewText = ops.slice().reverse().map(op => op.newText).join("\n...\n");
+  const firstLine = Math.min(...ops.map(op => op.lineStart));
+  const lastLine = Math.max(...ops.map(op => op.lineEnd));
+
+  const agent = agents.get(key);
+  const agentName = agent ? agent.name : "Agent";
+
+  showAgentDiffModal(agentName, allOldText, allNewText, firstLine, lastLine)
+    .then(action => {
+      if (action === "accept") {
+        // Apply operations bottom-to-top (already sorted)
+        for (const op of ops) {
+          const from = { line: op.lineStart, ch: 0 };
+          const to = { line: op.lineEnd, ch: _cm.getLine(op.lineEnd)?.length || 0 };
+
+          // Re-verify before applying
+          const nowText = _cm.getRange(from, to);
+          if (nowText !== op.oldText) {
+            api.sendToAgent(key, {
+              type: "edit_error",
+              requestId: msg.requestId,
+              message: "Content changed while review was pending",
+            });
+            return;
+          }
+
+          _cm.replaceRange(op.newText, from, to);
+
+          // Flash highlight on changed lines
+          const newLineEnd = op.lineStart + op.newText.split("\n").length - 1;
+          for (let i = op.lineStart; i <= newLineEnd; i++) {
+            _cm.addLineClass(i, "background", "ai-edit-flash");
+          }
+          setTimeout(() => {
+            for (let i = op.lineStart; i <= newLineEnd; i++) {
+              _cm.removeLineClass(i, "background", "ai-edit-flash");
+            }
+          }, 1500);
+        }
+
+        api.sendToAgent(key, { type: "edit_ok", requestId: msg.requestId });
+      } else {
+        api.sendToAgent(key, {
+          type: "edit_error",
+          requestId: msg.requestId,
+          message: "Patch rejected by user",
         });
       }
     });
@@ -724,6 +815,8 @@ function showConversationHistory(key) {
       html += `<div class="ai-history-entry user"><strong>You:</strong> ${escapeHtml(entry.value)}</div>`;
     } else if (entry.type === "edit") {
       html += `<div class="ai-history-entry agent edit"><strong>${escapeHtml(agent.name)} edited lines ${entry.lineStart}-${entry.lineEnd}</strong></div>`;
+    } else if (entry.type === "patch") {
+      html += `<div class="ai-history-entry agent edit"><strong>${escapeHtml(agent.name)} applied a patch</strong></div>`;
     }
   }
 
@@ -763,6 +856,109 @@ function clampPopover(popover) {
 
   popover.style.top = top + "px";
   popover.style.left = left + "px";
+}
+
+// ── Unified diff parser ────────────────────────────────────────────────────
+
+/**
+ * Parse a unified diff string into an array of hunks.
+ * Each hunk: { oldStart, oldCount, newStart, newCount, lines[] }
+ * Each line: { type: "ctx"|"add"|"del", text }
+ */
+function parseUnifiedDiff(patch) {
+  const hunks = [];
+  const lines = patch.split("\n");
+  let current = null;
+
+  for (const line of lines) {
+    // Hunk header: @@ -oldStart,oldCount +newStart,newCount @@
+    const hunkMatch = line.match(/^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
+    if (hunkMatch) {
+      current = {
+        oldStart: parseInt(hunkMatch[1], 10),
+        oldCount: hunkMatch[2] != null ? parseInt(hunkMatch[2], 10) : 1,
+        newStart: parseInt(hunkMatch[3], 10),
+        newCount: hunkMatch[4] != null ? parseInt(hunkMatch[4], 10) : 1,
+        lines: [],
+      };
+      hunks.push(current);
+      continue;
+    }
+
+    if (!current) continue;
+
+    if (line.startsWith("-")) {
+      current.lines.push({ type: "del", text: line.substring(1) });
+    } else if (line.startsWith("+")) {
+      current.lines.push({ type: "add", text: line.substring(1) });
+    } else if (line.startsWith(" ")) {
+      current.lines.push({ type: "ctx", text: line.substring(1) });
+    }
+    // Skip "\ No newline at end of file" and other noise
+  }
+
+  return hunks;
+}
+
+/**
+ * Given parsed hunks and the current file lines, compute the ranges to replace.
+ * Returns an array of operations: { lineStart, lineEnd, oldText, newText }
+ * Line numbers are 0-based (CodeMirror convention).
+ * Hunks are applied bottom-to-top to avoid line shifts.
+ */
+function patchToOperations(hunks, fileLines) {
+  const ops = [];
+
+  for (const hunk of hunks) {
+    // Unified diff uses 1-based line numbers; convert to 0-based
+    const startLine0 = hunk.oldStart - 1;
+
+    const oldLines = [];
+    const newLines = [];
+
+    for (const l of hunk.lines) {
+      if (l.type === "ctx") {
+        oldLines.push(l.text);
+        newLines.push(l.text);
+      } else if (l.type === "del") {
+        oldLines.push(l.text);
+      } else if (l.type === "add") {
+        newLines.push(l.text);
+      }
+    }
+
+    // Verify context lines match current content (fuzzy anchor)
+    let anchorOffset = 0;
+    const firstCtx = hunk.lines.find(l => l.type === "ctx");
+    if (firstCtx) {
+      const expectedLine = startLine0;
+      // Search nearby for the context line if it shifted
+      for (let delta = 0; delta <= 10; delta++) {
+        for (const sign of [0, 1, -1]) {
+          const probe = expectedLine + delta * (sign || 1);
+          if (probe >= 0 && probe < fileLines.length && fileLines[probe] === firstCtx.text) {
+            anchorOffset = probe - expectedLine;
+            break;
+          }
+        }
+        if (anchorOffset !== 0) break;
+      }
+    }
+
+    const adjustedStart = startLine0 + anchorOffset;
+    const adjustedEnd = adjustedStart + oldLines.length - 1;
+
+    ops.push({
+      lineStart: adjustedStart,
+      lineEnd: adjustedEnd,
+      oldText: oldLines.join("\n"),
+      newText: newLines.join("\n"),
+    });
+  }
+
+  // Sort bottom-to-top so line shifts don't affect earlier hunks
+  ops.sort((a, b) => b.lineStart - a.lineStart);
+  return ops;
 }
 
 // ── Utility ─────────────────────────────────────────────────────────────────
