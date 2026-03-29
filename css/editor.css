@@ -85,13 +85,22 @@
 .tab-name {
   overflow: hidden; text-overflow: ellipsis;
 }
+.tab-indicator {
+  flex-shrink: 0; width: 16px; height: 16px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+}
 .tab-close {
   font-size: 14px; line-height: 1; color: #4a4a6a;
-  cursor: pointer; flex-shrink: 0; padding: 0 2px;
+  cursor: pointer; padding: 0 2px;
   border-radius: 3px;
 }
 .tab-close:hover { color: #cdd6f4; background: rgba(255,255,255,0.1); }
 .tab-dirty-dot {
   width: 6px; height: 6px; border-radius: 50%;
-  background: #f0a840; flex-shrink: 0;
+  background: #f0a840; position: absolute;
 }
+/* Dirty tab: show dot, hide close; on hover swap */
+.tab-dirty-dot + .tab-close { display: none; }
+.tab-indicator:hover .tab-dirty-dot { display: none; }
+.tab-indicator:hover .tab-dirty-dot + .tab-close { display: flex; }

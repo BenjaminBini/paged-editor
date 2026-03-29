@@ -159,20 +159,25 @@ export function renderTabBar() {
     nameSpan.textContent = tab.name || "Untitled";
     el.appendChild(nameSpan);
 
+    const indicator = document.createElement("span");
+    indicator.className = "tab-indicator";
+
     if (tab.dirty) {
       const dot = document.createElement("span");
       dot.className = "tab-dirty-dot";
-      el.appendChild(dot);
-    } else {
-      const closeBtn = document.createElement("span");
-      closeBtn.className = "tab-close";
-      closeBtn.textContent = "\u00d7";
-      closeBtn.onclick = (e) => {
-        e.stopPropagation();
-        closeTab(i);
-      };
-      el.appendChild(closeBtn);
+      indicator.appendChild(dot);
     }
+
+    const closeBtn = document.createElement("span");
+    closeBtn.className = "tab-close";
+    closeBtn.textContent = "\u00d7";
+    closeBtn.onclick = (e) => {
+      e.stopPropagation();
+      closeTab(i);
+    };
+    indicator.appendChild(closeBtn);
+
+    el.appendChild(indicator);
 
     // Middle-click to close
     el.addEventListener("mousedown", (e) => {
