@@ -47,7 +47,7 @@
   flex: 1; overflow-y: auto; padding: 4px 0;
 }
 .outline-item {
-  display: block; cursor: pointer; position: relative;
+  display: flex; align-items: center; cursor: pointer; position: relative;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   transition: all 0.1s;
 }
@@ -65,8 +65,11 @@
   background: #0096ae;
   opacity: calc(0.3 + var(--prox) * 0.7);
 }
-.outline-item.active {}
-.outline-item.active::before { background: #3373b3; }
+.outline-item.active::after {
+  content: ""; width: 4px; height: 4px; border-radius: 50%;
+  background: #3373b3; flex-shrink: 0; margin-left: 4px; display: inline-block;
+  vertical-align: middle;
+}
 /* ── H1: section title — bold, sticky ── */
 .outline-item[data-level="1"] {
   padding: 10px 10px 8px; margin-top: -2px;
@@ -75,7 +78,6 @@
   background: #171726;
 }
 .outline-item[data-level="1"].stuck { border-bottom: 1px solid #2d2d3f; }
-.outline-item[data-level="1"].active { color: #cdd6f4; }
 .outline-item[data-level="1"].visible {
   background: linear-gradient(rgba(0,150,174, calc(0.04 + var(--prox) * 0.12)), rgba(0,150,174, calc(0.04 + var(--prox) * 0.12))), #171726;
 }
@@ -87,7 +89,6 @@
   background: #171726;
 }
 .outline-item[data-level="2"].stuck { border-bottom: 1px solid #2d2d3f; }
-.outline-item[data-level="2"].active { color: #cdd6f4; }
 .outline-item[data-level="2"].visible {
   background: linear-gradient(rgba(0,150,174, calc(0.04 + var(--prox) * 0.12)), rgba(0,150,174, calc(0.04 + var(--prox) * 0.12))), #171726;
 }
@@ -99,7 +100,6 @@
   background: #171726;
 }
 .outline-item[data-level="3"].stuck { border-bottom: 1px solid #2d2d3f; }
-.outline-item[data-level="3"].active { color: #b0b0cc; }
 .outline-item[data-level="3"].visible {
   background: linear-gradient(rgba(0,150,174, calc(0.04 + var(--prox) * 0.12)), rgba(0,150,174, calc(0.04 + var(--prox) * 0.12))), #171726;
 }
@@ -108,4 +108,3 @@
   padding: 1px 10px 1px 46px;
   font-size: 10px; font-weight: 400; color: #4a4a64;
 }
-.outline-item[data-level="4"].active { color: #9090aa; }
