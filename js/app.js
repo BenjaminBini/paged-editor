@@ -12,21 +12,96 @@ import {
   setTableRangesDirty, twSyncing, tableWidgets, destroyTableWidget,
 } from './table-widget.js';
 import {
-  openFolder, openFolderByPath, doSaveAs, doSave, isDirty,
-  closeFolder,
-  setStandaloneFile, activeFileIdx, folderPath, standaloneFilePath, fileEntries,
+  openFolder, openFolderByPath, closeFolder, refreshFileList, renderFileList,
+  readFile, writeFile, getFileModTime, saveWithConflictDetection,
+  showSaveAsDialog, showOpenFileDialog, addRecentFile,
+  applyPrettify, updateTitle, getFolderPath, getFileEntries,
+  setOnFileClick, setGetActiveFilePath, registerRefreshTableWidgets,
 } from './file-manager.js';
+import {
+  openTab, closeActiveTab, getActiveTab, getActiveTabIdx,
+  getTabCount, hasOpenTabs, markActiveTabDirty, markActiveTabClean,
+  updateActiveTabPath, isActiveTabDirty, renderTabBar,
+  onTabSwitch, onAllTabsClosed, getSessionState, findTabByPath,
+} from './tab-bar.js';
 import { closeDiffModal, resolveConflict } from './diff-merge.js';
 import { init as initAiCollab, addAgent } from './ai-collab.js';
 import './resize.js';
 
 const api = window.electronAPI;
 
-// ── Wire hooks ──────────────────────────────────────────────────────────────
+// ── Persist tab state (debounced) ──────────────────────────────────────────
+
+function persistTabState() {
+  const session = getSessionState();
+  api.setAppState({ openTabs: session.openTabs, activeTab: session.activeTab });
+}
+
+let persistTimer = null;
+function schedulePersist() {
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(persistTabState, 500);
+}
+
+// ── Wire tab-bar callbacks ─────────────────────────────────────────────────
+
+onTabSwitch((tab) => {
+  updateTitle(tab.name, tab.dirty);
+  renderFileList(); // update sidebar highlight
+  triggerRender();
+  setTimeout(buildOutline, 50);
+  setTimeout(refreshTableWidgets, 50);
+  updateMenuState();
+  schedulePersist();
+});
+
+onAllTabsClosed(() => {
+  updateTitle(null, false);
+  if (getFolderPath()) {
+    // Folder open — show empty editor
+    renderFileList();
+  } else {
+    // No folder — show welcome
+    showWelcome();
+  }
+  updateMenuState();
+  schedulePersist();
+});
+
+// ── Wire sidebar → tab-bar ─────────────────────────────────────────────────
+
+setOnFileClick(async (filePath, fileName) => {
+  // Check if already open in a tab
+  const existingIdx = findTabByPath(filePath);
+  if (existingIdx >= 0) {
+    openTab(filePath, fileName); // openTab handles the switch internally
+    return;
+  }
+
+  showLoading("Loading " + fileName + "...");
+  try {
+    const content = await readFile(filePath);
+    const modTime = await getFileModTime(filePath);
+    openTab(filePath, fileName, content, modTime);
+    hideLoading();
+    hideWelcome();
+    status.textContent = "Loaded " + fileName;
+  } catch (e) {
+    hideLoading();
+    status.textContent = "Load failed: " + e.message;
+  }
+});
+
+setGetActiveFilePath(() => {
+  const tab = getActiveTab();
+  return tab ? tab.path : null;
+});
+
+// ── Wire hooks ─────────────────────────────────────────────────────────────
 
 registerOnSetValue(() => {
   if (cm.getValue()) hideWelcome();
-  else showWelcome();
+  else if (!hasOpenTabs()) showWelcome();
   for (const tw of tableWidgets.values()) destroyTableWidget(tw);
   setTimeout(refreshTableWidgets, 50);
   setTimeout(updateMenuState, 0);
@@ -47,7 +122,7 @@ registerOnSectionReady((sectionIdx) => {
 
 window.addEventListener("resize", () => setTimeout(rebuildAnchorMap, 400));
 
-// ── Auto-render on pause ────────────────────────────────────────────────────
+// ── Auto-render on pause ───────────────────────────────────────────────────
 
 let restoreDone = false;
 let twRefreshTimer = null;
@@ -62,7 +137,16 @@ cm.on("change", () => {
   twRefreshTimer = setTimeout(refreshTableWidgets, 200);
 });
 
-// ── Format table button visibility ──────────────────────────────────────────
+// ── Dirty tracking ─────────────────────────────────────────────────────────
+
+cm.on("change", () => {
+  if (!hasOpenTabs()) return;
+  markActiveTabDirty();
+  const tab = getActiveTab();
+  if (tab) updateTitle(tab.name, true);
+});
+
+// ── Format table button visibility ─────────────────────────────────────────
 
 const btnFormatTable = document.getElementById("btnFormatTable");
 if (btnFormatTable) {
@@ -71,7 +155,7 @@ if (btnFormatTable) {
   });
 }
 
-// ── Document outline ────────────────────────────────────────────────────────
+// ── Document outline ───────────────────────────────────────────────────────
 
 const outlineList = document.getElementById("outlineList");
 const outlineSection = document.getElementById("outlineSection");
@@ -193,7 +277,7 @@ cm.on("cursorActivity", updateOutlineHighlight);
 cm.on("scroll", updateOutlineHighlight);
 setTimeout(buildOutline, 200);
 
-// ── Desktop-style menu bar ──────────────────────────────────────────────────
+// ── Desktop-style menu bar ─────────────────────────────────────────────────
 
 (function initMenubar() {
   const menubar = document.querySelector('.menubar');
@@ -243,7 +327,7 @@ setTimeout(buildOutline, 200);
   });
 })();
 
-// ── Drag & drop .md files ───────────────────────────────────────────────────
+// ── Drag & drop .md files ──────────────────────────────────────────────────
 
 const cmEl = cm.getWrapperElement();
 cmEl.addEventListener("dragover", e => { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; });
@@ -256,25 +340,27 @@ cmEl.addEventListener("drop", e => {
   }
 });
 
-// ── Open a file by path ─────────────────────────────────────────────────────
+// ── Open a file by path ────────────────────────────────────────────────────
 
 async function openFilePath(filePath) {
+  // Check if already open
+  const existing = findTabByPath(filePath);
+  if (existing >= 0) {
+    openTab(filePath, filePath.split("/").pop());
+    return;
+  }
+
   try {
     showLoading("Loading...");
-    const text = await api.readFile(filePath);
-    setStandaloneFile(filePath, text);
-    cm.setValue(text);
-    cm.clearHistory();
-    hideLoading();
+    const text = await readFile(filePath);
+    const modTime = await getFileModTime(filePath);
     const name = filePath.split("/").pop();
-    document.getElementById("paneFileName").textContent = name;
-    const title = name + " \u2014 BEORN Editor";
-    document.title = title;
-    api.setTitle(title);
+    openTab(filePath, name, text, modTime);
+    hideLoading();
+    hideWelcome();
     triggerRender();
-    const state = await api.getAppState();
-    const recent = [filePath, ...(state.recentFiles || []).filter(f => f !== filePath)].slice(0, 10);
-    await api.setAppState({ lastFile: filePath, recentFiles: recent });
+    addRecentFile(filePath);
+    await api.setAppState({ lastFile: filePath });
     buildRecentUI();
     status.textContent = "Loaded " + name;
   } catch (e) {
@@ -283,20 +369,114 @@ async function openFilePath(filePath) {
   }
 }
 
-// ── Open single file via dialog ─────────────────────────────────────────────
+// ── Save active tab ────────────────────────────────────────────────────────
+
+async function doSave() {
+  const tab = getActiveTab();
+  if (!tab) return;
+
+  applyPrettify();
+  const content = cm.getValue();
+
+  if (!tab.path) {
+    // Unsaved — trigger Save As
+    await doSaveAs();
+    return;
+  }
+
+  try {
+    const result = await saveWithConflictDetection(
+      tab.path, content, tab.savedContent, tab.localFileModTime
+    );
+
+    if (result.action === "cancel") {
+      status.textContent = "Save cancelled";
+      return;
+    }
+    if (result.action === "reload") {
+      cm.setValue(result.content);
+      markActiveTabClean(result.content, result.modTime);
+      status.textContent = "Loaded disk version of " + tab.name;
+      return;
+    }
+    if (result.action === "merge") {
+      cm.setValue(result.content);
+      if (result.hasConflicts) {
+        status.textContent = "Merged with conflicts \u2014 search for <<<<<<< to resolve";
+        return;
+      }
+      // Fall through to save the merged content
+      await writeFile(tab.path, cm.getValue());
+      const modTime = await getFileModTime(tab.path);
+      markActiveTabClean(cm.getValue(), modTime);
+      status.textContent = "Saved " + tab.name;
+      return;
+    }
+
+    // Normal save
+    markActiveTabClean(content, result.modTime);
+    updateTitle(tab.name, false);
+    status.textContent = "Saved " + tab.name;
+  } catch (e) {
+    status.textContent = "Save failed: " + e.message;
+  }
+}
+
+async function doSaveAs() {
+  const tab = getActiveTab();
+  if (!tab) return;
+
+  const filePath = await showSaveAsDialog(tab.name || "document.md");
+  if (!filePath) return;
+
+  applyPrettify();
+  try {
+    await writeFile(filePath, cm.getValue());
+    const modTime = await getFileModTime(filePath);
+    const name = filePath.split("/").pop();
+    updateActiveTabPath(filePath, name);
+    markActiveTabClean(cm.getValue(), modTime);
+    updateTitle(name, false);
+    status.textContent = "Saved as " + name;
+    addRecentFile(filePath);
+  } catch (e) {
+    status.textContent = "Save As failed: " + e.message;
+  }
+}
+
+// ── Close active tab (with auto-save) ──────────────────────────────────────
+
+async function closeCurrentTab() {
+  const tab = getActiveTab();
+  if (!tab) return;
+  if (tab.dirty && tab.path) await doSave();
+  closeActiveTab();
+}
+
+// ── Open single file via dialog ────────────────────────────────────────────
 
 async function openLocalFile() {
-  const filePath = await api.showOpenFileDialog();
+  const filePath = await showOpenFileDialog();
   if (!filePath) return;
   await openFilePath(filePath);
 }
 
-// ── Expose globals for onclick handlers in HTML ─────────────────────────────
+// ── Expose globals for onclick handlers in HTML ────────────────────────────
 
 window.openLocalFile = openLocalFile;
-window.openFolder = openFolder;
+window.openFolder = async () => {
+  const result = await openFolder();
+  if (result && result.fileEntries.length > 0) {
+    // Open first file in a tab
+    const first = result.fileEntries[0];
+    const content = await readFile(first.path);
+    const modTime = await getFileModTime(first.path);
+    openTab(first.path, first.name, content, modTime);
+    hideWelcome();
+  }
+};
 window.saveCurrentFile = () => {
-  if (standaloneFilePath || activeFileIdx >= 0) return doSave();
+  if (hasOpenTabs()) return doSave();
   return doSaveAs();
 };
 window.saveAs = doSaveAs;
@@ -308,13 +488,17 @@ window.toggleCover = toggleCover;
 window.toggleTableEditor = toggleTableEditor;
 window.closeDiffModal = closeDiffModal;
 window.resolveConflict = resolveConflict;
-window.closeFolder = closeFolder;
-window.closeFile = closeFile;
+window.closeFolder = () => {
+  closeFolder();
+  renderFileList();
+  updateMenuState();
+};
+window.closeFile = closeCurrentTab;
 window.newDocument = newDocument;
 window.newFromTemplate = newFromTemplate;
 window.addAgent = addAgent;
 
-// ── Welcome screen ──────────────────────────────────────────────────────────
+// ── Welcome screen ─────────────────────────────────────────────────────────
 
 const welcomeScreen = document.getElementById("welcomeScreen");
 
@@ -326,12 +510,12 @@ function showWelcome() {
   if (welcomeScreen) welcomeScreen.classList.remove("hidden");
 }
 
-// ── Menu state ──────────────────────────────────────────────────────────────
+// ── Menu state ─────────────────────────────────────────────────────────────
 
 function updateMenuState() {
   const hasContent = !!cm.getValue();
-  const hasFile = activeFileIdx >= 0 || !!standaloneFilePath;
-  const hasFolder = !!folderPath;
+  const hasFile = hasOpenTabs();
+  const hasFolder = !!getFolderPath();
   const canSave = hasFile;
 
   const set = (id, enabled) => {
@@ -345,7 +529,7 @@ function updateMenuState() {
   set("welcomeOpenFolder", true);
   set("btnSave", canSave);
   set("btnSaveAs", hasContent);
-  set("btnCloseFile", hasContent);
+  set("btnCloseFile", hasFile);
   set("btnCloseFolder", hasFolder);
 
   set("btnInsertTable", hasContent);
@@ -354,19 +538,6 @@ function updateMenuState() {
   set("btnRender", hasContent);
   set("btnPreviewTab", hasContent);
   set("btnToggleWrap", true);
-}
-
-function closeFile() {
-  if (isDirty() && !confirm("Discard unsaved changes?")) return;
-  setStandaloneFile(null, "");
-  cm.setValue("");
-  cm.clearHistory();
-  document.getElementById("paneFileName").textContent = "";
-  const title = "BEORN Editor";
-  document.title = title;
-  api.setTitle(title);
-  showWelcome();
-  updateMenuState();
 }
 
 const BLANK_FRONTMATTER = `---
@@ -378,14 +549,9 @@ doctype: ""
 
 function newDocument() {
   hideWelcome();
-  cm.setValue(BLANK_FRONTMATTER);
-  cm.clearHistory();
+  openTab(null, "Untitled", BLANK_FRONTMATTER, 0);
   cm.setCursor({ line: 1, ch: 8 });
   cm.focus();
-  document.getElementById("paneFileName").textContent = "";
-  const title = "New Document \u2014 BEORN Editor";
-  document.title = title;
-  api.setTitle(title);
 }
 
 const BEORN_TEMPLATE = `---
@@ -432,24 +598,51 @@ Present the team members.
 
 function newFromTemplate() {
   hideWelcome();
-  cm.setValue(BEORN_TEMPLATE);
-  cm.clearHistory();
+  openTab(null, "Untitled", BEORN_TEMPLATE, 0);
   cm.focus();
-  document.getElementById("paneFileName").textContent = "";
-  const title = "New Document \u2014 BEORN Editor";
-  document.title = title;
-  api.setTitle(title);
   triggerRender();
 }
 
-// ── Restore last session on startup ─────────────────────────────────────────
+// ── Restore last session on startup ────────────────────────────────────────
 
 async function tryRestore() {
   const state = await api.getAppState();
 
   if (state.lastFolder) {
     try {
-      await openFolderByPath(state.lastFolder, state.lastFile || null);
+      await openFolderByPath(state.lastFolder);
+      // Restore open tabs
+      const openTabNames = state.openTabs || [];
+      const activeTabName = state.activeTab;
+      const entries = getFileEntries();
+
+      if (openTabNames.length > 0) {
+        for (const tabInfo of openTabNames) {
+          const name = typeof tabInfo === "string" ? tabInfo : tabInfo.name;
+          const entry = entries.find(e => e.name === name);
+          if (entry) {
+            const content = await readFile(entry.path);
+            const modTime = await getFileModTime(entry.path);
+            openTab(entry.path, entry.name, content, modTime);
+          }
+        }
+        // Switch to previously active tab
+        if (activeTabName) {
+          const entry = entries.find(e => e.name === activeTabName);
+          if (entry) {
+            const idx = findTabByPath(entry.path);
+            if (idx >= 0) openTab(entry.path, entry.name);
+          }
+        }
+      } else if (state.lastFile) {
+        // Legacy: restore single file
+        const entry = entries.find(e => e.name === state.lastFile);
+        if (entry) {
+          const content = await readFile(entry.path);
+          const modTime = await getFileModTime(entry.path);
+          openTab(entry.path, entry.name, content, modTime);
+        }
+      }
       return true;
     } catch (e) {
       console.warn("Folder restore failed:", e);
@@ -469,14 +662,13 @@ async function tryRestore() {
   return false;
 }
 
-// ── Recent items UI ─────────────────────────────────────────────────────────
+// ── Recent items UI ────────────────────────────────────────────────────────
 
 async function buildRecentUI() {
   const state = await api.getAppState();
   const recentFiles = state.recentFiles || [];
   const recentFolders = state.recentFolders || [];
 
-  // File menu submenu
   const container = document.getElementById("recentMenuContainer");
   const menu = document.getElementById("recentMenu");
   if (container && menu) {
@@ -519,7 +711,6 @@ async function buildRecentUI() {
     }
   }
 
-  // Welcome screen
   const welcomeRecent = document.getElementById("welcomeRecent");
   const welcomeFolders = document.getElementById("welcomeRecentFolders");
   const welcomeFiles = document.getElementById("welcomeRecentFiles");
@@ -551,19 +742,46 @@ async function buildRecentUI() {
   }
 }
 
-// ── Wire Electron menu events ───────────────────────────────────────────────
+// ── Keyboard shortcuts ─────────────────────────────────────────────────────
+
+document.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "S") {
+    e.preventDefault();
+    doSaveAs();
+    return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+    e.preventDefault();
+    if (hasOpenTabs()) doSave();
+    else doSaveAs();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === "o") {
+    e.preventDefault();
+    openLocalFile();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === "n") {
+    e.preventDefault();
+    newDocument();
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === "w") {
+    e.preventDefault();
+    closeCurrentTab();
+  }
+});
+
+// ── Wire Electron menu events ──────────────────────────────────────────────
 
 if (api?.on) {
   api.on("menu-new", () => newDocument());
   api.on("menu-open-file", () => openLocalFile());
-  api.on("menu-open-folder", () => openFolder());
+  api.on("menu-open-folder", () => window.openFolder());
   api.on("menu-save", () => {
-    if (activeFileIdx >= 0 || standaloneFilePath) doSave();
+    if (hasOpenTabs()) doSave();
     else doSaveAs();
   });
   api.on("menu-save-as", () => doSaveAs());
-  api.on("menu-close-file", () => closeFile());
-  api.on("menu-close-folder", () => closeFolder());
+  api.on("menu-close-file", () => closeCurrentTab());
+  api.on("menu-close-folder", () => window.closeFolder());
   api.on("menu-insert-table", () => insertTable());
   api.on("menu-render", () => triggerRender());
   api.on("menu-preview-tab", () => openPreviewTab());
@@ -574,22 +792,22 @@ if (api?.on) {
   api.on("recent-cleared", () => buildRecentUI());
 }
 
-// ── Warn before closing with unsaved changes ────────────────────────────────
+// ── Warn before closing with unsaved changes ───────────────────────────────
 
 window.addEventListener("beforeunload", e => {
-  if (isDirty()) {
+  if (isActiveTabDirty()) {
     e.preventDefault();
     e.returnValue = "";
   }
 });
 
-// ── Startup ─────────────────────────────────────────────────────────────────
+// ── Startup ────────────────────────────────────────────────────────────────
 
 pagedReady.then(async () => {
   const hasStartupPath = await api.hasStartupPath();
   const loaded = hasStartupPath ? false : await tryRestore();
   hideLoading();
-  if (!loaded && !cm.getValue()) {
+  if (!loaded && !hasOpenTabs()) {
     showWelcome();
   } else {
     hideWelcome();
@@ -599,7 +817,10 @@ pagedReady.then(async () => {
   buildRecentUI();
 
   // Initialize AI agent collaboration
-  initAiCollab(cm, () => standaloneFilePath || (activeFileIdx >= 0 && fileEntries[activeFileIdx]?.path) || null);
+  initAiCollab(cm, () => {
+    const tab = getActiveTab();
+    return tab ? tab.path : null;
+  });
 }).catch(e => {
   hideLoading();
   if (status) status.textContent = "Startup error: " + e.message;
