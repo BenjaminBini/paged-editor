@@ -73,6 +73,7 @@
   border-top: 2px solid transparent;
   transition: color 0.1s;
   flex-shrink: 1;
+  text-transform: none; font-weight: 400; letter-spacing: 0;
 }
 .tab:hover { color: #a0a0c0; }
 .tab.active {
