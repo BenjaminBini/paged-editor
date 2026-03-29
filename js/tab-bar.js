@@ -1,0 +1,193 @@
+// tab-bar.js — Multi-tab state and tab bar UI
+
+import { cm } from './editor.js';
+
+// ── Tab state ───────────────────────────────────────────────────────────────
+
+const tabs = [];      // [{ path, name, doc, savedContent, localFileModTime, dirty }]
+let activeTabIdx = -1;
+
+// ── DOM refs ────────────────────────────────────────────────────────────────
+
+const tabBarTabs = document.getElementById("tabBarTabs");
+
+// ── Callbacks ───────────────────────────────────────────────────────────────
+
+let _onSwitch = null;   // called after tab switch (for render, outline, etc.)
+let _onAllClosed = null; // called when last tab is closed
+
+export function onTabSwitch(fn) { _onSwitch = fn; }
+export function onAllTabsClosed(fn) { _onAllClosed = fn; }
+
+// ── Public API ──────────────────────────────────────────────────────────────
+
+export function openTab(path, name, content, modTime) {
+  // If already open, switch to it
+  const existing = tabs.findIndex(t => t.path && t.path === path);
+  if (existing >= 0) {
+    switchToTab(existing);
+    return existing;
+  }
+
+  // Create new CodeMirror Doc
+  const doc = CodeMirror.Doc(content || "", "markdown");
+
+  const tab = {
+    path,          // null for unsaved new docs
+    name,
+    doc,
+    savedContent: content || "",
+    localFileModTime: modTime || 0,
+    dirty: false,
+  };
+
+  tabs.push(tab);
+  const idx = tabs.length - 1;
+  switchToTab(idx);
+  return idx;
+}
+
+export function closeTab(idx) {
+  if (idx < 0 || idx >= tabs.length) return;
+
+  tabs.splice(idx, 1);
+
+  if (tabs.length === 0) {
+    activeTabIdx = -1;
+    // Swap to a blank doc so CM has something
+    cm.swapDoc(CodeMirror.Doc("", "markdown"));
+    renderTabBar();
+    if (_onAllClosed) _onAllClosed();
+    return;
+  }
+
+  // Adjust active index
+  if (idx <= activeTabIdx) {
+    activeTabIdx = Math.max(0, activeTabIdx - 1);
+  }
+  switchToTab(activeTabIdx);
+}
+
+export function closeActiveTab() {
+  if (activeTabIdx >= 0) closeTab(activeTabIdx);
+}
+
+export function switchToTab(idx) {
+  if (idx < 0 || idx >= tabs.length) return;
+
+  // Save scroll position of current tab before switching
+  if (activeTabIdx >= 0 && activeTabIdx < tabs.length) {
+    tabs[activeTabIdx].scrollPos = cm.getScrollInfo();
+  }
+
+  activeTabIdx = idx;
+  const tab = tabs[idx];
+  cm.swapDoc(tab.doc);
+
+  // Restore scroll position
+  if (tab.scrollPos) {
+    setTimeout(() => cm.scrollTo(tab.scrollPos.left, tab.scrollPos.top), 0);
+  }
+
+  renderTabBar();
+  if (_onSwitch) _onSwitch(tab);
+}
+
+export function getActiveTab() {
+  if (activeTabIdx < 0 || activeTabIdx >= tabs.length) return null;
+  return tabs[activeTabIdx];
+}
+
+export function getActiveTabIdx() { return activeTabIdx; }
+export function getTabs() { return tabs; }
+export function getTabCount() { return tabs.length; }
+
+export function markActiveTabDirty() {
+  const tab = getActiveTab();
+  if (!tab) return;
+  tab.dirty = true;
+  renderTabBar();
+}
+
+export function markActiveTabClean(newSavedContent, modTime) {
+  const tab = getActiveTab();
+  if (!tab) return;
+  tab.dirty = false;
+  tab.savedContent = newSavedContent;
+  if (modTime !== undefined) tab.localFileModTime = modTime;
+  renderTabBar();
+}
+
+export function updateActiveTabPath(path, name) {
+  const tab = getActiveTab();
+  if (!tab) return;
+  tab.path = path;
+  tab.name = name;
+  renderTabBar();
+}
+
+export function isActiveTabDirty() {
+  const tab = getActiveTab();
+  return tab ? tab.dirty : false;
+}
+
+export function hasOpenTabs() {
+  return tabs.length > 0;
+}
+
+// Find tab by path (for sidebar highlight)
+export function findTabByPath(path) {
+  return tabs.findIndex(t => t.path === path);
+}
+
+// ── Tab bar rendering ───────────────────────────────────────────────────────
+
+export function renderTabBar() {
+  if (!tabBarTabs) return;
+  tabBarTabs.innerHTML = "";
+
+  tabs.forEach((tab, i) => {
+    const el = document.createElement("div");
+    el.className = "tab" + (i === activeTabIdx ? " active" : "");
+    el.onclick = (e) => {
+      if (e.target.classList.contains("tab-close")) return;
+      switchToTab(i);
+    };
+
+    const nameSpan = document.createElement("span");
+    nameSpan.className = "tab-name";
+    nameSpan.textContent = tab.name || "Untitled";
+    el.appendChild(nameSpan);
+
+    if (tab.dirty) {
+      const dot = document.createElement("span");
+      dot.className = "tab-dirty-dot";
+      el.appendChild(dot);
+    } else {
+      const closeBtn = document.createElement("span");
+      closeBtn.className = "tab-close";
+      closeBtn.textContent = "\u00d7";
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        closeTab(i);
+      };
+      el.appendChild(closeBtn);
+    }
+
+    // Middle-click to close
+    el.addEventListener("mousedown", (e) => {
+      if (e.button === 1) { e.preventDefault(); closeTab(i); }
+    });
+
+    tabBarTabs.appendChild(el);
+  });
+}
+
+// ── Session persistence helpers ─────────────────────────────────────────────
+
+export function getSessionState() {
+  return {
+    openTabs: tabs.map(t => ({ path: t.path, name: t.name })),
+    activeTab: activeTabIdx >= 0 ? tabs[activeTabIdx]?.path || tabs[activeTabIdx]?.name : null,
+  };
+}
