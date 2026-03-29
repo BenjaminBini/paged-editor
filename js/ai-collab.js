@@ -65,7 +65,9 @@ export async function addAgent() {
 function handleAgentMessage(key, msg) {
   const conv = conversations.get(key) || [];
 
-  if (msg.type === "edit") {
+  if (msg.type === "read") {
+    handleReadRequest(key, msg);
+  } else if (msg.type === "edit") {
     conv.push({ type: "edit", ...msg });
     conversations.set(key, conv);
     applyEdit(key, msg);
@@ -80,6 +82,31 @@ function handleAgentMessage(key, msg) {
   } else if (msg.type === "status") {
     updateWaitingStatus(key, msg);
   }
+}
+
+// ── Read requests ──────────────────────────────────────────────────────────
+
+function handleReadRequest(key, msg) {
+  if (!_cm) return;
+  const content = _cm.getValue();
+  const filePath = _getFilePath ? _getFilePath() : null;
+  const fileName = filePath ? filePath.split("/").pop() : "untitled.md";
+
+  const response = {
+    type: "read_response",
+    readId: msg.readId,
+    file: { path: filePath, name: fileName, content },
+  };
+
+  // If line range requested, also include the slice
+  if (msg.lineStart != null && msg.lineEnd != null) {
+    const lines = content.split("\n");
+    const start = Math.max(0, msg.lineStart);
+    const end = Math.min(lines.length - 1, msg.lineEnd);
+    response.lines = { lineStart: start, lineEnd: end, text: lines.slice(start, end + 1).join("\n") };
+  }
+
+  api.sendToAgent(key, response);
 }
 
 // ── Apply edits ─────────────────────────────────────────────────────────────
