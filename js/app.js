@@ -16,10 +16,10 @@ import {
   readFile, writeFile, getFileModTime, saveWithConflictDetection,
   showSaveAsDialog, showOpenFileDialog, addRecentFile,
   applyPrettify, updateTitle, getFolderPath, getFileEntries,
-  setOnFileClick, setGetActiveFilePath,
+  setOnFileClick, setGetActiveFilePath, setIsFileDirty,
 } from './file-manager.js';
 import {
-  openTab, closeActiveTab, getActiveTab,
+  openTab, closeActiveTab, getActiveTab, getTabs,
   hasOpenTabs, markActiveTabDirty, markActiveTabClean,
   updateActiveTabPath, isActiveTabDirty,
   onTabSwitch, onAllTabsClosed, getSessionState, findTabByPath,
@@ -97,6 +97,12 @@ setGetActiveFilePath(() => {
   return tab ? tab.path : null;
 });
 
+setIsFileDirty((path) => {
+  const idx = findTabByPath(path);
+  if (idx < 0) return false;
+  return getTabs()[idx].dirty;
+});
+
 // ── Wire hooks ─────────────────────────────────────────────────────────────
 
 registerOnSetValue(() => {
@@ -139,11 +145,14 @@ cm.on("change", () => {
 
 // ── Dirty tracking ─────────────────────────────────────────────────────────
 
+let sidebarDirtyTimer = null;
 cm.on("change", () => {
   if (!hasOpenTabs()) return;
   markActiveTabDirty();
   const tab = getActiveTab();
   if (tab) updateTitle(tab.name, true);
+  clearTimeout(sidebarDirtyTimer);
+  sidebarDirtyTimer = setTimeout(renderFileList, 300);
 });
 
 // ── Format table button visibility ─────────────────────────────────────────

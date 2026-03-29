@@ -233,16 +233,19 @@ export async function refreshFileList() {
 
 let _onFileClick = null;
 let _getActiveFilePath = null;
+let _isFileDirty = null;
 
 export function setOnFileClick(fn) { _onFileClick = fn; }
 export function setGetActiveFilePath(fn) { _getActiveFilePath = fn; }
+export function setIsFileDirty(fn) { _isFileDirty = fn; }
 
 export function renderFileList() {
   fileList.innerHTML = "";
   const activePath = _getActiveFilePath ? _getActiveFilePath() : null;
   fileEntries.forEach((f, i) => {
+    const dirty = _isFileDirty ? _isFileDirty(f.path) : false;
     const el = document.createElement("div");
-    el.className = "file-item" + (f.path === activePath ? " active" : "");
+    el.className = "file-item" + (f.path === activePath ? " active" : "") + (dirty ? " dirty" : "");
     el.innerHTML = '<span class="file-icon">\uD83D\uDCC4</span>' + escapeHtml(f.name);
     el.onclick = () => {
       if (_onFileClick) _onFileClick(f.path, f.name);
