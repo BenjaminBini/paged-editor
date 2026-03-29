@@ -95,7 +95,7 @@ onTabSwitch((tab) => {
   renderFileList(); // update sidebar highlight
   triggerRender();
   setTimeout(buildOutline, 50);
-  setTimeout(refreshTableWidgets, 50);
+  setTimeout(refreshTableWidgets, 150);
   updateMenuState();
   schedulePersist();
 });

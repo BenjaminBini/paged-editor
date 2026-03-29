@@ -83,6 +83,7 @@ export function switchToTab(idx) {
   activeTabIdx = idx;
   const tab = tabs[idx];
   cm.swapDoc(tab.doc);
+  cm.refresh();
 
   // Restore scroll position
   if (tab.scrollPos) {
