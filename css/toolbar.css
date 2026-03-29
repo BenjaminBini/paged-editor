@@ -7,7 +7,6 @@
 .toolbar .logo { font-family: "Montserrat", sans-serif; font-weight: 700; font-size: 13px; color: #fff; margin-right: 8px; }
 .toolbar .sep { width: 1px; height: 18px; background: #475569; margin: 0 8px; }
 .toolbar .status { margin-left: auto; font-size: 11px; color: #94a3b8; white-space: nowrap; }
-.toolbar .pane-filename { font-size: 11px; color: #94a3b8; margin-left: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; }
 
 /* ── Menu bar ── */
 .menubar { display: flex; align-items: stretch; height: 100%; }
