@@ -211,17 +211,19 @@ function renderMessages() {
       msg.className = "chat-msg status";
       msg.innerHTML = '<div class="ai-spinner"></div>' + escapeHtml(entry.text);
       messagesEl.appendChild(msg);
-    } else if (entry.type === "edit" || entry.type === "patch") {
+    } else if (entry.type === "propose") {
       const msg = document.createElement("div");
       msg.className = "chat-msg edit-note";
-      msg.textContent = entry.type === "edit"
-        ? "Proposed edit (lines " + (entry.lineStart + 1) + "-" + (entry.lineEnd + 1) + ")"
-        : "Proposed a patch";
+      msg.textContent = "Proposed changes to " + (entry.filePath ? entry.filePath.split("/").pop() : "file");
       messagesEl.appendChild(msg);
-    } else if (entry.type === "edit_result") {
+    } else if (entry.type === "proposal_result") {
       const msg = document.createElement("div");
       msg.className = "chat-msg edit-note";
-      msg.textContent = entry.accepted ? "\u2713 Edit accepted" : "\u2717 Edit rejected";
+      if (entry.accepted) {
+        msg.textContent = "\u2713 Changes accepted";
+      } else {
+        msg.textContent = "\u2717 Changes rejected: " + (entry.reason || "");
+      }
       messagesEl.appendChild(msg);
     }
   }
