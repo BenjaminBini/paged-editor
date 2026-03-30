@@ -43,5 +43,5 @@
   border: none; background: transparent;
   /* A4 at 96dpi = ~794px wide; scaled down via JS transform */
   width: 794px;
-  transform-origin: top center;
+  transform-origin: top left;
 }
