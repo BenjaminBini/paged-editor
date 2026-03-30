@@ -70,7 +70,17 @@ import {
   findTabByPath,
 } from "./tab-bar.js";
 import { closeDiffModal, resolveConflict, computeDiff } from "./diff-merge.js";
-import { init as initAiCollab, addAgent } from "./ai-collab.js";
+import {
+  init as initAiCollab, addAgent,
+  getConnectedAgents, sendRequest, sendAnswer,
+  onConversationUpdate, getConversation, onAgentClick, onAgentsChanged,
+} from "./ai-collab.js";
+import {
+  show as showChat, hide as hideChat, setAgents as setChatAgents,
+  focusWithContext, focusForAgent, refresh as refreshChat,
+  onSend as onChatSend, onAnswer as onChatAnswer,
+  setGetConversation, setGetSection,
+} from './chat-sidebar.js';
 import "./resize.js";
 
 const api = window.electronAPI;
@@ -1220,6 +1230,108 @@ pagedReady
       const tab = getActiveTab();
       return tab ? tab.path : null;
     });
+
+    // Wire chat sidebar
+    setGetConversation((key) => getConversation(key));
+
+    onChatSend((agentKey, prompt, context) => {
+      const selection = context || { text: "", lineStart: 0, lineEnd: 0 };
+      sendRequest(agentKey, prompt, selection);
+      refreshChat();
+    });
+
+    onChatAnswer((agentKey, questionId, value) => {
+      sendAnswer(agentKey, questionId, value);
+    });
+
+    onConversationUpdate(() => {
+      refreshChat();
+    });
+
+    onAgentClick((key) => {
+      showChat();
+      focusForAgent(key);
+    });
+
+    onAgentsChanged((connectedAgents) => {
+      setChatAgents(connectedAgents);
+      if (connectedAgents.length > 0) showChat();
+      else hideChat();
+    });
+
+    // Provide H1 section getter for auto-context
+    setGetSection(() => {
+      if (!cm.getValue()) return null;
+      const cursorLine = cm.getCursor().line;
+      let sectionStart = 0;
+      let sectionEnd = cm.lineCount() - 1;
+      let sectionTitle = "";
+      for (let i = cursorLine; i >= 0; i--) {
+        const m = cm.getLine(i)?.match(/^# (.+)/);
+        if (m) {
+          sectionStart = i;
+          sectionTitle = m[1].trim();
+          break;
+        }
+      }
+      for (let i = sectionStart + 1; i < cm.lineCount(); i++) {
+        if (/^# /.test(cm.getLine(i))) {
+          sectionEnd = i - 1;
+          break;
+        }
+      }
+      const lines = [];
+      for (let i = sectionStart; i <= sectionEnd; i++) lines.push(cm.getLine(i));
+      return {
+        text: lines.join("\n"),
+        lineStart: sectionStart,
+        lineEnd: sectionEnd,
+        label: 'Section: "' + sectionTitle + '"',
+      };
+    });
+
+    // Rewire spark button to focus chat
+    const sparkBtn = document.getElementById("sparkBtn");
+    if (sparkBtn) {
+      cm.on("cursorActivity", () => {
+        const sel = cm.getSelection();
+        const connected = getConnectedAgents();
+        if (!sel || connected.length === 0) {
+          sparkBtn.classList.remove("visible");
+          return;
+        }
+        const cursor = cm.getCursor("to");
+        const coords = cm.cursorCoords(cursor, "page");
+        sparkBtn.style.top = (coords.bottom + 4) + "px";
+        sparkBtn.style.left = coords.left + "px";
+        sparkBtn.classList.add("visible");
+      });
+      document.addEventListener("mouseup", () => {
+        setTimeout(() => {
+          const sel = cm.getSelection();
+          const connected = getConnectedAgents();
+          if (!sel || connected.length === 0) sparkBtn.classList.remove("visible");
+        }, 10);
+      });
+
+      sparkBtn.onclick = () => {
+        sparkBtn.classList.remove("visible");
+        const from = cm.getCursor("from");
+        const to = cm.getCursor("to");
+        const text = cm.getSelection();
+        if (!text) return;
+        const context = { text, lineStart: from.line, lineEnd: to.line };
+
+        const connected = getConnectedAgents();
+        if (connected.length === 1) {
+          focusForAgent(connected[0].key);
+          focusWithContext(context);
+        } else if (connected.length > 1) {
+          showChat();
+          focusWithContext(context);
+        }
+      };
+    }
   })
   .catch((e) => {
     hideLoading();
