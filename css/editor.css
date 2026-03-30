@@ -98,15 +98,15 @@
 }
 .cm-heading-badge[data-level="1"] {
   background: rgba(240, 168, 64, 0.18); color: #f0a840;
-  font-size: 12px; padding: 2px 7px; border-radius: 5px;
+  font-size: 15.5px; padding: 3px 9px; border-radius: 5px;
 }
 .cm-heading-badge[data-level="2"] {
   background: rgba(224, 192, 112, 0.14); color: #e0c070;
-  font-size: 11px;
+  font-size: 14px; padding: 2px 8px;
 }
 .cm-heading-badge[data-level="3"] {
   background: rgba(200, 216, 128, 0.10); color: #c8d880;
-  font-size: 10px;
+  font-size: 13px;
 }
 /* Hide text content of table lines; line widgets (siblings) stay visible */
 .tw-hidden-text { height: 0 !important; overflow: hidden !important; padding: 0 !important; margin: 0 !important; }
