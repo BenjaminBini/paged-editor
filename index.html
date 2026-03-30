@@ -337,7 +337,15 @@
       <div class="resize-handle" id="resizeHandle"></div>
 
       <div class="preview-pane" id="previewPane">
-        <div class="pane-header">Preview (Paged.js)</div>
+        <div class="pane-header">
+          <span>Preview</span>
+          <div class="preview-zoom">
+            <button onclick="previewZoomOut()" title="Zoom out">&minus;</button>
+            <span id="previewZoomLevel">100%</span>
+            <button onclick="previewZoomIn()" title="Zoom in">+</button>
+            <button onclick="previewZoomReset()" title="Fit to width">&oslash;</button>
+          </div>
+        </div>
         <div id="preview-container">
           <div id="preview-wrapper">
             <!-- Section iframes are created dynamically by render.js -->

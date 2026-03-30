@@ -469,11 +469,14 @@ window.addEventListener("message", e => {
 
 // ── Scaling ──────────────────────────────────────────────────────────────────
 
+let _userZoom = 1.0; // user zoom multiplier (1.0 = fit to width)
+
 function scaleFrame() {
   if (!currentFrame) return;
 
   const containerW = previewContainer.clientWidth - 40;
-  const scale = Math.min(1, containerW / A4_WIDTH_PX);
+  const fitScale = Math.min(1, containerW / A4_WIDTH_PX);
+  const scale = fitScale * _userZoom;
   currentFrame.style.transform = `scale(${scale})`;
   currentFrame.style.width = A4_WIDTH_PX + "px";
 
@@ -498,6 +501,27 @@ function scaleFrame() {
 
 export function scalePreview() {
   scaleFrame();
+}
+
+export function zoomIn() {
+  _userZoom = Math.min(3, _userZoom + 0.15);
+  scaleFrame();
+  return Math.round(_userZoom * 100);
+}
+
+export function zoomOut() {
+  _userZoom = Math.max(0.25, _userZoom - 0.15);
+  scaleFrame();
+  return Math.round(_userZoom * 100);
+}
+
+export function zoomReset() {
+  _userZoom = 1.0;
+  scaleFrame();
+}
+
+export function getZoom() {
+  return Math.round(_userZoom * 100);
 }
 
 window.addEventListener("resize", scalePreview);

@@ -18,6 +18,7 @@ import {
   clearRenderTimeout,
   scheduleRender,
   setActiveFileName,
+  zoomIn, zoomOut, zoomReset,
 } from "./render.js";
 import {
   setupPreviewClick,
@@ -862,6 +863,21 @@ window.saveAs = doSaveAs;
 window.insertTable = insertTable;
 window.triggerRender = triggerRender;
 window.openPreviewTab = openPreviewTab;
+window.previewZoomIn = () => {
+  const pct = zoomIn();
+  const el = document.getElementById("previewZoomLevel");
+  if (el) el.textContent = pct + "%";
+};
+window.previewZoomOut = () => {
+  const pct = zoomOut();
+  const el = document.getElementById("previewZoomLevel");
+  if (el) el.textContent = pct + "%";
+};
+window.previewZoomReset = () => {
+  zoomReset();
+  const el = document.getElementById("previewZoomLevel");
+  if (el) el.textContent = "100%";
+};
 window.toggleWrap = toggleWrap;
 window.toggleCover = () => {}; // no-op: single-section mode
 window.toggleTableEditor = toggleTableEditor;
