@@ -17,6 +17,25 @@ let wsHost = "localhost";
 let _cm = null;
 let _getFilePath = null;
 
+// ── Conversation hooks ──────────────────────────────────────────────────────
+
+let _onConversationUpdate = null;
+export function onConversationUpdate(fn) { _onConversationUpdate = fn; }
+
+function notifyConversationUpdate(key) {
+  if (_onConversationUpdate) _onConversationUpdate(key);
+}
+
+let _onAgentsChanged = null;
+export function onAgentsChanged(fn) { _onAgentsChanged = fn; }
+
+let _onAgentClick = null;
+export function onAgentClick(fn) { _onAgentClick = fn; }
+
+export function getConversation(key) {
+  return conversations.get(key) || [];
+}
+
 export function init(cm, getFilePath) {
   _cm = cm;
   _getFilePath = getFilePath;
@@ -29,6 +48,7 @@ export function init(cm, getFilePath) {
     pendingKeys.delete(key);
     conversations.set(key, conversations.get(key) || []);
     renderAgentList();
+    if (_onAgentsChanged) _onAgentsChanged(getConnectedAgents());
     // If the modal is open waiting for this agent, show success animation
     if (currentModalKey === key) {
       showAgentModalConnected();
@@ -41,10 +61,7 @@ export function init(cm, getFilePath) {
       agent.connected = false;
       renderAgentList();
     }
-    // Close popover if it belongs to this agent (e.g. "Thinking..." spinner)
-    if (activePopover && activePopover.dataset.agentKey === key) {
-      removeActivePopover();
-    }
+    if (_onAgentsChanged) _onAgentsChanged(getConnectedAgents());
     // Close the agent prompt modal if it was waiting for this agent
     if (currentModalKey === key) {
       closeAgentModal();
@@ -63,7 +80,6 @@ export function init(cm, getFilePath) {
   });
 
   renderAgentList();
-  setupSparkButton();
 }
 
 // ── Key generation ──────────────────────────────────────────────────────────
@@ -89,17 +105,23 @@ function handleAgentMessage(key, msg) {
   } else if (msg.type === "message") {
     conv.push({ type: "message", text: msg.text, requestId: msg.requestId });
     conversations.set(key, conv);
-    showAgentPopover(key, msg);
+    notifyConversationUpdate(key);
   } else if (msg.type === "question") {
     conv.push({ type: "question", ...msg });
     conversations.set(key, conv);
-    showQuestionPopover(key, msg);
+    notifyConversationUpdate(key);
   } else if (msg.type === "patch") {
     conv.push({ type: "patch", ...msg });
     conversations.set(key, conv);
     applyPatch(key, msg);
   } else if (msg.type === "status") {
-    updateWaitingStatus(key, msg);
+    const statusConv = conversations.get(key) || [];
+    // Remove previous status for this request
+    const idx = statusConv.findLastIndex(e => e.type === "status" && e.requestId === msg.requestId);
+    if (idx >= 0) statusConv.splice(idx, 1);
+    statusConv.push({ type: "status", text: msg.text, requestId: msg.requestId });
+    conversations.set(key, statusConv);
+    notifyConversationUpdate(key);
   }
 }
 
@@ -144,11 +166,10 @@ function applyEdit(key, msg) {
       requestId: msg.requestId,
       message: "oldText does not match current content at specified lines",
     });
-    showAgentPopover(key, {
-      type: "message",
-      text: "Edit rejected: the text at the specified location has changed.",
-      requestId: msg.requestId,
-    });
+    const errConv = conversations.get(key) || [];
+    errConv.push({ type: "message", text: "Edit rejected: the text at the specified location has changed.", requestId: msg.requestId });
+    conversations.set(key, errConv);
+    notifyConversationUpdate(key);
     return;
   }
 
@@ -190,6 +211,10 @@ function applyEdit(key, msg) {
           message: "Edit rejected by user",
         });
       }
+      const conv = conversations.get(key) || [];
+      conv.push({ type: "edit_result", accepted: action === "accept" });
+      conversations.set(key, conv);
+      notifyConversationUpdate(key);
     });
 }
 
@@ -277,6 +302,10 @@ function applyPatch(key, msg) {
           message: "Patch rejected by user",
         });
       }
+      const conv = conversations.get(key) || [];
+      conv.push({ type: "edit_result", accepted: action === "accept" });
+      conversations.set(key, conv);
+      notifyConversationUpdate(key);
     });
 }
 
@@ -286,8 +315,6 @@ let agentDiffResolve = null;
 let agentDiffKey = null;
 
 function showAgentDiffModal(agentKey, agentName, oldText, newText, lineStart, lineEnd) {
-  // Dismiss the "Thinking..." / status popover — the diff modal supersedes it
-  removeActivePopover();
   agentDiffKey = agentKey;
   const modal = document.getElementById("agentDiffModal");
   const title = document.getElementById("agentDiffTitle");
@@ -424,7 +451,9 @@ function renderAgentList() {
     const el = document.createElement("div");
     el.className = "agent-item connected";
     el.innerHTML = `<span class="agent-dot"></span><span class="agent-name">${escapeHtml(name)}</span><button class="agent-disconnect" title="Disconnect agent">&times;</button>`;
-    el.querySelector(".agent-name").onclick = () => showConversationHistory(key);
+    el.querySelector(".agent-name").onclick = () => {
+      if (_onAgentClick) _onAgentClick(key);
+    };
     el.querySelector(".agent-disconnect").onclick = (e) => {
       e.stopPropagation();
       disconnectAgent(key);
@@ -507,372 +536,6 @@ function closeAgentModal() {
     agentModalSuccess.hidden = true;
     agentModalSuccess.classList.remove("animate");
   }
-}
-
-// ── Spark IA button ─────────────────────────────────────────────────────────
-
-let sparkBtn = null;
-let sparkVisible = false;
-
-function setupSparkButton() {
-  sparkBtn = document.getElementById("sparkBtn");
-  if (!sparkBtn || !_cm) return;
-
-  _cm.on("cursorActivity", updateSparkVisibility);
-  document.addEventListener("mouseup", () => setTimeout(updateSparkVisibility, 10));
-}
-
-function updateSparkVisibility() {
-  if (!_cm || !sparkBtn) return;
-
-  const sel = _cm.getSelection();
-  const connected = getConnectedAgents();
-
-  if (!sel || connected.length === 0) {
-    hideSparkButton();
-    return;
-  }
-
-  // Position spark button near the selection end
-  const cursor = _cm.getCursor("to");
-  const coords = _cm.cursorCoords(cursor, "page");
-
-  sparkBtn.style.top = (coords.bottom + 4) + "px";
-  sparkBtn.style.left = (coords.left) + "px";
-  sparkBtn.classList.add("visible");
-  sparkVisible = true;
-
-  sparkBtn.onclick = () => {
-    const selection = getSelectionInfo();
-    if (!selection) return;
-
-    if (connected.length === 1) {
-      showSparkPrompt(connected[0].key, selection);
-    } else {
-      showAgentPicker(connected, selection);
-    }
-  };
-}
-
-function hideSparkButton() {
-  if (sparkBtn) sparkBtn.classList.remove("visible");
-  sparkVisible = false;
-}
-
-function getSelectionInfo() {
-  if (!_cm) return null;
-  const from = _cm.getCursor("from");
-  const to = _cm.getCursor("to");
-  const text = _cm.getSelection();
-  if (!text) return null;
-  return {
-    text,
-    lineStart: from.line,
-    lineEnd: to.line,
-    chStart: from.ch,
-    chEnd: to.ch,
-  };
-}
-
-// ── Spark prompt popover ────────────────────────────────────────────────────
-
-let activePopover = null;
-
-function removeActivePopover() {
-  if (activePopover) {
-    activePopover.remove();
-    activePopover = null;
-  }
-}
-
-function showSparkPrompt(agentKey, selection) {
-  removeActivePopover();
-  hideSparkButton();
-
-  const coords = _cm.cursorCoords(_cm.getCursor("to"), "page");
-  const popover = createPopover(coords);
-
-  const agent = agents.get(agentKey);
-  const agentName = agent ? agent.name : "Agent";
-
-  popover.innerHTML = `
-    <div class="ai-popover-header">Ask ${escapeHtml(agentName)}</div>
-    <textarea class="ai-popover-input" placeholder="What should I do with this selection?" rows="3"></textarea>
-    <div class="ai-popover-actions">
-      <button class="ai-popover-cancel">Cancel</button>
-      <button class="ai-popover-send">Send</button>
-    </div>
-  `;
-
-  const input = popover.querySelector(".ai-popover-input");
-  const sendBtn = popover.querySelector(".ai-popover-send");
-  const cancelBtn = popover.querySelector(".ai-popover-cancel");
-
-  cancelBtn.onclick = () => removeActivePopover();
-
-  const doSend = () => {
-    const prompt = input.value.trim();
-    if (!prompt) return;
-    const requestId = sendRequest(agentKey, prompt, selection);
-    removeActivePopover();
-    showWaitingPopover(agentKey, requestId, selection, coords);
-  };
-
-  sendBtn.onclick = doSend;
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      doSend();
-    }
-    if (e.key === "Escape") removeActivePopover();
-  });
-
-  clampPopover(popover);
-  activePopover = popover;
-  setTimeout(() => input.focus(), 10);
-}
-
-function showAgentPicker(connectedAgents, selection) {
-  removeActivePopover();
-  hideSparkButton();
-
-  const coords = _cm.cursorCoords(_cm.getCursor("to"), "page");
-  const popover = createPopover(coords);
-
-  popover.innerHTML = `
-    <div class="ai-popover-header">Choose an agent</div>
-    <div class="ai-popover-agent-list"></div>
-  `;
-
-  const list = popover.querySelector(".ai-popover-agent-list");
-  for (const { key, name } of connectedAgents) {
-    const btn = document.createElement("button");
-    btn.className = "ai-popover-agent-pick";
-    btn.textContent = name;
-    btn.onclick = () => {
-      removeActivePopover();
-      showSparkPrompt(key, selection);
-    };
-    list.appendChild(btn);
-  }
-
-  clampPopover(popover);
-  activePopover = popover;
-}
-
-function showWaitingPopover(agentKey, requestId, selection, coords) {
-  removeActivePopover();
-
-  const popover = createPopover(coords);
-  const agent = agents.get(agentKey);
-  const agentName = agent ? agent.name : "Agent";
-
-  popover.innerHTML = `
-    <div class="ai-popover-header">${escapeHtml(agentName)}</div>
-    <div class="ai-popover-waiting"><div class="ai-spinner"></div> Thinking...</div>
-  `;
-  popover.dataset.requestId = requestId;
-  popover.dataset.agentKey = agentKey;
-
-  clampPopover(popover);
-  activePopover = popover;
-}
-
-function updateWaitingStatus(key, msg) {
-  // Update the waiting popover in-place if it matches
-  if (!activePopover) return;
-  if (msg.requestId && activePopover.dataset.requestId !== msg.requestId) return;
-
-  const waitingEl = activePopover.querySelector(".ai-popover-waiting");
-  if (waitingEl) {
-    waitingEl.innerHTML = `<div class="ai-spinner"></div> ${escapeHtml(msg.text)}`;
-  }
-}
-
-// ── Agent response popovers ─────────────────────────────────────────────────
-
-function showAgentPopover(key, msg) {
-  const agent = agents.get(key);
-  const agentName = agent ? agent.name : "Agent";
-
-  // Always remove any existing popover before showing a new one
-  removeActivePopover();
-
-  // If there's already an active popover waiting for this request, replace it
-  if (activePopover && activePopover.dataset.requestId === msg.requestId) {
-    const coords = {
-      bottom: parseInt(activePopover.style.top),
-      left: parseInt(activePopover.style.left),
-    };
-    removeActivePopover();
-
-    const popover = createPopover(coords);
-    popover.innerHTML = `
-      <div class="ai-popover-header">${escapeHtml(agentName)}</div>
-      <div class="ai-popover-message">${escapeHtml(msg.text)}</div>
-      <div class="ai-popover-actions">
-        <button class="ai-popover-cancel">Close</button>
-      </div>
-    `;
-    popover.querySelector(".ai-popover-cancel").onclick = () => removeActivePopover();
-    clampPopover(popover);
-    activePopover = popover;
-    return;
-  }
-
-  // New popover — anchor to a sensible position
-  const coords = _cm ? _cm.cursorCoords(_cm.getCursor(), "page") : { bottom: 200, left: 400 };
-  const popover = createPopover(coords);
-  popover.innerHTML = `
-    <div class="ai-popover-header">${escapeHtml(agentName)}</div>
-    <div class="ai-popover-message">${escapeHtml(msg.text)}</div>
-    <div class="ai-popover-actions">
-      <button class="ai-popover-cancel">Close</button>
-    </div>
-  `;
-  popover.querySelector(".ai-popover-cancel").onclick = () => removeActivePopover();
-  clampPopover(popover);
-  activePopover = popover;
-}
-
-function showQuestionPopover(key, msg) {
-  const agent = agents.get(key);
-  const agentName = agent ? agent.name : "Agent";
-
-  // Always remove any existing popover before showing a new one
-  removeActivePopover();
-
-  // Replace waiting popover if matching
-  let coords;
-  if (activePopover && activePopover.dataset.requestId === msg.requestId) {
-    coords = { bottom: parseInt(activePopover.style.top), left: parseInt(activePopover.style.left) };
-    removeActivePopover();
-  } else {
-    coords = _cm ? _cm.cursorCoords(_cm.getCursor(), "page") : { bottom: 200, left: 400 };
-  }
-
-  const popover = createPopover(coords);
-  let actionsHtml = "";
-
-  if (msg.choices && msg.choices.length > 0) {
-    actionsHtml = `<div class="ai-popover-choices">
-      ${msg.choices.map(c => `<button class="ai-popover-choice">${escapeHtml(c)}</button>`).join("")}
-    </div>`;
-  } else {
-    actionsHtml = `
-      <textarea class="ai-popover-input" placeholder="Your answer..." rows="2"></textarea>
-      <div class="ai-popover-actions">
-        <button class="ai-popover-cancel">Cancel</button>
-        <button class="ai-popover-send">Reply</button>
-      </div>
-    `;
-  }
-
-  popover.innerHTML = `
-    <div class="ai-popover-header">${escapeHtml(agentName)}</div>
-    <div class="ai-popover-message">${escapeHtml(msg.text)}</div>
-    ${actionsHtml}
-  `;
-
-  if (msg.choices && msg.choices.length > 0) {
-    popover.querySelectorAll(".ai-popover-choice").forEach((btn, i) => {
-      btn.onclick = () => {
-        sendAnswer(key, msg.id, msg.choices[i]);
-        removeActivePopover();
-      };
-    });
-  } else {
-    const input = popover.querySelector(".ai-popover-input");
-    const sendBtn = popover.querySelector(".ai-popover-send");
-    const cancelBtn = popover.querySelector(".ai-popover-cancel");
-    cancelBtn.onclick = () => removeActivePopover();
-    sendBtn.onclick = () => {
-      const val = input.value.trim();
-      if (val) {
-        sendAnswer(key, msg.id, val);
-        removeActivePopover();
-      }
-    };
-  }
-
-  clampPopover(popover);
-  activePopover = popover;
-}
-
-// ── Conversation history popover ────────────────────────────────────────────
-
-function showConversationHistory(key) {
-  const agent = agents.get(key);
-  if (!agent) return;
-  const conv = conversations.get(key) || [];
-  if (conv.length === 0) return;
-
-  removeActivePopover();
-
-  // Show as a modal-style overlay
-  const overlay = document.createElement("div");
-  overlay.className = "ai-history-overlay";
-
-  const panel = document.createElement("div");
-  panel.className = "ai-history-panel";
-
-  let html = `<div class="ai-history-header">
-    <span>Conversation with ${escapeHtml(agent.name)}</span>
-    <button class="ai-history-close">&times;</button>
-  </div><div class="ai-history-body">`;
-
-  for (const entry of conv) {
-    if (entry.type === "request") {
-      html += `<div class="ai-history-entry user"><strong>You:</strong> ${escapeHtml(entry.prompt)}</div>`;
-    } else if (entry.type === "message") {
-      html += `<div class="ai-history-entry agent"><strong>${escapeHtml(agent.name)}:</strong> ${escapeHtml(entry.text)}</div>`;
-    } else if (entry.type === "question") {
-      html += `<div class="ai-history-entry agent"><strong>${escapeHtml(agent.name)}:</strong> ${escapeHtml(entry.text)}</div>`;
-    } else if (entry.type === "answer") {
-      html += `<div class="ai-history-entry user"><strong>You:</strong> ${escapeHtml(entry.value)}</div>`;
-    } else if (entry.type === "edit") {
-      html += `<div class="ai-history-entry agent edit"><strong>${escapeHtml(agent.name)} edited lines ${entry.lineStart}-${entry.lineEnd}</strong></div>`;
-    } else if (entry.type === "patch") {
-      html += `<div class="ai-history-entry agent edit"><strong>${escapeHtml(agent.name)} applied a patch</strong></div>`;
-    }
-  }
-
-  html += "</div>";
-  panel.innerHTML = html;
-  overlay.appendChild(panel);
-  document.body.appendChild(overlay);
-
-  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-  panel.querySelector(".ai-history-close").onclick = () => overlay.remove();
-}
-
-// ── Popover helper ──────────────────────────────────────────────────────────
-
-function createPopover(coords) {
-  const popover = document.createElement("div");
-  popover.className = "ai-popover";
-  popover._coords = coords;          // stash for clampPopover
-  return popover;
-}
-
-function clampPopover(popover) {
-  const coords = popover._coords || { bottom: 200, left: 400, top: 180 };
-  document.body.appendChild(popover);
-
-  const rect = popover.getBoundingClientRect();
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const pw = rect.width || 320;
-  const ph = rect.height || 200;
-
-  let top = coords.bottom + 4;
-  let left = coords.left;
-
-  if (top + ph > vh - 8) top = Math.max(8, (coords.top || coords.bottom - 20) - ph - 4);
-  if (left + pw > vw - 8) left = Math.max(8, vw - pw - 8);
-
-  popover.style.top = top + "px";
-  popover.style.left = left + "px";
 }
 
 // ── Unified diff parser ────────────────────────────────────────────────────
