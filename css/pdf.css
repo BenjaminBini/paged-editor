@@ -14,7 +14,7 @@
 * { margin: 0; padding: 0; box-sizing: border-box;
   -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
 body { font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
-  font-size: 10.5pt; line-height: 1.6; color: var(--text); background: #fff; }
+  font-size: 10.5pt; line-height: 1.5; color: var(--text); background: #fff; }
 
 /* ── Cover (2 pages: hero+info, sommaire) ── */
 .beorn-cover {
