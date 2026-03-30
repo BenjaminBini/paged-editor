@@ -989,7 +989,10 @@ async function tryRestore() {
       if (openTabNames.length > 0) {
         for (const tabInfo of openTabNames) {
           const name = typeof tabInfo === "string" ? tabInfo : tabInfo.name;
-          const entry = entries.find((e) => e.name === name);
+          const path = typeof tabInfo === "object" ? tabInfo.path : null;
+          // Match by path first, then by name
+          const entry = (path && entries.find((e) => e.path === path))
+            || entries.find((e) => e.name === name);
           if (entry) {
             const content = await readFile(entry.path);
             const modTime = await getFileModTime(entry.path);
@@ -998,7 +1001,9 @@ async function tryRestore() {
         }
         // Switch to previously active tab
         if (activeTabName) {
-          const entry = entries.find((e) => e.name === activeTabName);
+          // activeTab can be a path or a name
+          const entry = entries.find((e) => e.path === activeTabName)
+            || entries.find((e) => e.name === activeTabName);
           if (entry) {
             const idx = findTabByPath(entry.path);
             if (idx >= 0) openTab(entry.path, entry.name);
@@ -1018,6 +1023,23 @@ async function tryRestore() {
       console.warn("Folder restore failed:", e);
       closeFolder();
     }
+  }
+
+  // No folder — restore standalone file tabs
+  const standaloneOpenTabs = state.openTabs || [];
+  if (!state.lastFolder && standaloneOpenTabs.length > 0) {
+    for (const tabInfo of standaloneOpenTabs) {
+      const filePath = typeof tabInfo === "string" ? tabInfo : tabInfo.path;
+      if (filePath) {
+        try { await openFilePath(filePath); } catch (e) { console.warn("Tab restore failed:", filePath, e); }
+      }
+    }
+    // Switch to active tab
+    if (state.activeTab) {
+      const idx = findTabByPath(state.activeTab);
+      if (idx >= 0) openTab(state.activeTab, state.activeTab.split("/").pop());
+    }
+    return standaloneOpenTabs.length > 0;
   }
 
   if (state.lastFile && !state.lastFolder) {
