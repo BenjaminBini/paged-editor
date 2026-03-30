@@ -104,7 +104,10 @@ const COLOR_PAIRS = [
 ];
 
 let _colorIdx = 0;
-let _partieNum = 0;  // detected from "# Partie N" in H1, set before each parse
+let _partieNum = 0;  // partie number for H1 prefix
+let _activeFileName = "";  // set by app.js to current tab filename
+
+export function setActiveFileName(name) { _activeFileName = name || ""; }
 let _h2Count = 0;
 let _h3Count = 0;
 
@@ -253,9 +256,14 @@ function parseMarkdownSync(md, colorIdx, startLine) {
   _h2Count = 0;
   _h3Count = 0;
 
-  // Detect "# Partie N" in H1 for auto-numbering
+  // Detect partie number: from markdown H1, or from filename (e.g. "03-planning.md" → 3)
   const partieMatch = md.match(/^#\s+Partie\s+(\d+)/im);
-  _partieNum = partieMatch ? parseInt(partieMatch[1], 10) : 0;
+  if (partieMatch) {
+    _partieNum = parseInt(partieMatch[1], 10);
+  } else {
+    const fnMatch = _activeFileName.match(/^(\d+)/);
+    _partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
+  }
 
   const tokens = marked.lexer(md);
 
@@ -371,9 +379,15 @@ export async function triggerRender() {
   const fmMatch = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
   const startLine = fmMatch ? fmMatch[0].split('\n').length - 1 : 0;
 
-  // Detect Partie number for color selection before parsing
-  const partieMatch = body.match(/^#\s+Partie\s+(\d+)/im);
-  const partieNum = partieMatch ? parseInt(partieMatch[1], 10) : 0;
+  // Detect Partie number for color selection: from markdown or filename
+  const partieMatch2 = body.match(/^#\s+Partie\s+(\d+)/im);
+  let partieNum;
+  if (partieMatch2) {
+    partieNum = parseInt(partieMatch2[1], 10);
+  } else {
+    const fnMatch = _activeFileName.match(/^(\d+)/);
+    partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
+  }
   const colorIdx = partieNum > 0 ? (partieNum - 1) % COLOR_PAIRS.length : 0;
 
   // Phase 1: Sync parse (mermaid → placeholders)

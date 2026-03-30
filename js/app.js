@@ -17,6 +17,7 @@ import {
   getPreviewFrame,
   clearRenderTimeout,
   scheduleRender,
+  setActiveFileName,
 } from "./render.js";
 import {
   setupPreviewClick,
@@ -92,6 +93,7 @@ function schedulePersist() {
 onTabSwitch((tab) => {
   updateTitle(tab.name, tab.dirty);
   renderFileList(); // update sidebar highlight
+  setActiveFileName(tab.name);
   triggerRender();
   setTimeout(buildOutline, 50);
   setTimeout(refreshTableWidgets, 150);
