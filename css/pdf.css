@@ -141,6 +141,7 @@ h3 + h4 { margin-top: var(--space-md); }
   color: color-mix(in srgb, var(--section-color, var(--blue)) 50%, white); }
 .pdf-content ul ul ul li::before { content: "\2022"; font-size: 0.7em;
   color: color-mix(in srgb, var(--section-color, var(--blue)) 30%, white); top: 0.25em; }
+ul, ol { font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif; }
 ol { margin: var(--space-md) 0 var(--space-md) 1.35rem; }
 ol li { padding-left: 0.3rem; }
 ol li + li { margin-top: var(--space-sm); }
