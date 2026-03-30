@@ -297,6 +297,17 @@
             <span>Loading...</span>
           </div>
           <textarea id="editor-textarea"></textarea>
+          <div id="diffReviewView" class="diff-review-view" hidden>
+            <div class="diff-review-header">
+              <span class="diff-review-title" id="diffReviewTitle"></span>
+              <span class="diff-review-file" id="diffReviewFile"></span>
+            </div>
+            <div class="diff-review-body" id="diffReviewBody"></div>
+            <div class="diff-review-footer" id="diffReviewFooter">
+              <button class="diff-review-btn reject" id="diffReviewReject">Reject</button>
+              <button class="diff-review-btn accept" id="diffReviewAccept">Accept</button>
+            </div>
+          </div>
         </div>
         <div class="editor-statusbar">
           <div

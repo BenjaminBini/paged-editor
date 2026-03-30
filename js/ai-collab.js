@@ -1,5 +1,7 @@
 // ai-collab.js — AI agent collaboration module
 
+import { computeDiff, renderDiffHtml } from './diff-merge.js';
+
 const api = window.electronAPI;
 
 // ── State ───────────────────────────────────────────────────────────────────
@@ -9,6 +11,10 @@ const pendingKeys = new Map();  // key -> { created: Date }
 const conversations = new Map(); // key -> [{ type, ...data }]
 let wsPort = 0;
 let wsHost = "localhost";
+
+// ── Diff review state ──────────────────────────────────────────────────────
+let _diffReviewResolve = null;
+let _diffReviewAgentKey = null;
 
 // ── External dependencies (set by app.js) ───────────────────────────────────
 
@@ -64,6 +70,14 @@ export function init(cm, getFilePath) {
     if (currentModalKey === key) {
       closeAgentModal();
     }
+    // Dismiss diff review if this agent's proposal was being reviewed
+    if (_diffReviewAgentKey === key) {
+      const view = document.getElementById("diffReviewView");
+      if (view) view.hidden = true;
+      _cm.getWrapperElement().style.display = "";
+      _diffReviewResolve = null;
+      _diffReviewAgentKey = null;
+    }
   });
 
   api.on("agent-message", ({ key, message }) => {
@@ -87,7 +101,13 @@ export async function addAgent() {
 function handleAgentMessage(key, msg) {
   const conv = conversations.get(key) || [];
 
-  if (msg.type === "message") {
+  if (msg.type === "propose") {
+    conv.push({ type: "propose", requestId: msg.requestId, filePath: msg.filePath });
+    conversations.set(key, conv);
+    notifyConversationUpdate(key);
+    showDiffReview(key, msg);
+    return;
+  } else if (msg.type === "message") {
     conv.push({ type: "message", text: msg.text, requestId: msg.requestId });
     conversations.set(key, conv);
     notifyConversationUpdate(key);
@@ -102,6 +122,116 @@ function handleAgentMessage(key, msg) {
     conv.push({ type: "status", text: msg.text, requestId: msg.requestId });
     conversations.set(key, conv);
     notifyConversationUpdate(key);
+  }
+}
+
+// ── Diff review view ──────────────────────────────────────────────────────
+
+function showDiffReview(agentKey, msg) {
+  if (!_cm) return;
+  _diffReviewAgentKey = agentKey;
+
+  const agent = agents.get(agentKey);
+  const agentName = agent ? agent.name : "Agent";
+  const filePath = msg.filePath;
+  const fileName = filePath ? filePath.split("/").pop() : "file";
+  const oldContent = _cm.getValue();
+  const newContent = msg.newContent;
+
+  const oldLines = oldContent.split("\n");
+  const newLines = newContent.split("\n");
+  const diff = computeDiff(oldLines, newLines);
+
+  // Populate diff review view
+  const view = document.getElementById("diffReviewView");
+  const titleEl = document.getElementById("diffReviewTitle");
+  const fileEl = document.getElementById("diffReviewFile");
+  const body = document.getElementById("diffReviewBody");
+  const footer = document.getElementById("diffReviewFooter");
+
+  titleEl.textContent = `Changes proposed by ${agentName}`;
+  fileEl.textContent = fileName;
+  body.innerHTML = renderDiffHtml(diff);
+
+  // Reset footer to accept/reject buttons
+  footer.innerHTML = `
+    <button class="diff-review-btn reject" id="diffReviewReject">Reject</button>
+    <button class="diff-review-btn accept" id="diffReviewAccept">Accept</button>
+  `;
+
+  // Show diff view, hide CodeMirror
+  view.hidden = false;
+  _cm.getWrapperElement().style.display = "none";
+
+  // Scroll to first change
+  const firstChange = body.querySelector(".diff-add, .diff-del");
+  if (firstChange) setTimeout(() => firstChange.scrollIntoView({ block: "center" }), 50);
+
+  function finish(result) {
+    _diffReviewResolve = null;
+    _diffReviewAgentKey = null;
+
+    // Restore editor
+    view.hidden = true;
+    _cm.getWrapperElement().style.display = "";
+
+    if (result.action === "accept") {
+      // Write to disk, update editor
+      api.writeFile(result.filePath, result.newContent).then(() => {
+        const cursor = _cm.getCursor();
+        const scrollInfo = _cm.getScrollInfo();
+        _cm.setValue(result.newContent);
+        const maxLine = _cm.lineCount() - 1;
+        _cm.setCursor({ line: Math.min(cursor.line, maxLine), ch: cursor.ch });
+        _cm.scrollTo(scrollInfo.left, scrollInfo.top);
+      });
+      api.sendToAgent(agentKey, { type: "proposal_accepted", requestId: msg.requestId });
+      const c = conversations.get(agentKey) || [];
+      c.push({ type: "proposal_result", accepted: true, requestId: msg.requestId });
+      conversations.set(agentKey, c);
+    } else {
+      api.sendToAgent(agentKey, {
+        type: "proposal_rejected",
+        requestId: msg.requestId,
+        reason: result.reason,
+      });
+      const c = conversations.get(agentKey) || [];
+      c.push({ type: "proposal_result", accepted: false, reason: result.reason, requestId: msg.requestId });
+      conversations.set(agentKey, c);
+    }
+
+    notifyConversationUpdate(agentKey);
+  }
+
+  _diffReviewResolve = finish;
+
+  document.getElementById("diffReviewAccept").onclick = () => {
+    finish({ action: "accept", newContent, filePath });
+  };
+
+  document.getElementById("diffReviewReject").onclick = () => {
+    showRejectFeedback(footer);
+  };
+
+  function showRejectFeedback(footerEl) {
+    footerEl.innerHTML = `
+      <div class="diff-review-feedback">
+        <input type="text" id="diffRejectReason" placeholder="Why are you rejecting this change?" autofocus />
+        <button id="diffRejectSend">Send</button>
+      </div>
+    `;
+    const input = document.getElementById("diffRejectReason");
+    const sendBtn = document.getElementById("diffRejectSend");
+
+    sendBtn.onclick = () => {
+      const reason = input.value.trim();
+      if (!reason) { input.focus(); return; }
+      finish({ action: "reject", reason });
+    };
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { sendBtn.click(); }
+    });
+    input.focus();
   }
 }
 
@@ -248,6 +378,17 @@ if (btnCloseAgentModal) btnCloseAgentModal.onclick = () => closeAgentModal();
 document.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
   // Close modals & overlays in priority order
+  // Escape while reviewing a proposal → trigger reject feedback
+  const diffView = document.getElementById("diffReviewView");
+  if (diffView && !diffView.hidden) {
+    const footer = document.getElementById("diffReviewFooter");
+    // Only trigger reject if not already showing feedback
+    if (!footer.querySelector(".diff-review-feedback")) {
+      const rejectBtn = document.getElementById("diffReviewReject");
+      if (rejectBtn) rejectBtn.click();
+    }
+    return;
+  }
   if (agentModal?.classList.contains("open")) { closeAgentModal(); return; }
 });
 
