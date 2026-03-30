@@ -98,6 +98,7 @@ onTabSwitch((tab) => {
   setTimeout(buildOutline, 50);
   setTimeout(refreshTableWidgets, 150);
   setTimeout(updateGutterMarkers, 50);
+  setTimeout(applyHeadingMarks, 50);
   updateMenuState();
   schedulePersist();
 });
