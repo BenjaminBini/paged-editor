@@ -150,13 +150,6 @@
 }
 @keyframes ai-spin { to { transform: rotate(360deg); } }
 
-/* ── Edit flash highlight ──────────────────────────────────────────────────── */
-
-.ai-edit-flash {
-  background: rgba(243, 196, 56, 0.15) !important;
-  transition: background 1.5s ease-out;
-}
-
 /* ── Chat sidebar ─────────────────────────────────────────────────────────── */
 
 .chat-sidebar {
