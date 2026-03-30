@@ -493,8 +493,6 @@ document.addEventListener("keydown", (e) => {
     agentDiffKey = null;
     return;
   }
-  const historyOverlay = document.querySelector(".ai-history-overlay");
-  if (historyOverlay) { historyOverlay.remove(); return; }
   if (agentModal?.classList.contains("open")) { closeAgentModal(); return; }
 });
 
