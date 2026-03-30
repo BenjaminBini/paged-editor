@@ -424,14 +424,22 @@ function buildOutline() {
   outlineList.innerHTML = "";
   const stickyItems = [];
 
-  // Compute hierarchical numbering (1, 1.1, 1.1.1, etc.)
-  const counters = [0, 0, 0, 0]; // levels 1-4
+  // Compute section numbering using partie number from filename
+  const tab = getActiveTab();
+  const fnMatch = tab?.name?.match(/^(\d+)/);
+  const partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
+  const counters = [0, 0, 0]; // h2, h3, h4 counters
   const numbers = outlineHeadings.map((h) => {
-    const lvl = h.level - 1; // 0-based
+    if (h.level === 1) {
+      // H1 = partie title, reset sub-counters
+      counters[0] = 0; counters[1] = 0; counters[2] = 0;
+      return partieNum ? `Partie ${partieNum}` : "";
+    }
+    const lvl = h.level - 2; // h2→0, h3→1, h4→2
     counters[lvl]++;
-    // Reset deeper levels
     for (let k = lvl + 1; k < counters.length; k++) counters[k] = 0;
-    return counters.slice(0, lvl + 1).join(".");
+    const prefix = partieNum ? `${partieNum}.` : "";
+    return prefix + counters.slice(0, lvl + 1).join(".");
   });
 
   outlineHeadings.forEach((h, idx) => {
@@ -439,9 +447,10 @@ function buildOutline() {
     el.className = "outline-item";
     el.dataset.level = h.level;
     el.dataset.idx = idx;
-    // Strip existing leading number (e.g. "1.2 Foo" → "Foo") to avoid duplication
-    const cleanText = h.text.replace(/^[\d.]+\s*/, "");
-    el.textContent = numbers[idx] + " " + cleanText;
+    // Strip existing leading number/partie prefix to avoid duplication
+    const cleanText = h.text.replace(/^(?:Partie\s+\d+\s*[—●\-]\s*|[\d.]+\s*)/i, "");
+    const num = numbers[idx];
+    el.textContent = num ? num + " " + cleanText : cleanText;
     el.onclick = () => {
       cm.setCursor({ line: h.line, ch: 0 });
       cm.scrollIntoView(
