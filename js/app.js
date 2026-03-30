@@ -327,10 +327,16 @@ let _cursorLine = -1;
 
 function computeHeadingLabels() {
   const labels = []; // {line, depth, label, hashLen}
+  // Detect partie number from markdown H1 or filename
   let partieNum = 0;
   for (let i = 0; i < cm.lineCount(); i++) {
     const m = cm.getLine(i).match(/^#\s+(?:\d+\.?\s+)?Partie\s+(\d+)/i);
     if (m) { partieNum = parseInt(m[1], 10); break; }
+  }
+  if (!partieNum) {
+    const tab = getActiveTab();
+    const fnMatch = tab?.name?.match(/^(\d+)/);
+    partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
   }
   if (!partieNum) return labels;
 
