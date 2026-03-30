@@ -1,4 +1,4 @@
-.container { display: flex; height: calc(100% - 42px); }
+.container { display: flex; height: calc(100% - 42px); overflow: hidden; }
 
 /* ── Welcome screen ── */
 .welcome-screen {
