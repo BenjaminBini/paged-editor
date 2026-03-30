@@ -489,9 +489,9 @@ function scaleFrame() {
 
     if (h > 100) {
       currentFrame.style.height = h + "px";
-      previewWrapper.style.width = (A4_WIDTH_PX * scale) + "px";
-      previewWrapper.style.height = (h * scale) + "px";
-      previewWrapper.style.overflow = "hidden";
+      // Wrapper uses scaled dimensions for layout; iframe overflows but is visually correct
+      previewWrapper.style.width = Math.ceil(A4_WIDTH_PX * scale) + "px";
+      previewWrapper.style.height = Math.ceil(h * scale) + "px";
     }
   } catch(e) {
     // iframe not ready yet, retry
