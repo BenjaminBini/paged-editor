@@ -4,10 +4,10 @@ import {
   cm,
   status,
   toggleWrap,
-  registerOnSetValue,
   showLoading,
   hideLoading,
 } from "./editor.js";
+import { on as busOn } from "./event-bus.js";
 import { pagedReady } from "./assets.js";
 import {
   openPreviewTab,
@@ -19,7 +19,6 @@ import {
 import {
   triggerRender,
   scalePreview,
-  registerOnSectionReady,
   getPreviewFrame,
   clearRenderTimeout,
   scheduleRender,
@@ -117,32 +116,22 @@ const api = window.electronAPI;
 function detachCmListeners() {
   cm.off("change", onChangeAutoRender);
   cm.off("change", onChangeDirtyTracking);
-  cm.off("change", onChangeGutterMarkers);
-  cm.off("change", onChangePageBreaks);
-  cm.off("change", onChangeHeadingBadges);
-  cm.off("change", onChangeOutline);
-  cm.off("cursorActivity", onCursorPageBreaks);
-  cm.off("cursorActivity", onCursorHeadingBadges);
-  cm.off("cursorActivity", updateOutlineHighlight);
+  cm.off("change", onChangeDecorations);
+  cm.off("cursorActivity", onCursorDecorations);
   cm.off("scroll", updateOutlineHighlight);
 }
 
 function reattachCmListeners() {
   cm.on("change", onChangeAutoRender);
   cm.on("change", onChangeDirtyTracking);
-  cm.on("change", onChangeGutterMarkers);
-  cm.on("change", onChangePageBreaks);
-  cm.on("change", onChangeHeadingBadges);
-  cm.on("change", onChangeOutline);
-  cm.on("cursorActivity", onCursorPageBreaks);
-  cm.on("cursorActivity", onCursorHeadingBadges);
-  cm.on("cursorActivity", updateOutlineHighlight);
+  cm.on("change", onChangeDecorations);
+  cm.on("cursorActivity", onCursorDecorations);
   cm.on("scroll", updateOutlineHighlight);
 }
 
-// ── Wire hooks ─────────────────────────────────────────────────────────────
+// ── Event bus subscriptions ────────────────────────────────────────────────
 
-registerOnSetValue(() => {
+busOn("content-loaded", () => {
   if (cm.getValue()) hideWelcome();
   else if (!hasOpenTabs()) showWelcome();
   for (const tw of tableWidgets.values()) destroyTableWidget(tw);
@@ -152,7 +141,7 @@ registerOnSetValue(() => {
 
 let _scaleTimer = null;
 let _anchorTimer = null;
-registerOnSectionReady(() => {
+busOn("section-ready", () => {
   const frame = getPreviewFrame();
   if (frame) setupPreviewClick(frame);
   clearTimeout(_scaleTimer);
@@ -191,73 +180,50 @@ cm.on("change", onChangeAutoRender);
 
 cm.on("change", onChangeDirtyTracking);
 
-// ── Editor decorations (delegated to editor-decorations.js) ────────────────
+// ── Editor decorations ─────────────────────────────────────────────────────
+// Consolidated: one debounced handler for all cm.change decoration updates,
+// one handler for cursorActivity. Replaces 5 independent timers.
 
 const updateGutterMarkers = () => _updateGutterMarkers(getActiveTab);
 const applyHeadingMarks = () => _applyHeadingMarks(getActiveTab);
+const _buildOutline = () => buildOutline(getActiveTab);
 
-let gutterTimer = null;
-function onChangeGutterMarkers() {
+const btnFormatTable = document.getElementById("btnFormatTable");
+
+let _decorTimer = null;
+function onChangeDecorations() {
   if (!hasOpenTabs()) return;
-  clearTimeout(gutterTimer);
-  gutterTimer = setTimeout(updateGutterMarkers, 400);
-}
-cm.on("change", onChangeGutterMarkers);
-
-let pageBreakTimer = null;
-function onChangePageBreaks() {
   resetPageBreakCache();
-  clearTimeout(pageBreakTimer);
-  pageBreakTimer = setTimeout(applyPageBreakMarks, 150);
+  clearTimeout(_decorTimer);
+  _decorTimer = setTimeout(() => {
+    applyPageBreakMarks();       // 1. page break widgets
+    applyHeadingMarks();         // 2. heading number badges
+    _buildOutline();             // 3. document outline
+    updateGutterMarkers();       // 4. gutter change markers (heaviest — last)
+  }, 200);
 }
-function onCursorPageBreaks() {
-  applyPageBreakMarks();
-}
-cm.on("change", onChangePageBreaks);
-cm.on("cursorActivity", onCursorPageBreaks);
-setTimeout(applyPageBreakMarks, 200);
 
-let headingBadgeTimer = null;
-function onChangeHeadingBadges() {
-  clearTimeout(headingBadgeTimer);
-  headingBadgeTimer = setTimeout(applyHeadingMarks, 150);
-}
-function onCursorHeadingBadges() {
+function onCursorDecorations() {
+  // Page breaks: re-apply when cursor moves to/from a \newpage line
+  applyPageBreakMarks();
+  // Heading badges: re-apply when cursor line changes
   const cur = cm.getCursor().line;
   if (cur !== getCursorLine()) {
     setCursorLine(cur);
     applyHeadingMarks();
   }
-}
-cm.on("change", onChangeHeadingBadges);
-cm.on("cursorActivity", onCursorHeadingBadges);
-setTimeout(applyHeadingMarks, 200);
-
-// ── Format table button visibility ─────────────────────────────────────────
-
-const btnFormatTable = document.getElementById("btnFormatTable");
-if (btnFormatTable) {
-  cm.on("cursorActivity", () => {
-    btnFormatTable.style.display = getTableRangeAt(cm.getCursor().line)
-      ? ""
-      : "none";
-  });
+  // Outline highlight
+  updateOutlineHighlight();
+  // Table format button
+  if (btnFormatTable) {
+    btnFormatTable.style.display = getTableRangeAt(cm.getCursor().line) ? "" : "none";
+  }
 }
 
-// ── Document outline ───────────────────────────────────────────────────────
-
-// Outline: delegated to outline-manager.js
-const _buildOutline = () => buildOutline(getActiveTab);
-
-let outlineTimer = null;
-function onChangeOutline() {
-  clearTimeout(outlineTimer);
-  outlineTimer = setTimeout(_buildOutline, 300);
-}
-cm.on("change", onChangeOutline);
-cm.on("cursorActivity", updateOutlineHighlight);
+cm.on("change", onChangeDecorations);
+cm.on("cursorActivity", onCursorDecorations);
 cm.on("scroll", updateOutlineHighlight);
-setTimeout(_buildOutline, 200);
+setTimeout(() => { applyPageBreakMarks(); applyHeadingMarks(); _buildOutline(); }, 200);
 
 // ── Wire tab & sidebar callbacks (delegated to tab-wiring.js) ─────────────
 

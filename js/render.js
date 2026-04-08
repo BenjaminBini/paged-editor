@@ -4,13 +4,8 @@
 import { editor, previewContainer, status } from "./editor.js";
 import { getActiveFileName } from "./parse-context.js";
 import { renderMarkdown } from "./render-pipeline.js";
+import { emit } from "./event-bus.js";
 
-// ── Hooks ───────────────────────────────────────────────────────────────────
-
-let onSectionReady = null;
-export function registerOnSectionReady(fn) {
-  onSectionReady = fn;
-}
 
 // ── Single iframe state ─────────────────────────────────────────────────────
 
@@ -109,7 +104,7 @@ window.addEventListener("message", (e) => {
   const elapsed = Math.round(performance.now() - renderStartTime);
   status.textContent = pages + " pages — " + elapsed + "ms";
 
-  if (typeof onSectionReady === "function") onSectionReady();
+  emit("section-ready");
 });
 
 // ── Scaling ─────────────────────────────────────────────────────────────────

@@ -13,20 +13,15 @@ export const cm = CodeMirror.fromTextArea(document.getElementById("editor-textar
   gutters: ["CodeMirror-linenumbers"],
 });
 
-// ── setValue hook ─────────────────────────────────────────────────────────────
+// ── Content-loaded event ─────────────────────────────────────────────────────
+// Emitted after setValue or swapDoc so interested modules can react.
 
-let onSetValue = null;
-
-export function registerOnSetValue(fn) {
-  onSetValue = fn;
-}
+import { emit } from "./event-bus.js";
 
 const _cmSetValue = cm.setValue.bind(cm);
 cm.setValue = function (v) {
   _cmSetValue(v);
-  if (typeof onSetValue === "function") {
-    setTimeout(onSetValue, 50);
-  }
+  setTimeout(() => emit("content-loaded"), 0);
 };
 
 // ── Compatibility shim ────────────────────────────────────────────────────────
