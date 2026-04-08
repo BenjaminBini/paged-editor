@@ -103,7 +103,7 @@
   color: #fff;
 }
 .menu-dropdown button:disabled {
-  color: #475569;
+  color: #64748b;
   cursor: default;
 }
 .menu-dropdown button:disabled:hover {
@@ -256,4 +256,16 @@
 }
 .menu-backdrop.active {
   display: block;
+}
+
+/* ── Web mode: hide Electron-only menu items ── */
+.web-mode #btnOpenLocal,
+.web-mode #btnOpenFolder,
+.web-mode #welcomeOpenLocal,
+.web-mode #welcomeOpenFolder,
+.web-mode #btnSaveAs,
+.web-mode #btnCloseFolder,
+.web-mode #recentMenuContainer,
+.web-mode .web-mode-hide {
+  display: none !important;
 }

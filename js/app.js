@@ -19,6 +19,10 @@ import {
   scheduleRender,
   setActiveFileName,
   zoomIn, zoomOut, zoomReset,
+  previewPdf,
+  previewFullMemoire,
+  closePdfPanel,
+  savePdfAs,
 } from "./render.js";
 import {
   setupPreviewClick,
@@ -52,11 +56,17 @@ import {
   getFolderPath,
   getFileEntries,
   setOnFileClick,
+  setOnFileRefresh,
   setGetActiveFilePath,
   setIsFileDirty,
+  setOnFileDelete,
+  createNewFile,
+  refreshFileList,
 } from "./file-manager.js";
 import {
   openTab,
+  switchToTab,
+  closeTab,
   closeActiveTab,
   getActiveTab,
   getTabs,
@@ -67,6 +77,8 @@ import {
   isActiveTabDirty,
   onTabSwitch,
   onAllTabsClosed,
+  onTabSaveRequest,
+  onTabRefreshRequest,
   getSessionState,
   findTabByPath,
 } from "./tab-bar.js";
@@ -127,6 +139,9 @@ onAllTabsClosed(() => {
   schedulePersist();
 });
 
+onTabSaveRequest(() => doSave());
+onTabRefreshRequest((tab) => reloadTabFromDisk(tab));
+
 // ── Wire sidebar → tab-bar ─────────────────────────────────────────────────
 
 setOnFileClick(async (filePath, fileName) => {
@@ -160,6 +175,33 @@ setIsFileDirty((path) => {
   const idx = findTabByPath(path);
   if (idx < 0) return false;
   return getTabs()[idx].dirty;
+});
+
+setOnFileDelete((filePath) => {
+  const idx = findTabByPath(filePath);
+  if (idx >= 0) closeTab(idx);
+});
+
+setOnFileRefresh(async (filePath, fileName) => {
+  const existingIdx = findTabByPath(filePath);
+  if (existingIdx >= 0) {
+    switchToTab(existingIdx);
+    await reloadTabFromDisk(getTabs()[existingIdx]);
+  } else {
+    // Not open — open fresh from disk
+    showLoading("Loading " + fileName + "...");
+    try {
+      const content = await readFile(filePath);
+      const modTime = await getFileModTime(filePath);
+      openTab(filePath, fileName, content, modTime);
+      hideLoading();
+      hideWelcome();
+      status.textContent = "Loaded " + fileName;
+    } catch (e) {
+      hideLoading();
+      status.textContent = "Load failed: " + e.message;
+    }
+  }
 });
 
 // ── Wire hooks ─────────────────────────────────────────────────────────────
@@ -207,6 +249,7 @@ cm.on("change", () => {
 // ── Dirty tracking ─────────────────────────────────────────────────────────
 
 let sidebarDirtyTimer = null;
+let changeNotifyTimer = null;
 cm.on("change", () => {
   if (!hasOpenTabs()) return;
   markActiveTabDirty();
@@ -214,6 +257,14 @@ cm.on("change", () => {
   if (tab) updateTitle(tab.name, true);
   clearTimeout(sidebarDirtyTimer);
   sidebarDirtyTimer = setTimeout(renderFileList, 300);
+  // Notify parent frame of content change (debounced)
+  if (window.__pagedEditorNotifyParent) {
+    clearTimeout(changeNotifyTimer);
+    changeNotifyTimer = setTimeout(() => {
+      const t = getActiveTab();
+      if (t) window.__pagedEditorNotifyParent("change", { file: t.path, name: t.name });
+    }, 500);
+  }
 });
 
 // ── Gutter change markers ──────────────────────────────────────────────────
@@ -679,6 +730,26 @@ async function openFilePath(filePath) {
   }
 }
 
+// ── Reload tab from disk ───────────────────────────────────────────────────
+
+async function reloadTabFromDisk(tab) {
+  if (!tab || !tab.path) return;
+  try {
+    showLoading("Reloading " + tab.name + "...");
+    const content = await readFile(tab.path);
+    const modTime = await getFileModTime(tab.path);
+    cm.setValue(content);
+    markActiveTabClean(content, modTime);
+    updateGutterMarkers();
+    renderFileList();
+    hideLoading();
+    status.textContent = "Reloaded " + tab.name + " from disk";
+  } catch (e) {
+    hideLoading();
+    status.textContent = "Failed to reload: " + e.message;
+  }
+}
+
 // ── Save active tab ────────────────────────────────────────────────────────
 
 async function doSave() {
@@ -737,6 +808,10 @@ async function doSave() {
     updateGutterMarkers();
     renderFileList();
     status.textContent = "Saved " + tab.name;
+    // Notify parent frame (React component) of save
+    if (window.__pagedEditorNotifyParent) {
+      window.__pagedEditorNotifyParent("save", { file: tab.path, name: tab.name });
+    }
   } catch (e) {
     status.textContent = "Save failed: " + e.message;
   }
@@ -863,6 +938,25 @@ window.saveAs = doSaveAs;
 window.insertTable = insertTable;
 window.triggerRender = triggerRender;
 window.openPreviewTab = openPreviewTab;
+window.pdfViewerClose = closePdfPanel;
+window.pdfViewerSaveAs = savePdfAs;
+window.downloadPdf = () => {
+  const tab = getActiveTab();
+  previewPdf(tab ? tab.name : "document");
+};
+window.downloadFullMemoire = async () => {
+  const entries = getFileEntries();
+  if (!entries.length) return;
+  const openTabs = getTabs();
+  const sections = [];
+  for (const entry of entries) {
+    const tab = openTabs.find(t => t.path === entry.path);
+    const markdown = tab ? tab.doc.getValue() : await readFile(entry.path);
+    sections.push({ name: entry.name, markdown });
+  }
+  const folderName = getFolderPath()?.split("/").pop() || "memoire";
+  await previewFullMemoire(sections, folderName);
+};
 window.previewZoomIn = () => {
   const pct = zoomIn();
   const el = document.getElementById("previewZoomLevel");
@@ -889,6 +983,8 @@ window.closeFolder = () => {
   updateMenuState();
   if (!hasOpenTabs()) showWelcome();
 };
+window.refreshSidebar = () => refreshFileList();
+window.createNewFile = createNewFile;
 window.closeFile = closeCurrentTab;
 window.newDocument = newDocument;
 window.newFromTemplate = newFromTemplate;
@@ -933,7 +1029,32 @@ function updateMenuState() {
   set("btnRedo", hasContent);
   set("btnRender", hasContent);
   set("btnPreviewTab", hasContent);
+  set("btnDownloadPdf", hasContent);
+  set("btnDownloadMemoire", hasFolder);
+  set("btnDownloadMemoire2", hasFolder);
   set("btnToggleWrap", true);
+
+  updatePdfButtonLabel();
+}
+
+/** Update "Export PDF Partie N" buttons with the actual partie number. */
+function updatePdfButtonLabel() {
+  const tab = getActiveTab();
+  const fnMatch = tab?.name?.match(/^(\d+)/);
+  const num = fnMatch ? fnMatch[1] : "N";
+  const label = `Export PDF Partie ${num}`;
+  // Preview toolbar button — text node after the SVG
+  const toolbarBtn = document.querySelector('.pdf-download-btn:not(.memoire-btn)');
+  if (toolbarBtn) {
+    const textNode = Array.from(toolbarBtn.childNodes).find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+    if (textNode) textNode.textContent = `\n              ${label}\n            `;
+  }
+  // Menu dropdown button
+  const menuBtn = document.getElementById('btnDownloadPdf');
+  if (menuBtn) {
+    const span = menuBtn.querySelector('.menu-label');
+    if (span) span.textContent = label;
+  }
 }
 
 const BLANK_FRONTMATTER = `---
@@ -1043,6 +1164,12 @@ async function tryRestore() {
           const modTime = await getFileModTime(entry.path);
           openTab(entry.path, entry.name, content, modTime);
         }
+      } else if (window.__pagedEditorWebMode && entries.length > 0) {
+        // Web mode first load — auto-open the first file
+        const first = entries[0];
+        const content = await readFile(first.path);
+        const modTime = await getFileModTime(first.path);
+        openTab(first.path, first.name, content, modTime);
       }
       return true;
     } catch (e) {
@@ -1209,6 +1336,8 @@ if (api?.on) {
   api.on("menu-insert-table", () => insertTable());
   api.on("menu-render", () => triggerRender());
   api.on("menu-preview-tab", () => openPreviewTab());
+  api.on("menu-download-pdf", () => window.downloadPdf());
+  api.on("menu-download-memoire", () => window.downloadFullMemoire());
   api.on("menu-toggle-wrap", () => toggleWrap());
   api.on("menu-toggle-cover", () => {}); // no-op: single-section mode
   api.on("open-file-path", (filePath) => openFilePath(filePath));

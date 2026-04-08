@@ -115,6 +115,13 @@
             <button onclick="openPreviewTab()" id="btnPreviewTab" disabled>
               <span class="menu-label">Open in New Tab</span>
             </button>
+            <button onclick="downloadPdf()" id="btnDownloadPdf" disabled>
+              <span class="menu-label">Export PDF Partie N</span
+              ><span class="menu-shortcut">Ctrl+Shift+E</span>
+            </button>
+            <button onclick="downloadFullMemoire()" id="btnDownloadMemoire2" disabled>
+              <span class="menu-label">Export PDF M&#233;moire</span>
+            </button>
             <div class="menu-divider"></div>
             <button onclick="toggleWrap()" id="btnToggleWrap" disabled>
               <span class="menu-label">Toggle Line Wrap</span>
@@ -258,20 +265,21 @@
         <div class="sidebar-header">
           <span class="folder-name" id="folderName">Files</span>
           <button
+            onclick="window.createNewFile()"
+            class="sidebar-icon-btn sidebar-new-file-btn"
+            style="margin-left: auto;"
+            title="New file"
+          >+</button>
+          <button
+            onclick="window.refreshSidebar()"
+            class="sidebar-icon-btn"
+            title="Refresh file list"
+          >&#x21BB;</button>
+          <button
             onclick="closeFolder()"
-            style="
-              background: none;
-              border: none;
-              color: #64748b;
-              cursor: pointer;
-              font-size: 14px;
-              padding: 2px 4px;
-              margin-left: auto;
-            "
+            class="sidebar-icon-btn web-mode-hide"
             title="Close folder"
-          >
-            &times;
-          </button>
+          >&times;</button>
         </div>
         <div class="file-list" id="fileList"></div>
         <div class="outline-section" id="outlineSection">
@@ -341,12 +349,35 @@
             <span id="previewZoomLevel">100%</span>
             <button onclick="previewZoomIn()" title="Zoom in">+</button>
             <button onclick="previewZoomReset()" title="Fit to width">&oslash;</button>
+            <button onclick="downloadPdf()" title="Export PDF de la partie courante" class="pdf-download-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export PDF Partie N
+            </button>
+            <button onclick="downloadFullMemoire()" title="Export PDF du m&#233;moire complet" class="pdf-download-btn memoire-btn" id="btnDownloadMemoire">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+                <polyline points="10 2 10 10 13 7 16 10 16 2"/>
+              </svg>
+              Export PDF M&#233;moire
+            </button>
           </div>
         </div>
         <div id="preview-container">
           <div id="preview-wrapper">
             <!-- Section iframes are created dynamically by render.js -->
           </div>
+        </div>
+        <div id="pdf-viewer-panel" hidden>
+          <div class="pdf-viewer-toolbar">
+            <span class="pdf-viewer-name" id="pdfViewerName"></span>
+            <button onclick="pdfViewerSaveAs()" class="pdf-viewer-btn">Save As&hellip;</button>
+            <button onclick="pdfViewerClose()" class="pdf-viewer-btn pdf-viewer-close">&times;</button>
+          </div>
+          <embed id="pdfViewerEmbed" type="application/pdf" />
         </div>
       </div>
 
@@ -416,6 +447,8 @@
       </div>
     </div>
 
+    <!-- Web mode: REST-backed API shim (runs before ES modules) -->
+    <script src="js/web-api.js"></script>
     <!-- Single entry point — all logic lives in ES modules -->
     <script type="module" src="js/app.js"></script>
   </body>
