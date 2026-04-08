@@ -8,7 +8,10 @@ contextBridge.exposeInMainWorld("electronAPI", {
   showOpenFileDialog: () => ipcRenderer.invoke("show-open-file-dialog"),
   showOpenFolderDialog: () => ipcRenderer.invoke("show-open-folder-dialog"),
   showSaveDialog: (defaultName) => ipcRenderer.invoke("show-save-dialog", defaultName),
+  showInFinder: (filePath) => ipcRenderer.invoke("show-in-finder", filePath),
   setTitle: (title) => ipcRenderer.invoke("set-title", title),
+  previewPdf: (htmlContent, defaultName) => ipcRenderer.invoke("preview-pdf", htmlContent, defaultName),
+  savePdfAs: (defaultName) => ipcRenderer.invoke("save-pdf-as", defaultName),
   getAppState: () => ipcRenderer.invoke("get-app-state"),
   setAppState: (partial) => ipcRenderer.invoke("set-app-state", partial),
   hasStartupPath: () => ipcRenderer.invoke("has-startup-path"),
@@ -22,7 +25,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     const validChannels = [
       "menu-new", "menu-open-file", "menu-open-folder",
       "menu-save", "menu-save-as", "menu-close-file", "menu-close-folder",
-      "menu-insert-table", "menu-render", "menu-preview-tab", "menu-toggle-wrap", "menu-toggle-cover",
+      "menu-insert-table", "menu-render", "menu-preview-tab", "menu-download-pdf", "menu-download-memoire", "menu-toggle-wrap", "menu-toggle-cover",
       "open-file-path", "open-folder-path", "recent-cleared",
       "agent-connected", "agent-disconnected", "agent-message",
     ];

@@ -293,6 +293,14 @@
   font-size: 12px; line-height: 1.6;
 }
 
+.diff-review-body .diff-line { white-space: pre-wrap; word-break: break-all; padding: 1px 12px; }
+.diff-review-body .diff-add { background: rgba(166,227,161,0.15); color: #a6e3a1; }
+.diff-review-body .diff-del { background: rgba(243,139,168,0.15); color: #f38ba8; text-decoration: line-through; }
+.diff-review-body .diff-ctx { color: #6c7086; }
+.diff-review-body .diff-hdr { color: #89b4fa; font-weight: 700; margin-top: 8px; }
+.diff-review-body .diff-del .diff-word { background: rgba(243,139,168,0.35); border-radius: 2px; padding: 0 1px; }
+.diff-review-body .diff-add .diff-word { background: rgba(166,227,161,0.35); border-radius: 2px; padding: 0 1px; }
+
 .diff-review-footer {
   display: flex; align-items: center; justify-content: flex-end;
   gap: 8px; padding: 8px 16px;

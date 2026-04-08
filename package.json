@@ -29,7 +29,9 @@
     "protocols": [
       {
         "name": "Paged Editor",
-        "schemes": ["paged"]
+        "schemes": [
+          "paged"
+        ]
       }
     ],
     "mac": {
@@ -52,8 +54,16 @@
     "dmg": {
       "title": "Paged Editor",
       "contents": [
-        { "x": 130, "y": 220 },
-        { "x": 410, "y": 220, "type": "link", "path": "/Applications" }
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
       ]
     }
   },
@@ -63,6 +73,7 @@
   },
   "dependencies": {
     "marked": "^15.0.7",
+    "pdf-lib": "^1.17.1",
     "ws": "^8.20.0"
   }
 }

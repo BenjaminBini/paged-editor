@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Menu, ipcMain, dialog } = require("electron");
+const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require("electron");
 const path = require("path");
 const fs = require("fs/promises");
 const os = require("os");
@@ -97,6 +97,127 @@ ipcMain.handle("set-title", (_e, title) => {
   if (mainWindow) mainWindow.setTitle(title);
 });
 
+// ── PDF generation helper ─────────────────────────────────────────────────
+
+async function generatePdf(htmlContent) {
+  const printWin = new BrowserWindow({
+    show: false,
+    width: 794,
+    height: 1123,
+    webPreferences: { contextIsolation: true },
+  });
+  const tmpPath = path.join(app.getPath("temp"), "paged-editor-print.html");
+  await fs.writeFile(tmpPath, Buffer.from(htmlContent, "utf-8"));
+  await printWin.loadFile(tmpPath);
+
+  // Wait for Paged.js to finish rendering
+  await new Promise((resolve) => {
+    const check = () => {
+      printWin.webContents.executeJavaScript(
+        `document.querySelector('.pagedjs_pages') !== null`
+      ).then((ready) => {
+        if (ready) resolve();
+        else setTimeout(check, 200);
+      }).catch(() => setTimeout(check, 200));
+    };
+    setTimeout(check, 500);
+  });
+  await new Promise((r) => setTimeout(r, 500));
+
+  // Extract heading outline for PDF bookmarks
+  const outline = await printWin.webContents.executeJavaScript(`
+    (function() {
+      var result = [];
+      document.querySelectorAll('h1[id], h2[id], h3[id]').forEach(function(h) {
+        var page = h.closest('.pagedjs_page');
+        if (!page) return;
+        var pageNum = parseInt(page.dataset.pageNumber, 10) || 0;
+        var depth = parseInt(h.tagName[1], 10);
+        var text = h.textContent.replace(/[\\u25CF]/g, '').replace(/\\s+/g, ' ').trim();
+        result.push({ depth: depth, title: text, page: pageNum });
+      });
+      return result;
+    })()
+  `);
+
+  const buf = await printWin.webContents.printToPDF({
+    printBackground: true,
+    preferCSSPageSize: true,
+  });
+  printWin.close();
+
+  // Add PDF bookmarks
+  const { PDFDocument } = require("pdf-lib");
+  const pdfDoc = await PDFDocument.load(buf);
+  if (outline && outline.length > 0) {
+    try {
+      const pages = pdfDoc.getPages();
+      const outlineItems = [];
+      for (const entry of outline) {
+        if (entry.depth > 2) continue;
+        const pageIdx = Math.max(0, Math.min(entry.page - 1, pages.length - 1));
+        outlineItems.push({ title: entry.title, pageIdx, depth: entry.depth });
+      }
+      if (outlineItems.length > 0) addPdfOutline(pdfDoc, outlineItems);
+    } catch (e) {
+      console.warn("Could not add PDF outline:", e);
+    }
+  }
+  return Buffer.from(await pdfDoc.save());
+}
+
+function addPdfOutline(pdfDoc, items) {
+  const ctx = pdfDoc.context;
+  const pages = pdfDoc.getPages();
+  const outlineRef = ctx.nextRef();
+  const itemRefs = items.map(() => ctx.nextRef());
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i];
+    const pageRef = pages[item.pageIdx].ref;
+    const dict = new Map();
+    dict.set('Title', ctx.obj(item.title));
+    dict.set('Parent', outlineRef);
+    dict.set('Dest', ctx.obj([pageRef, 'Fit']));
+    if (i > 0) dict.set('Prev', itemRefs[i - 1]);
+    if (i < items.length - 1) dict.set('Next', itemRefs[i + 1]);
+    ctx.assign(itemRefs[i], ctx.obj(Object.fromEntries(dict)));
+  }
+  ctx.assign(outlineRef, ctx.obj({
+    Type: 'Outlines',
+    First: itemRefs[0],
+    Last: itemRefs[itemRefs.length - 1],
+    Count: items.length,
+  }));
+  pdfDoc.catalog.set(ctx.obj('Outlines'), outlineRef);
+  pdfDoc.catalog.set(ctx.obj('PageMode'), ctx.obj('UseOutlines'));
+}
+
+// ── PDF preview & save ────────────────────────────────────────────────────
+
+let _lastPdfBuffer = null;
+let _lastPdfName = "document.pdf";
+
+ipcMain.handle("preview-pdf", async (_e, htmlContent, defaultName) => {
+  _lastPdfName = (defaultName || "document").replace(/\.md$/i, "") + ".pdf";
+  _lastPdfBuffer = await generatePdf(htmlContent);
+
+  const tempPdf = path.join(app.getPath("temp"), "paged-preview.pdf");
+  await fs.writeFile(tempPdf, _lastPdfBuffer);
+  return { tempPath: tempPdf, name: _lastPdfName };
+});
+
+ipcMain.handle("save-pdf-as", async (_e, defaultName) => {
+  if (!_lastPdfBuffer) return null;
+  const result = await dialog.showSaveDialog(mainWindow, {
+    filters: [{ name: "PDF", extensions: ["pdf"] }],
+    defaultPath: defaultName || _lastPdfName,
+  });
+  if (result.canceled) return null;
+  await fs.writeFile(result.filePath, _lastPdfBuffer);
+  return result.filePath;
+});
+
 ipcMain.handle("get-app-state", () => ({ ...appState }));
 
 ipcMain.handle("set-app-state", async (_e, partial) => {
@@ -122,6 +243,10 @@ ipcMain.handle("revoke-agent-key", (_e, key) => {
     conn.ws.close();
     agentConnections.delete(key);
   }
+});
+
+ipcMain.handle("show-in-finder", (_e, filePath) => {
+  shell.showItemInFolder(filePath);
 });
 
 ipcMain.handle("send-to-agent", (_e, key, message) => {
@@ -219,6 +344,8 @@ function buildMenu() {
       submenu: [
         { label: "Render Preview", accelerator: "CmdOrCtrl+Enter", click: () => mainWindow.webContents.send("menu-render") },
         { label: "Open in New Window", click: () => mainWindow.webContents.send("menu-preview-tab") },
+        { label: "Download PDF", accelerator: "CmdOrCtrl+Shift+E", click: () => mainWindow.webContents.send("menu-download-pdf") },
+        { label: "Download Full Mémoire", click: () => mainWindow.webContents.send("menu-download-memoire") },
         { type: "separator" },
         { label: "Toggle Line Wrap", click: () => mainWindow.webContents.send("menu-toggle-wrap") },
         { label: "Toggle Cover & Sommaire", click: () => mainWindow.webContents.send("menu-toggle-cover") },
