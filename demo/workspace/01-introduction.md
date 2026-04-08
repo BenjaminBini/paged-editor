@@ -1,0 +1,41 @@
+---
+title: "Acme Digital Workplace — Technical Proposal"
+doctype: "Memoire technique"
+ao_ref: "2025-042"
+acheteur: "Acme Corporation"
+---
+
+# Partie 1 — Introduction
+
+## 1.1 Executive Summary
+
+This document presents BEORN's technical proposal for the implementation of a modern Digital Workplace platform for Acme Corporation. Our approach combines proven enterprise solutions with agile delivery methodology to ensure a successful deployment within the agreed timeline.
+
+The proposed solution addresses all requirements outlined in the RFP, including :
+
+- Unified communication and collaboration
+- Document management with advanced search
+- Employee self-service portal
+- Mobile-first design
+
+## 1.2 Company Overview
+
+BEORN Technologies is a Paris-based consulting firm specializing in Digital Workplace solutions. Founded in 2018, we have delivered over 50 enterprise-scale projects across France and Europe.
+
+| Metric | Value |
+| --- | --- |
+| Founded | 2018 |
+| Employees | 45+ |
+| Projects Delivered | 50+ |
+| Client Retention | 95% |
+
+## 1.3 Understanding of Requirements
+
+Based on our analysis of the consultation documents (DCE), we have identified the following key themes :
+
+1. **User Experience** — Intuitive, modern interface accessible from any device
+2. **Integration** — Seamless connection with existing enterprise systems (SAP, Salesforce, Office 365)
+3. **Security** — GDPR-compliant data handling with SSO and MFA
+4. **Scalability** — Support for 5,000+ concurrent users across 12 sites
+
+> **Note :** All section references follow the numbering scheme defined in the CCTP document.
