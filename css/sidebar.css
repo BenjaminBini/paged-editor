@@ -6,11 +6,17 @@
 .file-sidebar:not(.open) .file-list { display: none; }
 .file-sidebar .sidebar-header {
   height: 32px; background: #1e1e2e; color: #a0a0c0;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 10px; font-size: 11px; font-weight: 600;
+  display: flex; align-items: center; gap: 2px;
+  padding: 0 6px 0 10px; font-size: 11px; font-weight: 600;
   text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0;
   border-bottom: 1px solid #2d2d3f;
 }
+.sidebar-icon-btn {
+  background: none; border: none; color: #64748b;
+  cursor: pointer; font-size: 14px; padding: 2px 4px;
+  border-radius: 3px; line-height: 1; flex-shrink: 0;
+}
+.sidebar-icon-btn:hover { color: #cdd6f4; background: rgba(255,255,255,0.08); }
 .file-sidebar .sidebar-header .folder-name {
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   text-transform: none; letter-spacing: 0; color: #cdd6f4;
@@ -21,7 +27,7 @@
 .file-list .file-item {
   display: flex; align-items: center; gap: 6px;
   padding: 5px 10px; cursor: pointer; font-size: 12px;
-  color: #8888aa; transition: all 0.1s; border-left: 2px solid transparent;
+  color: #a0a0ba; transition: all 0.1s; border-left: 2px solid transparent;
 }
 .file-list .file-item:hover { background: #1e1e2e; color: #cdd6f4; }
 .file-list .file-item.active {
@@ -62,7 +68,7 @@
 .outline-item:hover { background: #1e1e2e; color: #cdd6f4; }
 .outline-item.visible {
   --prox: 0;
-  color: color-mix(in srgb, #cdd6f4 calc(var(--prox) * 100%), #7c7c9a);
+  color: color-mix(in srgb, #cdd6f4 calc(var(--prox) * 100%), #9494b0);
   background: rgba(0,150,174, calc(0.04 + var(--prox) * 0.12));
 }
 .outline-item.visible::before {
@@ -87,7 +93,7 @@
 /* ── H2: subsection — medium weight, sticky below H1 ── */
 .outline-item[data-level="2"] {
   padding: 4px 10px 4px 22px; margin-top: -1px;
-  font-size: 11px; font-weight: 500; color: #7c7c9a;
+  font-size: 11px; font-weight: 500; color: #9494b0;
   position: sticky; top: 33px; z-index: 1;
   background: #171726;
 }
@@ -98,7 +104,7 @@
 /* ── H3: sub-subsection — lighter, smaller, sticky ── */
 .outline-item[data-level="3"] {
   padding: 3px 10px 3px 34px; margin-top: -1px;
-  font-size: 10.5px; font-weight: 400; color: #5c5c78;
+  font-size: 10.5px; font-weight: 400; color: #9090aa;
   position: sticky; top: 55px; z-index: 0;
   background: #171726;
 }
@@ -109,5 +115,5 @@
 /* ── H4: detail — dimmest, smallest ── */
 .outline-item[data-level="4"] {
   padding: 1px 10px 1px 46px;
-  font-size: 10px; font-weight: 400; color: #4a4a64;
+  font-size: 10px; font-weight: 400; color: #8585a0;
 }

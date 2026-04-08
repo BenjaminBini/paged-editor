@@ -232,17 +232,19 @@ export async function refreshFileList() {
 // ── Sidebar rendering ───────────────────────────────────────────────────────
 
 let _onFileClick = null;
+let _onFileRefresh = null;
 let _getActiveFilePath = null;
 let _isFileDirty = null;
 
 export function setOnFileClick(fn) { _onFileClick = fn; }
+export function setOnFileRefresh(fn) { _onFileRefresh = fn; }
 export function setGetActiveFilePath(fn) { _getActiveFilePath = fn; }
 export function setIsFileDirty(fn) { _isFileDirty = fn; }
 
 export function renderFileList() {
   fileList.innerHTML = "";
   const activePath = _getActiveFilePath ? _getActiveFilePath() : null;
-  fileEntries.forEach((f, i) => {
+  fileEntries.forEach((f) => {
     const dirty = _isFileDirty ? _isFileDirty(f.path) : false;
     const el = document.createElement("div");
     el.className = "file-item" + (f.path === activePath ? " active" : "") + (dirty ? " dirty" : "");
@@ -250,8 +252,132 @@ export function renderFileList() {
     el.onclick = () => {
       if (_onFileClick) _onFileClick(f.path, f.name);
     };
+    el.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showFileContextMenu(e.clientX, e.clientY, f);
+    });
     fileList.appendChild(el);
   });
+}
+
+// ── File context menu ────────────────────────────────────────────────────────
+
+let _fileCtxMenu = null;
+
+function getOrCreateFileContextMenu() {
+  if (_fileCtxMenu) return _fileCtxMenu;
+  _fileCtxMenu = document.createElement("div");
+  _fileCtxMenu.className = "tab-context-menu";
+  _fileCtxMenu.style.display = "none";
+  document.body.appendChild(_fileCtxMenu);
+  document.addEventListener("mousedown", (e) => {
+    if (!_fileCtxMenu.contains(e.target)) _fileCtxMenu.style.display = "none";
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") _fileCtxMenu.style.display = "none";
+  });
+  return _fileCtxMenu;
+}
+
+function showFileContextMenu(x, y, f) {
+  const menu = getOrCreateFileContextMenu();
+  const items = [
+    {
+      label: "Open",
+      action: () => { if (_onFileClick) _onFileClick(f.path, f.name); },
+    },
+    {
+      label: "Refresh from Disk",
+      action: () => { if (_onFileRefresh) _onFileRefresh(f.path, f.name); },
+    },
+    { separator: true },
+    {
+      label: "Copy Path",
+      action: () => navigator.clipboard.writeText(f.path),
+    },
+    {
+      label: "Show in Finder",
+      disabled: !window.electronAPI || window.__pagedEditorWebMode,
+      action: () => window.electronAPI?.showInFinder(f.path),
+    },
+    { separator: true },
+    {
+      label: "Delete File",
+      action: () => deleteFileWithConfirm(f),
+    },
+  ];
+
+  menu.innerHTML = "";
+  items.forEach((item) => {
+    if (item.separator) {
+      const sep = document.createElement("div");
+      sep.className = "tab-ctx-separator";
+      menu.appendChild(sep);
+      return;
+    }
+    const el = document.createElement("div");
+    el.className = "tab-ctx-item" + (item.disabled ? " disabled" : "");
+    el.textContent = item.label;
+    if (!item.disabled) {
+      el.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        _fileCtxMenu.style.display = "none";
+        item.action();
+      });
+    }
+    menu.appendChild(el);
+  });
+
+  menu.style.display = "block";
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const mw = menu.offsetWidth;
+  const mh = menu.offsetHeight;
+  menu.style.left = (x + mw > vw ? vw - mw - 4 : x) + "px";
+  menu.style.top  = (y + mh > vh ? vh - mh - 4 : y) + "px";
+}
+
+// ── File creation ────────────────────────────────────────────────────────────
+
+let _onFileDelete = null;
+export function setOnFileDelete(fn) { _onFileDelete = fn; }
+
+export async function createNewFile() {
+  if (!folderPath) return;
+
+  const name = prompt("New file name:", "untitled.md");
+  if (!name) return;
+
+  const fileName = name.endsWith(".md") ? name : name + ".md";
+
+  try {
+    await api.writeFile(fileName, "");
+    await refreshFileList();
+    if (_onFileClick) _onFileClick(fileName, fileName);
+  } catch (e) {
+    alert("Failed to create file: " + e.message);
+  }
+}
+
+async function deleteFileWithConfirm(f) {
+  const confirmed = confirm(`Delete "${f.name}"? This cannot be undone.`);
+  if (!confirmed) return;
+
+  try {
+    // Use the web API DELETE endpoint if available, otherwise write empty and warn
+    const resp = await fetch("/api/files/" + encodeURIComponent(f.path), { method: "DELETE" });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: "Unknown error" }));
+      alert("Failed to delete: " + (err.error || resp.statusText));
+      return;
+    }
+    // Notify app to close the tab if open
+    if (_onFileDelete) _onFileDelete(f.path);
+    await refreshFileList();
+  } catch (e) {
+    alert("Failed to delete file: " + e.message);
+  }
 }
 
 // ── Close folder ────────────────────────────────────────────────────────────

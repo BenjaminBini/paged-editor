@@ -15,9 +15,13 @@ const tabBarTabs = document.getElementById("tabBarTabs");
 
 let _onSwitch = null;   // called after tab switch (for render, outline, etc.)
 let _onAllClosed = null; // called when last tab is closed
+let _onSave = null;     // called to save a tab by index
+let _onRefresh = null;  // called to reload a tab from disk
 
 export function onTabSwitch(fn) { _onSwitch = fn; }
 export function onAllTabsClosed(fn) { _onAllClosed = fn; }
+export function onTabSaveRequest(fn) { _onSave = fn; }
+export function onTabRefreshRequest(fn) { _onRefresh = fn; }
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -70,6 +74,29 @@ export function closeTab(idx) {
 
 export function closeActiveTab() {
   if (activeTabIdx >= 0) closeTab(activeTabIdx);
+}
+
+export function closeTabsToRight(idx) {
+  if (idx < 0 || idx >= tabs.length - 1) return;
+  tabs.splice(idx + 1);
+  if (activeTabIdx > idx) activeTabIdx = idx;
+  switchToTab(Math.min(activeTabIdx, tabs.length - 1));
+}
+
+export function closeTabsToLeft(idx) {
+  if (idx <= 0 || idx >= tabs.length) return;
+  tabs.splice(0, idx);
+  const newActive = activeTabIdx < idx ? 0 : activeTabIdx - idx;
+  activeTabIdx = 0; // will be set by switchToTab
+  switchToTab(Math.max(0, newActive));
+}
+
+export function closeAllTabs() {
+  tabs.splice(0);
+  activeTabIdx = -1;
+  cm.swapDoc(CodeMirror.Doc("", "markdown"));
+  renderTabBar();
+  if (_onAllClosed) _onAllClosed();
 }
 
 export function switchToTab(idx) {
@@ -185,8 +212,118 @@ export function renderTabBar() {
       if (e.button === 1) { e.preventDefault(); closeTab(i); }
     });
 
+    // Right-click context menu
+    el.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      showTabContextMenu(e.clientX, e.clientY, i);
+    });
+
     tabBarTabs.appendChild(el);
   });
+}
+
+// ── Tab context menu ────────────────────────────────────────────────────────
+
+let _ctxMenu = null;
+
+function getOrCreateContextMenu() {
+  if (_ctxMenu) return _ctxMenu;
+  _ctxMenu = document.createElement("div");
+  _ctxMenu.className = "tab-context-menu";
+  _ctxMenu.style.display = "none";
+  document.body.appendChild(_ctxMenu);
+
+  // Dismiss on any click/contextmenu outside the menu
+  document.addEventListener("mousedown", (e) => {
+    if (!_ctxMenu.contains(e.target)) hideTabContextMenu();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") hideTabContextMenu();
+  });
+  return _ctxMenu;
+}
+
+function hideTabContextMenu() {
+  if (_ctxMenu) _ctxMenu.style.display = "none";
+}
+
+function showTabContextMenu(x, y, tabIdx) {
+  const menu = getOrCreateContextMenu();
+  const tab = tabs[tabIdx];
+
+  const items = [
+    {
+      label: "Save",
+      disabled: !tab.dirty,
+      action: () => { if (_onSave) { switchToTab(tabIdx); _onSave(); } },
+    },
+    {
+      label: "Refresh from Disk",
+      disabled: !tab.path,
+      action: () => { if (_onRefresh) { switchToTab(tabIdx); _onRefresh(tab); } },
+    },
+    { separator: true },
+    {
+      label: "Close",
+      action: () => closeTab(tabIdx),
+    },
+    {
+      label: "Close Tabs to the Left",
+      disabled: tabIdx === 0,
+      action: () => closeTabsToLeft(tabIdx),
+    },
+    {
+      label: "Close Tabs to the Right",
+      disabled: tabIdx >= tabs.length - 1,
+      action: () => closeTabsToRight(tabIdx),
+    },
+    {
+      label: "Close All",
+      action: () => closeAllTabs(),
+    },
+    { separator: true },
+    {
+      label: "Copy Path",
+      disabled: !tab.path,
+      action: () => tab.path && navigator.clipboard.writeText(tab.path),
+    },
+    {
+      label: "Show in Finder",
+      disabled: !tab.path || !window.electronAPI,
+      action: () => tab.path && window.electronAPI?.showInFinder(tab.path),
+    },
+  ];
+
+  menu.innerHTML = "";
+  items.forEach((item) => {
+    if (item.separator) {
+      const sep = document.createElement("div");
+      sep.className = "tab-ctx-separator";
+      menu.appendChild(sep);
+      return;
+    }
+    const el = document.createElement("div");
+    el.className = "tab-ctx-item" + (item.disabled ? " disabled" : "");
+    el.textContent = item.label;
+    if (!item.disabled) {
+      el.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+        hideTabContextMenu();
+        item.action();
+      });
+    }
+    menu.appendChild(el);
+  });
+
+  // Position the menu, keeping it within viewport
+  menu.style.display = "block";
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const mw = menu.offsetWidth;
+  const mh = menu.offsetHeight;
+  menu.style.left = (x + mw > vw ? vw - mw - 4 : x) + "px";
+  menu.style.top  = (y + mh > vh ? vh - mh - 4 : y) + "px";
 }
 
 // ── Session persistence helpers ─────────────────────────────────────────────
