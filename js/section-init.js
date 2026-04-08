@@ -24,9 +24,15 @@
       var els = [h];
       var next = h.nextElementSibling;
       while (next && /^H[2-6]$/.test(next.tagName)) { els.push(next); wrapped.add(next); next = next.nextElementSibling; }
-      if (next && !/^H[1-6]$/.test(next.tagName)) els.push(next);
+      if (next && !/^H[1-6]$/.test(next.tagName)) {
+        els.push(next);
+        // Also pull in an immediately following block element (table, list, figure)
+        var second = next.nextElementSibling;
+        if (second && /^(TABLE|UL|OL|DL|FIGURE|IMG|SVG|BLOCKQUOTE)$/.test(second.tagName)) els.push(second);
+      }
       if (els.length < 2) return;
       var wrapper = document.createElement('div');
+      wrapper.className = 'heading-keep';
       wrapper.style.breakInside = 'avoid';
       wrapper.style.pageBreakInside = 'avoid';
       h.parentNode.insertBefore(wrapper, h);

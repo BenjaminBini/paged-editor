@@ -10,6 +10,8 @@
   @bottom-center { content: counter(page); font-family: "Hanken Grotesk", sans-serif; font-size: 8pt; color: #718096; }
 }
 @page cover { margin: 0; @bottom-center { content: none; } }
+@page sommaire { margin: 20mm 18mm 25mm 18mm;
+  @bottom-center { content: counter(page); font-family: "Hanken Grotesk", sans-serif; font-size: 8pt; color: #718096; } }
 @page :first { margin: 0; @bottom-center { content: none; } }
 * { margin: 0; padding: 0; box-sizing: border-box;
   -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
@@ -20,11 +22,12 @@ body { font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
 .beorn-cover {
   width: 100%; break-after: page; page-break-after: always; background: #fff; page: cover;
 }
-.beorn-cover-body { padding: 4rem 3.5rem 0; box-sizing: border-box; }
+.beorn-cover-body { padding: 4rem 3.5rem 3rem; box-sizing: border-box;
+  display: flex; flex-direction: column; min-height: 100vh; }
 .beorn-cover-logos { display: flex; align-items: flex-end; gap: 1.5rem; margin-bottom: 3rem; }
 .beorn-cover-logo { height: auto !important; max-width: 180px; }
 .beorn-cover-logo-separator { width: 1px; height: 28px; background: #d1d5db; }
-.beorn-cover-logo-lumapps { height: 48px !important; width: auto; background: #FEEC40; padding: 10px 16px; margin-bottom: 16px; }
+.beorn-cover-logo-partner { height: 48px !important; width: auto; }
 .beorn-cover-doctype {
   font-family: "Montserrat", sans-serif; font-size: 10pt; font-weight: 700;
   letter-spacing: 0.15em; text-transform: uppercase; color: var(--blue); margin-bottom: 1rem;
@@ -39,7 +42,7 @@ body { font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
   background: linear-gradient(90deg, var(--blue), var(--teal)); }
 .beorn-cover-underline .chunk { height: 4px; border-radius: 2px; background: var(--teal); }
 .beorn-cover-ref { font-size: 11pt; color: var(--text-light); margin-bottom: 0.3rem; }
-.beorn-cover-bottom-section { margin-top: 90mm; }
+.beorn-cover-bottom-section { margin-top: auto; }
 .beorn-cover-confidential { font-size: 7.5pt; color: var(--text-light); font-style: italic;
   text-align: center; margin-top: 3rem; }
 .beorn-cover-info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5rem;
@@ -50,15 +53,24 @@ body { font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
 .beorn-cover-info-value strong { font-weight: 700; }
 
 /* ── Cover: Sommaire ── */
-.beorn-cover-sommaire .beorn-cover-body { padding-top: 3.5rem; }
+.beorn-cover-sommaire { page: sommaire; break-after: page !important; page-break-after: always !important; }
+.beorn-cover-sommaire .beorn-cover-body { padding: 3.5rem 3.5rem 3rem; }
 .beorn-toc { display: flex; flex-direction: column; gap: 0; }
-.beorn-toc-entry { display: flex; align-items: baseline; gap: 1rem;
-  padding: 0.65rem 0; border-bottom: 1px solid var(--border); }
-.beorn-toc-entry:first-child { border-top: 1px solid var(--border); }
+a.beorn-toc-entry { display: flex; align-items: baseline; gap: 0.8rem;
+  padding: 0.55rem 0; text-decoration: none; color: inherit;
+  border-bottom: 1px solid var(--border); }
+a.beorn-toc-entry:first-child { border-top: 1px solid var(--border); }
+a.beorn-toc-entry::after { content: none; } /* suppress href display */
 .beorn-toc-num { font-family: "Montserrat", sans-serif; font-size: 10pt; font-weight: 800;
-  color: var(--blue); min-width: 2rem; }
+  color: var(--blue); min-width: 2rem; flex-shrink: 0; }
 .beorn-toc-title { font-family: "Hanken Grotesk", sans-serif; font-size: 10.5pt; font-weight: 500;
   color: var(--navy); }
+.beorn-toc-dots { flex: 1; border-bottom: 1px dotted #cbd5e1;
+  min-width: 2rem; align-self: center; margin: 0 0.2rem; transform: translateY(-3px); }
+/* PDF bookmarks — Paged.js generates PDF outline from these */
+h1 { bookmark-level: 1; bookmark-label: content(text); }
+h2 { bookmark-level: 2; bookmark-label: content(text); }
+h3 { bookmark-level: 3; bookmark-label: content(text); }
 
 /* ── Running header (document title on every page) ── */
 .pdf-running-header {
@@ -84,7 +96,8 @@ h1, h2, h3, h4, h5, h6 { font-family: "Montserrat", sans-serif; }
 
 /* ── H1: Section title — large, with chunked underline ── */
 h1 { font-size: 18pt; color: var(--navy); font-weight: 800; margin: var(--space-2xl) 0 var(--space-xl); line-height: 1.15;
-  padding-bottom: 0.5rem; position: relative; width: fit-content; max-width: 100%; letter-spacing: -0.01em; }
+  padding-bottom: 0.5rem; position: relative; width: fit-content; max-width: 100%; letter-spacing: -0.01em;
+  break-before: page; page-break-before: always; }
 h1:first-child, section > h1:first-child { margin-top: 0; }
 h1 .beorn-underline, h2 .beorn-underline { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; display: flex; align-items: center; gap: 4px; }
 h1 .beorn-underline .beorn-solid, h2 .beorn-underline .beorn-solid { height: 3.5px; border-radius: 1.75px; flex: 1; min-width: 0; }
@@ -191,7 +204,7 @@ img { max-width: 100%; height: auto; border-radius: 8px; margin: var(--space-md)
 .pdf-content > section.level2 ~ section.level2 { break-before: page; page-break-before: always; }
 h1, h2, h3, h4 { break-after: avoid; page-break-after: avoid; break-inside: avoid; orphans: 3; widows: 3; }
 p { break-inside: avoid; page-break-inside: avoid; orphans: 3; widows: 3; }
-table { break-inside: avoid; page-break-inside: avoid; }
+table { break-inside: avoid; page-break-inside: avoid; break-before: avoid; page-break-before: avoid; }
 pre { break-inside: avoid; page-break-inside: avoid; }
 blockquote { break-inside: avoid; page-break-inside: avoid; }
 figure, .mermaid-diagram { break-inside: avoid; page-break-inside: avoid; }
