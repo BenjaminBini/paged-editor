@@ -52,9 +52,10 @@ export async function renderMarkdown(md, options = {}) {
   // Reset mermaid queue for this render
   resetMermaidQueue();
 
-  // Configure a fresh marked instance with this render's context
-  const parser = new marked.Marked();
-  parser.use({
+  // Configure the global marked instance with this render's context.
+  // Each render call sets up its own renderer via marked.use() before parsing.
+  // This is safe because renders are awaited sequentially (never concurrent).
+  marked.use({
     renderer: buildRenderer(ctx),
     hooks: {
       postprocess(html) {
@@ -68,7 +69,7 @@ export async function renderMarkdown(md, options = {}) {
   });
 
   // Tokenize and add source-line info
-  const tokens = parser.lexer(body);
+  const tokens = marked.lexer(body);
   if (startLine > 0) {
     let cursor = 0;
     for (const token of tokens) {
@@ -81,7 +82,7 @@ export async function renderMarkdown(md, options = {}) {
     }
   }
 
-  let html = parser.parser(tokens).replace(/\{src:[^}]+\}/g, "");
+  let html = marked.parser(tokens).replace(/\{src:[^}]+\}/g, "");
 
   // Resolve mermaid diagrams
   const queue = getMermaidQueue();
