@@ -133,7 +133,7 @@ export function getActiveTab() {
 }
 
 export function getActiveTabIdx() { return activeTabIdx; }
-export function getTabs() { return tabs; }
+export function getTabs() { return [...tabs]; }
 export function getTabCount() { return tabs.length; }
 
 export function markActiveTabDirty() {
