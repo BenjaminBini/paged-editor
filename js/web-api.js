@@ -130,8 +130,13 @@
       document.title = title;
     },
 
-    // PDF — no-op on web (could be enhanced later)
-    async previewPdf(_htmlContent, _defaultName) {},
+    // PDF — open paged HTML in a new tab for browser print (Cmd+P)
+    async previewPdf(htmlContent, _defaultName) {
+      const blob = new Blob([htmlContent], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank");
+      return null;
+    },
     async savePdfAs(_defaultName) {},
 
     // App state — backed by localStorage, seeded from server config on first call

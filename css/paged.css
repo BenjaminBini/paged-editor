@@ -1,40 +1,104 @@
-body { background: #e5e7eb; }
-.pagedjs_pages { display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 32px 0; }
-.pagedjs_page { background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,0.12); position: relative; overflow: hidden; border-radius: 8px; }
-.pagedjs_page::before {
-  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 6px; z-index: 100;
-  background: linear-gradient(90deg, #3373b3 0%, #0096ae 35%, #493a8b 65%, #b82775 100%);
+/* ── Print: strip preview-only decoration ── */
+@media print {
+  body {
+    background: #fff;
+  }
+  .pagedjs_pages {
+    padding: 0;
+    gap: 0;
+  }
+  .pagedjs_page {
+    border-radius: 0;
+    box-shadow: none;
+    margin-bottom: 0;
+  }
+}
+
+body {
+  background: #e5e7eb !important;
+}
+.pagedjs_pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px !important;
+  padding: 32px 0;
+}
+.pagedjs_page {
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 24px;
+}
+.pagedjs_bleed-top {
+  height: 6px;
+  background: linear-gradient(
+    90deg,
+    #3373b3 0%,
+    #0096ae 35%,
+    #493a8b 65%,
+    #b82775 100%
+  );
 }
 .pagedjs_margin-bottom-center > .pagedjs_margin-content::after {
-  font-family: "Hanken Grotesk", sans-serif; font-size: 8pt; color: #718096; }
-.pdf-page-footer { position: static; padding: 0; }
-.pagedjs_page .pdf-page-footer { position: absolute; bottom: 8mm; left: 18mm; }
-/* Hide fixed elements — we use ::before on .pagedjs_page for gradient instead */
-.pdf-page-gradient { display: none; }
-.pdf-running-header { display: none; }
-.pagedjs_page .pdf-running-header { display: flex; }
+  font-family: "Hanken Grotesk", sans-serif;
+  font-size: 8pt;
+  color: #718096;
+}
+.pdf-page-footer {
+  position: static;
+  padding: 0;
+}
+.pagedjs_page .pdf-page-footer {
+  position: absolute;
+  bottom: 8mm;
+  left: 18mm;
+}
+/* Hide fixed elements — we use .pagedjs_bleed-top for gradient instead */
+.pdf-page-gradient {
+  display: none;
+}
+.pdf-running-header {
+  display: none;
+}
+.pagedjs_page .pdf-running-header {
+  display: flex;
+}
 /* Hide watermark on cover pages (named page "cover") */
-.pagedjs_named_page::after { display: none; }
+.pagedjs_named_page::after {
+  display: none;
+}
 /* Beorn logo watermark bottom-left on every page */
 .pagedjs_page::after {
-  content: ""; position: absolute; bottom: 8mm; left: 18mm;
-  width: 107px; height: 40px; z-index: 50; opacity: 0.6;
-  background-size: contain; background-repeat: no-repeat; background-position: left center;
+  content: "";
+  position: absolute;
+  bottom: 8mm;
+  left: 18mm;
+  width: 107px;
+  height: 40px;
+  z-index: 50;
+  opacity: 0.6;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: left center;
 }
 /* Editor focus highlight */
 .paged-highlight {
-  outline: 1px solid rgba(51, 115, 179, 0.25); outline-offset: 2px;
-  border-radius: 4px; background: rgba(51, 115, 179, 0.03);
+  outline: 1px solid rgba(51, 115, 179, 0.25);
+  outline-offset: 2px;
+  border-radius: 4px;
+  background: rgba(51, 115, 179, 0.03);
 }
 .paged-highlight-flash {
-  outline: 2px solid rgba(51, 115, 179, 0.8); outline-offset: 2px;
-  border-radius: 4px; background: rgba(51, 115, 179, 0.12);
+  outline: 2px solid rgba(51, 115, 179, 0.8);
+  outline-offset: 2px;
+  border-radius: 4px;
+  background: rgba(51, 115, 179, 0.12);
   box-shadow: 0 0 16px rgba(51, 115, 179, 0.3);
-  transition: outline-color 0.6s ease-out, background 0.6s ease-out, box-shadow 0.6s ease-out;
-}
-/* ── Print: strip preview-only decoration ── */
-@media print {
-  body { background: #fff; }
-  .pagedjs_pages { padding: 0; gap: 0; }
-  .pagedjs_page { border-radius: 0; box-shadow: none; }
+  transition:
+    outline-color 0.6s ease-out,
+    background 0.6s ease-out,
+    box-shadow 0.6s ease-out;
 }
