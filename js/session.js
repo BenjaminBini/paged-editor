@@ -1,6 +1,6 @@
 // session.js — Session persistence, restoration, and recent items UI.
 
-const api = window.electronAPI;
+import * as platform from "./platform.js";
 
 // ── Session restore ────────────────────────────────────────────────────────
 
@@ -14,7 +14,7 @@ export async function tryRestore({
   closeFolder,
   findTabByPath,
 }) {
-  const state = await api.getAppState();
+  const state = await platform.getAppState();
 
   if (state.lastFolder) {
     try {
@@ -50,7 +50,7 @@ export async function tryRestore({
           const modTime = await getFileModTime(entry.path);
           openTab(entry.path, entry.name, content, modTime);
         }
-      } else if (window.__pagedEditorWebMode && entries.length > 0) {
+      } else if (platform.isWebMode && entries.length > 0) {
         const first = entries[0];
         const content = await readFile(first.path);
         const modTime = await getFileModTime(first.path);
@@ -94,7 +94,7 @@ export async function tryRestore({
 // ── Recent items UI ────────────────────────────────────────────────────────
 
 export async function buildRecentUI({ openFilePath, openFolderByPathAndLoad }) {
-  const state = await api.getAppState();
+  const state = await platform.getAppState();
   const recentFiles = state.recentFiles || [];
   const recentFolders = state.recentFolders || [];
 

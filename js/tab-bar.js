@@ -2,6 +2,7 @@
 
 import { cm } from './editor.js';
 import { showContextMenu } from './context-menu.js';
+import { canShowInFinder, showInFinder } from './platform.js';
 
 // ── Tab state ───────────────────────────────────────────────────────────────
 
@@ -242,7 +243,7 @@ function showTabContextMenu(x, y, tabIdx) {
     { label: "Close All", action: () => closeAllTabs() },
     { separator: true },
     { label: "Copy Path", disabled: !tab.path, action: () => tab.path && navigator.clipboard.writeText(tab.path) },
-    { label: "Show in Finder", disabled: !tab.path || !window.electronAPI, action: () => tab.path && window.electronAPI?.showInFinder(tab.path) },
+    { label: "Show in Finder", disabled: !tab.path || !canShowInFinder, action: () => tab.path && showInFinder(tab.path) },
   ]);
 }
 

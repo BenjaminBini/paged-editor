@@ -15,14 +15,13 @@ import {
   markActiveTabDirty, onTabSwitch, onAllTabsClosed, onTabSaveRequest,
   onTabRefreshRequest, onBeforeDocSwap, getSessionState, findTabByPath,
 } from "./tab-bar.js";
-
-const api = window.electronAPI;
+import * as platform from "./platform.js";
 
 // ── Persist tab state (debounced) ──────────────────────────────────────────
 
 function persistTabState() {
   const session = getSessionState();
-  api.setAppState({ openTabs: session.openTabs, activeTab: session.activeTab });
+  platform.setAppState({ openTabs: session.openTabs, activeTab: session.activeTab });
 }
 
 let persistTimer = null;

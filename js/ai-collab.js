@@ -2,8 +2,7 @@
 
 import { computeDiff, renderDiffHtml } from './diff-merge.js';
 import { escapeHtml } from './utils.js';
-
-const api = window.electronAPI;
+import * as platform from './platform.js';
 
 // ── State ───────────────────────────────────────────────────────────────────
 
@@ -44,11 +43,11 @@ export function getConversation(key) {
 export function init(cm, getFilePath) {
   _cm = cm;
   _getFilePath = getFilePath;
-  api.getWsPort().then(port => { wsPort = port; });
-  api.getWsHost().then(host => { wsHost = host; });
+  platform.getWsPort().then(port => { wsPort = port; });
+  platform.getWsHost().then(host => { wsHost = host; });
 
   // Listen for agent events from main process
-  api.on("agent-connected", ({ key, name }) => {
+  platform.on("agent-connected", ({ key, name }) => {
     agents.set(key, { name, connected: true });
     pendingKeys.delete(key);
     conversations.set(key, conversations.get(key) || []);
@@ -60,7 +59,7 @@ export function init(cm, getFilePath) {
     }
   });
 
-  api.on("agent-disconnected", ({ key }) => {
+  platform.on("agent-disconnected", ({ key }) => {
     const agent = agents.get(key);
     if (agent) {
       agent.connected = false;
@@ -81,7 +80,7 @@ export function init(cm, getFilePath) {
     }
   });
 
-  api.on("agent-message", ({ key, message }) => {
+  platform.on("agent-message", ({ key, message }) => {
     handleAgentMessage(key, message);
   });
 
@@ -91,7 +90,7 @@ export function init(cm, getFilePath) {
 // ── Key generation ──────────────────────────────────────────────────────────
 
 export async function addAgent() {
-  const key = await api.generateAgentKey();
+  const key = await platform.generateAgentKey();
   pendingKeys.set(key, { created: new Date() });
   showAgentPromptModal(key);
   renderAgentList();
@@ -178,7 +177,7 @@ function showDiffReview(agentKey, msg) {
 
     if (result.action === "accept") {
       // Write to disk, update editor
-      api.writeFile(result.filePath, result.newContent).then(() => {
+      platform.writeFile(result.filePath, result.newContent).then(() => {
         const cursor = _cm.getCursor();
         const scrollInfo = _cm.getScrollInfo();
         _cm.setValue(result.newContent);
@@ -186,12 +185,12 @@ function showDiffReview(agentKey, msg) {
         _cm.setCursor({ line: Math.min(cursor.line, maxLine), ch: cursor.ch });
         _cm.scrollTo(scrollInfo.left, scrollInfo.top);
       });
-      api.sendToAgent(agentKey, { type: "proposal_accepted", requestId: msg.requestId });
+      platform.sendToAgent(agentKey, { type: "proposal_accepted", requestId: msg.requestId });
       const c = conversations.get(agentKey) || [];
       c.push({ type: "proposal_result", accepted: true, requestId: msg.requestId });
       conversations.set(agentKey, c);
     } else {
-      api.sendToAgent(agentKey, {
+      platform.sendToAgent(agentKey, {
         type: "proposal_rejected",
         requestId: msg.requestId,
         reason: result.reason,
@@ -282,14 +281,14 @@ export function sendRequest(key, prompt, selection) {
   conv.push({ type: "request", prompt, requestId, selection });
   conversations.set(key, conv);
 
-  api.sendToAgent(key, message);
+  platform.sendToAgent(key, message);
   return requestId;
 }
 
 // ── Send answer to agent question ───────────────────────────────────────────
 
 export function sendAnswer(key, questionId, value) {
-  api.sendToAgent(key, { type: "answer", questionId, value });
+  platform.sendToAgent(key, { type: "answer", questionId, value });
   const conv = conversations.get(key) || [];
   conv.push({ type: "answer", questionId, value });
   conversations.set(key, conv);
@@ -308,7 +307,7 @@ export function getConnectedAgents() {
 // ── Disconnect agent ────────────────────────────────────────────────────────
 
 function disconnectAgent(key) {
-  api.revokeAgentKey(key);
+  platform.revokeAgentKey(key);
   agents.delete(key);
   pendingKeys.delete(key);
   renderAgentList();

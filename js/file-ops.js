@@ -24,7 +24,7 @@ export async function openFilePath(filePath) {
     ctx.hideWelcome();
     ctx.triggerRender();
     ctx.addRecentFile(filePath);
-    await ctx.api.setAppState({ lastFile: filePath });
+    await ctx.platform.setAppState({ lastFile: filePath });
     ctx.buildRecentUI();
     ctx.status.textContent = "Loaded " + name;
   } catch (e) {

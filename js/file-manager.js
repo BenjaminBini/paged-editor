@@ -4,8 +4,7 @@ import { cm } from './editor.js';
 import { escapeHtml } from './utils.js';
 import { showDiffModal, threeWayMerge } from './diff-merge.js';
 import { showContextMenu } from './context-menu.js';
-
-const api = window.electronAPI;
+import * as platform from './platform.js';
 
 // ── Folder state ────────────────────────────────────────────────────────────
 
@@ -139,23 +138,23 @@ export function applyPrettify() {
 // ── File I/O ────────────────────────────────────────────────────────────────
 
 export async function readFile(filePath) {
-  return api.readFile(filePath);
+  return platform.readFile(filePath);
 }
 
 export async function writeFile(filePath, content) {
-  return api.writeFile(filePath, content);
+  return platform.writeFile(filePath, content);
 }
 
 export async function getFileModTime(filePath) {
-  return api.getFileModTime(filePath);
+  return platform.getFileModTime(filePath);
 }
 
 // ── Conflict-aware save ─────────────────────────────────────────────────────
 
 export async function saveWithConflictDetection(filePath, content, savedContent, localFileModTime) {
-  const currentModTime = await api.getFileModTime(filePath);
+  const currentModTime = await platform.getFileModTime(filePath);
   if (localFileModTime && currentModTime > localFileModTime) {
-    const remoteText = await api.readFile(filePath);
+    const remoteText = await platform.readFile(filePath);
     if (remoteText !== savedContent) {
       const fileName = filePath.split("/").pop();
       const action = await showDiffModal(content, remoteText, fileName);
@@ -168,27 +167,27 @@ export async function saveWithConflictDetection(filePath, content, savedContent,
     }
   }
 
-  await api.writeFile(filePath, content);
-  const newModTime = await api.getFileModTime(filePath);
+  await platform.writeFile(filePath, content);
+  const newModTime = await platform.getFileModTime(filePath);
   return { action: "saved", modTime: newModTime };
 }
 
 // ── Save As dialog ──────────────────────────────────────────────────────────
 
 export async function showSaveAsDialog(defaultName) {
-  return api.showSaveDialog(defaultName || "document.md");
+  return platform.showSaveDialog(defaultName || "document.md");
 }
 
 // ── Open file dialog ────────────────────────────────────────────────────────
 
 export async function showOpenFileDialog() {
-  return api.showOpenFileDialog();
+  return platform.showOpenFileDialog();
 }
 
 // ── Folder operations ───────────────────────────────────────────────────────
 
 export async function openFolder() {
-  const dirPath = await api.showOpenFolderDialog();
+  const dirPath = await platform.showOpenFolderDialog();
   if (!dirPath) return null;
   folderPath = dirPath;
   return activateFolder();
@@ -205,16 +204,16 @@ async function activateFolder() {
   btnSave.style.display = "";
   cm.refresh();
 
-  const state = await api.getAppState();
+  const state = await platform.getAppState();
   const recentFolders = [folderPath, ...(state.recentFolders || []).filter(f => f !== folderPath)].slice(0, 10);
-  await api.setAppState({ lastFolder: folderPath, recentFolders });
+  await platform.setAppState({ lastFolder: folderPath, recentFolders });
 
   await refreshFileList();
   return { folderPath, fileEntries };
 }
 
 export async function refreshFileList() {
-  fileEntries = await api.readDir(folderPath);
+  fileEntries = await platform.readDir(folderPath);
   renderFileList();
 }
 
@@ -258,7 +257,7 @@ function showFileContextMenu(x, y, f) {
     { label: "Refresh from Disk", action: () => { if (_onFileRefresh) _onFileRefresh(f.path, f.name); } },
     { separator: true },
     { label: "Copy Path", action: () => navigator.clipboard.writeText(f.path) },
-    { label: "Show in Finder", disabled: !window.electronAPI || window.__pagedEditorWebMode, action: () => window.electronAPI?.showInFinder(f.path) },
+    { label: "Show in Finder", disabled: !platform.canShowInFinder, action: () => platform.showInFinder(f.path) },
     { separator: true },
     { label: "Delete File", action: () => deleteFileWithConfirm(f) },
   ]);
@@ -278,7 +277,7 @@ export async function createNewFile() {
   const fileName = name.endsWith(".md") ? name : name + ".md";
 
   try {
-    await api.writeFile(fileName, "");
+    await platform.writeFile(fileName, "");
     await refreshFileList();
     if (_onFileClick) _onFileClick(fileName, fileName);
   } catch (e) {
@@ -291,7 +290,7 @@ async function deleteFileWithConfirm(f) {
   if (!confirmed) return;
 
   try {
-    await api.deleteFile(f.path);
+    await platform.deleteFile(f.path);
     if (_onFileDelete) _onFileDelete(f.path);
     await refreshFileList();
   } catch (e) {
@@ -305,7 +304,7 @@ export function closeFolder() {
   fileSidebar.classList.remove("open");
   fileEntries = [];
   folderPath = null;
-  api.setAppState({ lastFolder: null, lastFile: null });
+  platform.setAppState({ lastFolder: null, lastFile: null });
 }
 
 // ── Accessors ───────────────────────────────────────────────────────────────
@@ -316,9 +315,9 @@ export function getFileEntries() { return fileEntries; }
 // ── Recent files helper ─────────────────────────────────────────────────────
 
 export async function addRecentFile(filePath) {
-  const state = await api.getAppState();
+  const state = await platform.getAppState();
   const recent = [filePath, ...(state.recentFiles || []).filter(f => f !== filePath)].slice(0, 10);
-  await api.setAppState({ recentFiles: recent });
+  await platform.setAppState({ recentFiles: recent });
 }
 
 // ── Title helper ────────────────────────────────────────────────────────────
@@ -327,5 +326,5 @@ export function updateTitle(fileName, dirty) {
   const prefix = dirty ? "\u2022 " : "";
   const title = fileName ? prefix + fileName + " \u2014 BEORN Editor" : "BEORN Editor";
   document.title = title;
-  api.setTitle(title);
+  platform.setTitle(title);
 }

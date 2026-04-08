@@ -105,8 +105,7 @@ import {
   resetPageBreakCache,
 } from "./editor-decorations.js";
 import "./resize.js";
-
-const api = window.electronAPI;
+import * as platform from "./platform.js";
 
 // ── Initialize file operations module ──────────────────────────────────────
 // (deferred: initFileOps called after all local functions are defined)
@@ -325,7 +324,7 @@ window.addAgent = addAgent;
 // ── Initialize file-ops module with dependencies ──────────────────────────
 
 initFileOps({
-  cm, api, status,
+  cm, platform, status,
   findTabByPath, openTab, showLoading, hideLoading,
   hideWelcome: () => hideWelcome(),
   triggerRender, readFile, getFileModTime, addRecentFile,
@@ -434,7 +433,7 @@ const shortcutActions = {
   openFilePath, openFolderByPathAndLoad, buildRecentUI,
 };
 setupKeyboardShortcuts(shortcutActions);
-wireElectronMenus(api, shortcutActions);
+wireElectronMenus(platform, shortcutActions);
 
 // ── Warn before closing with unsaved changes ───────────────────────────────
 
@@ -449,7 +448,7 @@ window.addEventListener("beforeunload", (e) => {
 
 pagedReady
   .then(async () => {
-    const hasStartupPath = await api.hasStartupPath();
+    const hasStartupPath = await platform.hasStartupPath();
     const loaded = hasStartupPath ? false : await tryRestore();
     hideLoading();
     if (!loaded && !hasOpenTabs()) {

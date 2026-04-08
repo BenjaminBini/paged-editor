@@ -5,6 +5,7 @@ import { parseFrontmatter } from "./utils.js";
 import { getActiveFileName } from "./parse-context.js";
 import { renderMarkdown } from "./render-pipeline.js";
 import { buildHeaderText, buildCoverHtml, buildSommaireHtml, wrapInDocument } from "./document.js";
+import * as platform from "./platform.js";
 
 // ── Single-document export ──────────────────────────────────────────────────
 
@@ -22,12 +23,11 @@ export async function openPreviewTab() {
 }
 
 export async function previewPdf(defaultName) {
-  const api = window.electronAPI;
-  if (!api?.previewPdf) return;
+  if (!platform.previewPdf) return;
 
   status.textContent = "Generating PDF...";
   const html = await buildPagedHtml(editor.value);
-  const result = await api.previewPdf(html, defaultName);
+  const result = await platform.previewPdf(html, defaultName);
   status.textContent = "Ready";
   if (result) showPdfPanel(result.tempPath, result.name);
 }
@@ -64,12 +64,11 @@ export async function buildFullMemoireHtml(sections) {
 }
 
 export async function previewFullMemoire(sections, defaultName) {
-  const api = window.electronAPI;
-  if (!api?.previewPdf) return;
+  if (!platform.previewPdf) return;
 
   status.textContent = "Generating full PDF...";
   const html = await buildFullMemoireHtml(sections);
-  const result = await api.previewPdf(html, defaultName);
+  const result = await platform.previewPdf(html, defaultName);
   status.textContent = "Ready";
   if (result) showPdfPanel(result.tempPath, result.name);
 }
@@ -97,7 +96,6 @@ export function closePdfPanel() {
 }
 
 export async function savePdfAs() {
-  const api = window.electronAPI;
   if (!api?.savePdfAs) return;
-  await api.savePdfAs(_currentPdfName);
+  await platform.savePdfAs(_currentPdfName);
 }
