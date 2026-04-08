@@ -21,6 +21,34 @@ export function getMermaidQueue() {
   return [..._queue];
 }
 
+const MERMAID_CONFIG = {
+  startOnLoad: false,
+  securityLevel: "strict",
+  look: "handDrawn",
+  theme: "base",
+  themeVariables: {
+    primaryColor: "#e8f0fa",
+    primaryBorderColor: "#3373b3",
+    primaryTextColor: "#193658",
+    secondaryColor: "#eef8fa",
+    secondaryBorderColor: "#0096ae",
+    secondaryTextColor: "#193658",
+    tertiaryColor: "#f3f0fa",
+    tertiaryBorderColor: "#493a8b",
+    tertiaryTextColor: "#193658",
+    lineColor: "#94a3b8",
+    textColor: "#2d3748",
+    fontFamily: '"Hanken Grotesk", -apple-system, sans-serif',
+    fontSize: "13px",
+    nodeBorder: "#3373b3",
+    mainBkg: "#e8f0fa",
+    edgeLabelBackground: "#fff",
+    clusterBkg: "#f8f9fc",
+    clusterBorder: "#e2e8f0",
+    titleColor: "#193658",
+  },
+};
+
 function ensureMermaid() {
   if (typeof mermaid !== "undefined") return Promise.resolve();
   if (_mermaidLoading) return _mermaidLoading;
@@ -28,33 +56,7 @@ function ensureMermaid() {
     const script = document.createElement("script");
     script.src = "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js";
     script.onload = () => {
-      mermaid.initialize({
-        startOnLoad: false,
-        securityLevel: "strict",
-        look: "handDrawn",
-        theme: "base",
-        themeVariables: {
-          primaryColor: "#e8f0fa",
-          primaryBorderColor: "#3373b3",
-          primaryTextColor: "#193658",
-          secondaryColor: "#eef8fa",
-          secondaryBorderColor: "#0096ae",
-          secondaryTextColor: "#193658",
-          tertiaryColor: "#f3f0fa",
-          tertiaryBorderColor: "#493a8b",
-          tertiaryTextColor: "#193658",
-          lineColor: "#94a3b8",
-          textColor: "#2d3748",
-          fontFamily: '"Hanken Grotesk", -apple-system, sans-serif',
-          fontSize: "13px",
-          nodeBorder: "#3373b3",
-          mainBkg: "#e8f0fa",
-          edgeLabelBackground: "#fff",
-          clusterBkg: "#f8f9fc",
-          clusterBorder: "#e2e8f0",
-          titleColor: "#193658",
-        },
-      });
+      mermaid.initialize(MERMAID_CONFIG);
       resolve();
     };
     script.onerror = reject;
@@ -62,6 +64,9 @@ function ensureMermaid() {
   });
   return _mermaidLoading;
 }
+
+// Preload Mermaid in the background so it's ready before the first diagram
+ensureMermaid();
 
 export async function resolveMermaid(html, queue) {
   if (queue.length === 0) return html;
