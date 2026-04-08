@@ -1,5 +1,5 @@
 // render-pipeline.js — Unified markdown→HTML pipeline.
-// Creates a fresh render context per call, eliminating shared mutable state.
+// Configures marked once at load time; sets per-render context before each parse.
 // Used by both render.js (preview) and pdf-export.js (export).
 
 import { parseFrontmatter } from "./utils.js";
@@ -11,100 +11,18 @@ import { escapeHtml } from "./utils.js";
 import { resetMermaidQueue, pushToMermaidQueue, getMermaidQueue, resolveMermaid } from "./mermaid-render.js";
 import { buildHeaderText, wrapInDocument } from "./document.js";
 
-/**
- * Render markdown to a full paged HTML document.
- *
- * @param {string} md - Raw markdown (with frontmatter)
- * @param {object} options
- * @param {string} options.fileName - Active file name (for partie detection)
- * @param {number} [options.startLine=0] - Line offset for source-line tracking
- * @param {number} [options.gen=0] - Generation counter for iframe swap
- * @param {Array} [options.headingCollector] - Array to push heading data into (for TOC)
- * @param {number} [options.headingIdOffset=0] - Starting heading ID counter
- * @returns {Promise<{ html: string, frontmatter: object, headings: Array, headerText: string }>}
- */
-export async function renderMarkdown(md, options = {}) {
-  const {
-    fileName = "",
-    startLine = 0,
-    gen = 0,
-    headingCollector = null,
-    headingIdOffset = 0,
-  } = options;
+// ── Per-render context (set before each parse, read by renderer) ───────────
+// This is module-scoped, not global — only render-pipeline.js reads/writes it.
+// Safe because renders are awaited sequentially (never concurrent).
 
-  const { fm, body } = parseFrontmatter(md);
-  const headerText = buildHeaderText(fm);
-  const language = fm.language || "fr";
+let _ctx = null;
 
-  const partieNum = detectPartieNum(body, fileName);
-  const colorIdx = getColorIndex(partieNum);
+// ── Configure marked once at module load ───────────────────────────────────
 
-  // Create per-render state (no shared globals)
-  const ctx = {
-    colorIdx,
-    partieNum,
-    h2Count: 0,
-    h3Count: 0,
-    headingCollector,
-    headingIdCounter: headingIdOffset,
-  };
-
-  // Reset mermaid queue for this render
-  resetMermaidQueue();
-
-  // Configure the global marked instance with this render's context.
-  // Each render call sets up its own renderer via marked.use() before parsing.
-  // This is safe because renders are awaited sequentially (never concurrent).
-  marked.use({
-    renderer: buildRenderer(ctx),
-    hooks: {
-      postprocess(html) {
-        return html
-          .replace(/(\w) :/g, "$1\u00a0:")
-          .replace(/(\w) ;/g, "$1\u00a0;")
-          .replace(/(\w) !/g, "$1\u00a0!")
-          .replace(/(\w) \?/g, "$1\u00a0?");
-      },
-    },
-  });
-
-  // Tokenize and add source-line info
-  const tokens = marked.lexer(body);
-  if (startLine > 0) {
-    let cursor = 0;
-    for (const token of tokens) {
-      const idx = body.indexOf(token.raw, cursor);
-      if (idx >= 0) {
-        const lineInSection = body.substring(0, idx).split("\n").length - 1;
-        token._sourceLine = startLine + lineInSection;
-        cursor = idx + token.raw.length;
-      }
-    }
-  }
-
-  let html = marked.parser(tokens).replace(/\{src:[^}]+\}/g, "");
-
-  // Resolve mermaid diagrams
-  const queue = getMermaidQueue();
-  html = await resolveMermaid(html, queue);
-
-  const sectionHtml = wrapSection(html, colorIdx);
-
-  return {
-    sectionHtml,
-    documentHtml: wrapInDocument(sectionHtml, { gen, headerText, language }),
-    frontmatter: fm,
-    headerText,
-    language,
-    headingIdCounter: ctx.headingIdCounter,
-  };
-}
-
-// ── Marked renderer factory (pure — no global state) ──────────────────────
-
-function buildRenderer(ctx) {
-  return {
+marked.use({
+  renderer: {
     heading(token) {
+      const ctx = _ctx;
       const { tokens, depth } = token;
       const sl = token._sourceLine != null
         ? ` data-source-line="${token._sourceLine}"` : "";
@@ -162,7 +80,6 @@ function buildRenderer(ctx) {
 
     paragraph(token) {
       const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
-      // Convert \newpage and /newpage to a page break div (handled by CSS break-after: page)
       const text = this.parser.parseInline(token.tokens);
       const stripped = text.replace(/<[^>]*>/g, "").trim();
       if (stripped === "\\newpage" || stripped === "/newpage") {
@@ -221,5 +138,90 @@ function buildRenderer(ctx) {
       const langClass = lang ? ` class="language-${escapeHtml(lang)}"` : "";
       return `<pre${sl}><code${langClass}>${escapeHtml(text)}</code></pre>\n`;
     },
+  },
+
+  hooks: {
+    postprocess(html) {
+      return html
+        .replace(/(\w) :/g, "$1\u00a0:")
+        .replace(/(\w) ;/g, "$1\u00a0;")
+        .replace(/(\w) !/g, "$1\u00a0!")
+        .replace(/(\w) \?/g, "$1\u00a0?");
+    },
+  },
+});
+
+// ── Public API ─────────────────────────────────────────────────────────────
+
+/**
+ * Render markdown to a full paged HTML document.
+ * @param {string} md - Raw markdown (with frontmatter)
+ * @param {object} options
+ * @param {string} options.fileName - Active file name (for partie detection)
+ * @param {number} [options.startLine=0] - Line offset for source-line tracking
+ * @param {number} [options.gen=0] - Generation counter for iframe swap
+ * @param {Array} [options.headingCollector] - Array to push heading data into (for TOC)
+ * @param {number} [options.headingIdOffset=0] - Starting heading ID counter
+ */
+export async function renderMarkdown(md, options = {}) {
+  const {
+    fileName = "",
+    startLine = 0,
+    gen = 0,
+    headingCollector = null,
+    headingIdOffset = 0,
+  } = options;
+
+  const { fm, body } = parseFrontmatter(md);
+  const headerText = buildHeaderText(fm);
+  const language = fm.language || "fr";
+
+  const partieNum = detectPartieNum(body, fileName);
+  const colorIdx = getColorIndex(partieNum);
+
+  // Set per-render context (read by the renderer registered above)
+  _ctx = {
+    colorIdx,
+    partieNum,
+    h2Count: 0,
+    h3Count: 0,
+    headingCollector,
+    headingIdCounter: headingIdOffset,
+  };
+
+  resetMermaidQueue();
+
+  // Tokenize and add source-line info
+  const tokens = marked.lexer(body);
+  if (startLine > 0) {
+    let cursor = 0;
+    for (const token of tokens) {
+      const idx = body.indexOf(token.raw, cursor);
+      if (idx >= 0) {
+        const lineInSection = body.substring(0, idx).split("\n").length - 1;
+        token._sourceLine = startLine + lineInSection;
+        cursor = idx + token.raw.length;
+      }
+    }
+  }
+
+  let html = marked.parser(tokens).replace(/\{src:[^}]+\}/g, "");
+
+  const queue = getMermaidQueue();
+  html = await resolveMermaid(html, queue);
+
+  const sectionHtml = wrapSection(html, colorIdx);
+
+  // Capture counter before clearing context
+  const headingIdCounter = _ctx.headingIdCounter;
+  _ctx = null;
+
+  return {
+    sectionHtml,
+    documentHtml: wrapInDocument(sectionHtml, { gen, headerText, language }),
+    frontmatter: fm,
+    headerText,
+    language,
+    headingIdCounter,
   };
 }
