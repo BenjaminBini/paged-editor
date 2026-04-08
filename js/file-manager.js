@@ -353,14 +353,7 @@ async function deleteFileWithConfirm(f) {
   if (!confirmed) return;
 
   try {
-    // Use the web API DELETE endpoint if available, otherwise write empty and warn
-    const resp = await fetch("/api/files/" + encodeURIComponent(f.path), { method: "DELETE" });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ error: "Unknown error" }));
-      alert("Failed to delete: " + (err.error || resp.statusText));
-      return;
-    }
-    // Notify app to close the tab if open
+    await api.deleteFile(f.path);
     if (_onFileDelete) _onFileDelete(f.path);
     await refreshFileList();
   } catch (e) {

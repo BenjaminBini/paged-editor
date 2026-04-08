@@ -1,6 +1,7 @@
 // ai-collab.js — AI agent collaboration module
 
 import { computeDiff, renderDiffHtml } from './diff-merge.js';
+import { escapeHtml } from './utils.js';
 
 const api = window.electronAPI;
 
@@ -432,10 +433,3 @@ function closeAgentModal() {
   }
 }
 
-// ── Utility ─────────────────────────────────────────────────────────────────
-
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}

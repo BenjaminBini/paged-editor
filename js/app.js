@@ -103,6 +103,7 @@ import {
   applyHeadingMarks as _applyHeadingMarks,
   getCursorLine,
   setCursorLine,
+  resetPageBreakCache,
 } from "./editor-decorations.js";
 import "./resize.js";
 
@@ -205,6 +206,7 @@ cm.on("change", onChangeGutterMarkers);
 
 let pageBreakTimer = null;
 function onChangePageBreaks() {
+  resetPageBreakCache();
   clearTimeout(pageBreakTimer);
   pageBreakTimer = setTimeout(applyPageBreakMarks, 150);
 }
@@ -338,7 +340,6 @@ window.previewZoomReset = () => {
   if (el) el.textContent = "100%";
 };
 window.toggleWrap = toggleWrap;
-window.toggleCover = () => {}; // no-op: single-section mode
 window.toggleTableEditor = toggleTableEditor;
 window.closeDiffModal = closeDiffModal;
 window.resolveConflict = resolveConflict;

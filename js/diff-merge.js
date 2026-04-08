@@ -1,3 +1,7 @@
+import { escapeHtml } from "./utils.js";
+
+const splitLines = t => t === "" ? [] : t.split("\n");
+
 // ── Diff algorithm (Myers-like, minimal) ──────────────────────────
 export function computeDiff(oldLines, newLines) {
   // Simple LCS-based diff producing context, add, and del entries
@@ -35,9 +39,6 @@ export function computeDiff(oldLines, newLines) {
 }
 
 // ── Word-level diff for inline highlighting ─────────────────────
-function escapeHtml(s) {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
 
 // Tokenize a line into words and whitespace chunks for fine-grained comparison
 function tokenize(line) {
@@ -130,7 +131,6 @@ export function renderDiffHtml(diff) {
 // base = savedContent (common ancestor), local = editor, remote = disk/Drive
 export function threeWayMerge(baseText, localText, remoteText) {
   // "".split("\n") yields [""] not [] — guard against that.
-  const splitLines = t => t === "" ? [] : t.split("\n");
   const baseLines = splitLines(baseText);
   const localLines = splitLines(localText);
   const remoteLines = splitLines(remoteText);
@@ -223,7 +223,6 @@ export function threeWayMerge(baseText, localText, remoteText) {
 // del, so the key reliably points to the first base line consumed.
 function diffToEditMap(baseLines, modifiedLines) {
   // "".split("\n") yields [""] — guard so empty files produce zero-length arrays.
-  const splitLines = t => t === "" ? [] : t.split("\n");
   const bLines = baseLines.length > 0 ? baseLines : splitLines("");
   const mLines = modifiedLines.length > 0 ? modifiedLines : splitLines("");
   const diff = computeDiff(bLines, mLines);

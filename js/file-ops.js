@@ -22,8 +22,7 @@ export async function openFilePath(filePath) {
 
   try {
     showLoading("Loading...");
-    const text = await readFile(filePath);
-    const modTime = await getFileModTime(filePath);
+    const [text, modTime] = await Promise.all([readFile(filePath), getFileModTime(filePath)]);
     const name = filePath.split("/").pop();
     openTab(filePath, name, text, modTime);
     hideLoading();
@@ -48,8 +47,7 @@ export async function reloadTabFromDisk(tab) {
   if (!tab || !tab.path) return;
   try {
     showLoading("Reloading " + tab.name + "...");
-    const content = await readFile(tab.path);
-    const modTime = await getFileModTime(tab.path);
+    const [content, modTime] = await Promise.all([readFile(tab.path), getFileModTime(tab.path)]);
     cm.setValue(content);
     markActiveTabClean(content, modTime);
     updateGutterMarkers();

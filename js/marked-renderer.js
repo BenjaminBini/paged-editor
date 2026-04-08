@@ -162,22 +162,12 @@ marked.use({
 
   hooks: {
     postprocess(html) {
-      const pair = COLOR_PAIRS[state.colorIdx % COLOR_PAIRS.length];
-      const vars = `--section-color:${pair[0]};--section-color-light:${pair[1]}`;
-
-      html = html.replace(
-        /<(p|ul|ol|li|blockquote|table|thead|tbody|tr|td|th|pre|code)(\s|>)/gi,
-        (_m, tag, after) => `<${tag} style="${vars}"${after}`,
-      );
-
       // French typography: non-breaking spaces before :;!?
-      html = html
+      return html
         .replace(/(\w) :/g, "$1\u00a0:")
         .replace(/(\w) ;/g, "$1\u00a0;")
         .replace(/(\w) !/g, "$1\u00a0!")
         .replace(/(\w) \?/g, "$1\u00a0?");
-
-      return html;
     },
   },
 });

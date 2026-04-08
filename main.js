@@ -67,6 +67,10 @@ ipcMain.handle("get-file-mod-time", async (_e, filePath) => {
   return stat.mtimeMs;
 });
 
+ipcMain.handle("delete-file", async (_e, filePath) => {
+  await fs.unlink(filePath);
+});
+
 ipcMain.handle("show-open-file-dialog", async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     filters: [{ name: "Markdown", extensions: ["md"] }],

@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   writeFile: (filePath, content) => ipcRenderer.invoke("write-file", filePath, content),
   readDir: (dirPath) => ipcRenderer.invoke("read-dir", dirPath),
   getFileModTime: (filePath) => ipcRenderer.invoke("get-file-mod-time", filePath),
+  deleteFile: (filePath) => ipcRenderer.invoke("delete-file", filePath),
   showOpenFileDialog: () => ipcRenderer.invoke("show-open-file-dialog"),
   showOpenFolderDialog: () => ipcRenderer.invoke("show-open-folder-dialog"),
   showSaveDialog: (defaultName) => ipcRenderer.invoke("show-save-dialog", defaultName),

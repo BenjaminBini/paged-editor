@@ -52,7 +52,6 @@ export function wireElectronMenus(api, actions) {
   api.on("menu-download-pdf", () => window.downloadPdf());
   api.on("menu-download-memoire", () => window.downloadFullMemoire());
   api.on("menu-toggle-wrap", () => toggleWrap());
-  api.on("menu-toggle-cover", () => {});
   api.on("open-file-path", (filePath) => openFilePath(filePath));
   api.on("open-folder-path", (folderPath) => openFolderByPathAndLoad(folderPath));
   api.on("recent-cleared", () => buildRecentUI());

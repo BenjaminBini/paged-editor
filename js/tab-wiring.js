@@ -103,8 +103,7 @@ export function wireSidebarCallbacks({ hideWelcome, reloadTabFromDisk }) {
 
     showLoading("Loading " + fileName + "...");
     try {
-      const content = await readFile(filePath);
-      const modTime = await getFileModTime(filePath);
+      const [content, modTime] = await Promise.all([readFile(filePath), getFileModTime(filePath)]);
       openTab(filePath, fileName, content, modTime);
       hideLoading();
       hideWelcome();
@@ -139,8 +138,7 @@ export function wireSidebarCallbacks({ hideWelcome, reloadTabFromDisk }) {
     } else {
       showLoading("Loading " + fileName + "...");
       try {
-        const content = await readFile(filePath);
-        const modTime = await getFileModTime(filePath);
+        const [content, modTime] = await Promise.all([readFile(filePath), getFileModTime(filePath)]);
         openTab(filePath, fileName, content, modTime);
         hideLoading();
         hideWelcome();

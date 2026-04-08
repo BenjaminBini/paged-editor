@@ -1,6 +1,7 @@
 // chat-sidebar.js — Chat sidebar UI for AI agent conversations
 
 import { cm } from './editor.js';
+import { escapeHtml } from './utils.js';
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 
@@ -322,10 +323,3 @@ if (input) {
   });
 }
 
-// ── Utility ─────────────────────────────────────────────────────────────────
-
-function escapeHtml(str) {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}

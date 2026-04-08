@@ -49,6 +49,7 @@ export async function openPreviewTab() {
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
   window.open(url, "_blank");
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 export async function previewPdf(defaultName) {

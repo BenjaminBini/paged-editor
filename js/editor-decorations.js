@@ -57,12 +57,23 @@ export function updateGutterMarkers(getActiveTab) {
 // ── Page break decorations (inline replacement, cursor-aware) ─────────────
 
 let _pageBreakMarks = [];
+let _pbCursorLine = -1;
+
+function isPageBreakLine(lineNum) {
+  const text = cm.getLine(lineNum)?.trim();
+  return text === '/newpage' || text === '\\newpage';
+}
 
 export function applyPageBreakMarks() {
+  const cursorLine = cm.getCursor().line;
+  const prevLine = _pbCursorLine;
+  _pbCursorLine = cursorLine;
+  // Skip rebuild if cursor hasn't moved, or moved between non-pagebreak lines
+  if (cursorLine === prevLine) return;
+  if (!isPageBreakLine(cursorLine) && !isPageBreakLine(prevLine) && _pageBreakMarks.length > 0) return;
+
   for (const pm of _pageBreakMarks) pm.mark.clear();
   _pageBreakMarks = [];
-
-  const cursorLine = cm.getCursor().line;
 
   for (let i = 0; i < cm.lineCount(); i++) {
     const text = cm.getLine(i).trim();
@@ -152,3 +163,5 @@ export function applyHeadingMarks(getActiveTab) {
 
 export function getCursorLine() { return _cursorLine; }
 export function setCursorLine(line) { _cursorLine = line; }
+
+export function resetPageBreakCache() { _pbCursorLine = -1; }

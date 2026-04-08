@@ -137,8 +137,7 @@ export function createEditorRouter(options) {
 
     try {
       const filePath = join(workDir, name);
-      const content = await readFile(filePath, "utf-8");
-      const s = await stat(filePath);
+      const [content, s] = await Promise.all([readFile(filePath, "utf-8"), stat(filePath)]);
       res.json({ content, modifiedAt: s.mtimeMs });
     } catch (e) {
       if (e.code === "ENOENT") return res.status(404).json({ error: "File not found" });

@@ -136,7 +136,7 @@ export function getTabCount() { return tabs.length; }
 
 export function markActiveTabDirty() {
   const tab = getActiveTab();
-  if (!tab) return;
+  if (!tab || tab.dirty) return;
   tab.dirty = true;
   renderTabBar();
 }

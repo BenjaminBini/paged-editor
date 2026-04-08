@@ -96,6 +96,15 @@
       if (!resp.ok) throw new Error("Failed to write file: " + filePath);
     },
 
+    // Delete a file
+    async deleteFile(filePath) {
+      const resp = await api("/api/files/" + encName(filePath), { method: "DELETE" });
+      if (!resp.ok) {
+        const err = await resp.json().catch(() => ({ error: "Unknown error" }));
+        throw new Error(err.error || resp.statusText);
+      }
+    },
+
     // List .md files in workspace
     async readDir(_dirPath) {
       const resp = await api("/api/files");
@@ -135,6 +144,7 @@
       const blob = new Blob([htmlContent], { type: "text/html" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
       return null;
     },
     async savePdfAs(_defaultName) {},

@@ -168,9 +168,7 @@ function scaleFrame() {
   }
 }
 
-export function scalePreview() {
-  scaleFrame();
-}
+export const scalePreview = scaleFrame;
 
 export function zoomIn() {
   _userZoom = Math.min(3, _userZoom + 0.15);
