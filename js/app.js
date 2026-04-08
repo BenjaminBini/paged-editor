@@ -8,21 +8,22 @@ import {
   showLoading,
   hideLoading,
 } from "./editor.js";
+import { pagedReady } from "./assets.js";
 import {
-  pagedReady,
-  triggerRender,
-  scalePreview,
   openPreviewTab,
-  registerOnSectionReady,
-  getPreviewFrame,
-  clearRenderTimeout,
-  scheduleRender,
-  setActiveFileName,
-  zoomIn, zoomOut, zoomReset,
   previewPdf,
   previewFullMemoire,
   closePdfPanel,
   savePdfAs,
+} from "./pdf-export.js";
+import {
+  triggerRender,
+  scalePreview,
+  registerOnSectionReady,
+  getPreviewFrame,
+  clearRenderTimeout,
+  scheduleRender,
+  zoomIn, zoomOut, zoomReset,
 } from "./render.js";
 import {
   setupPreviewClick,
@@ -55,34 +56,21 @@ import {
   updateTitle,
   getFolderPath,
   getFileEntries,
-  setOnFileClick,
-  setOnFileRefresh,
-  setGetActiveFilePath,
-  setIsFileDirty,
-  setOnFileDelete,
   createNewFile,
   refreshFileList,
 } from "./file-manager.js";
 import {
   openTab,
-  switchToTab,
-  closeTab,
   closeActiveTab,
   getActiveTab,
   getTabs,
   hasOpenTabs,
-  markActiveTabDirty,
   markActiveTabClean,
   updateActiveTabPath,
   isActiveTabDirty,
-  onTabSwitch,
-  onAllTabsClosed,
-  onTabSaveRequest,
-  onTabRefreshRequest,
-  getSessionState,
   findTabByPath,
 } from "./tab-bar.js";
-import { closeDiffModal, resolveConflict, computeDiff } from "./diff-merge.js";
+import { closeDiffModal, resolveConflict } from "./diff-merge.js";
 import {
   init as initAiCollab, addAgent,
   getConnectedAgents, sendRequest, sendAnswer,
@@ -94,115 +82,62 @@ import {
   onSend as onChatSend, onAnswer as onChatAnswer,
   setGetConversation, setGetSection,
 } from './chat-sidebar.js';
+import { buildOutline, updateOutlineHighlight } from "./outline-manager.js";
+import { tryRestore as _tryRestore, buildRecentUI as _buildRecentUI } from "./session.js";
+import { setupKeyboardShortcuts, wireElectronMenus } from "./keyboard-shortcuts.js";
+import {
+  hideWelcome, showWelcome, initMenubar,
+  updateMenuState as _updateMenuState,
+} from "./menu-state.js";
+import {
+  wireTabCallbacks, wireSidebarCallbacks,
+  onChangeDirtyTracking,
+} from "./tab-wiring.js";
+import {
+  initFileOps, openFilePath, reloadTabFromDisk, doSave, doSaveAs,
+  closeCurrentTab, openLocalFile, openFolderAndLoadFirst, openFolderByPathAndLoad,
+} from "./file-ops.js";
+import {
+  updateGutterMarkers as _updateGutterMarkers,
+  applyPageBreakMarks,
+  applyHeadingMarks as _applyHeadingMarks,
+  getCursorLine,
+  setCursorLine,
+} from "./editor-decorations.js";
 import "./resize.js";
 
 const api = window.electronAPI;
 
-// ── Persist tab state (debounced) ──────────────────────────────────────────
+// ── Initialize file operations module ──────────────────────────────────────
+// (deferred: initFileOps called after all local functions are defined)
 
-function persistTabState() {
-  const session = getSessionState();
-  api.setAppState({ openTabs: session.openTabs, activeTab: session.activeTab });
+// ── Tab lifecycle & sidebar wiring (delegated to tab-wiring.js) ────────────
+
+function detachCmListeners() {
+  cm.off("change", onChangeAutoRender);
+  cm.off("change", onChangeDirtyTracking);
+  cm.off("change", onChangeGutterMarkers);
+  cm.off("change", onChangePageBreaks);
+  cm.off("change", onChangeHeadingBadges);
+  cm.off("change", onChangeOutline);
+  cm.off("cursorActivity", onCursorPageBreaks);
+  cm.off("cursorActivity", onCursorHeadingBadges);
+  cm.off("cursorActivity", updateOutlineHighlight);
+  cm.off("scroll", updateOutlineHighlight);
 }
 
-let persistTimer = null;
-function schedulePersist() {
-  clearTimeout(persistTimer);
-  persistTimer = setTimeout(persistTabState, 500);
+function reattachCmListeners() {
+  cm.on("change", onChangeAutoRender);
+  cm.on("change", onChangeDirtyTracking);
+  cm.on("change", onChangeGutterMarkers);
+  cm.on("change", onChangePageBreaks);
+  cm.on("change", onChangeHeadingBadges);
+  cm.on("change", onChangeOutline);
+  cm.on("cursorActivity", onCursorPageBreaks);
+  cm.on("cursorActivity", onCursorHeadingBadges);
+  cm.on("cursorActivity", updateOutlineHighlight);
+  cm.on("scroll", updateOutlineHighlight);
 }
-
-// ── Wire tab-bar callbacks ─────────────────────────────────────────────────
-
-onTabSwitch((tab) => {
-  updateTitle(tab.name, tab.dirty);
-  renderFileList(); // update sidebar highlight
-  setActiveFileName(tab.name);
-  triggerRender();
-  setTimeout(buildOutline, 50);
-  setTimeout(refreshTableWidgets, 150);
-  setTimeout(updateGutterMarkers, 50);
-  setTimeout(applyHeadingMarks, 50);
-  updateMenuState();
-  schedulePersist();
-});
-
-onAllTabsClosed(() => {
-  updateTitle(null, false);
-  if (getFolderPath()) {
-    // Folder open — show empty editor
-    renderFileList();
-  } else {
-    // No folder — show welcome
-    showWelcome();
-  }
-  updateMenuState();
-  schedulePersist();
-});
-
-onTabSaveRequest(() => doSave());
-onTabRefreshRequest((tab) => reloadTabFromDisk(tab));
-
-// ── Wire sidebar → tab-bar ─────────────────────────────────────────────────
-
-setOnFileClick(async (filePath, fileName) => {
-  // Check if already open in a tab
-  const existingIdx = findTabByPath(filePath);
-  if (existingIdx >= 0) {
-    openTab(filePath, fileName); // openTab handles the switch internally
-    return;
-  }
-
-  showLoading("Loading " + fileName + "...");
-  try {
-    const content = await readFile(filePath);
-    const modTime = await getFileModTime(filePath);
-    openTab(filePath, fileName, content, modTime);
-    hideLoading();
-    hideWelcome();
-    status.textContent = "Loaded " + fileName;
-  } catch (e) {
-    hideLoading();
-    status.textContent = "Load failed: " + e.message;
-  }
-});
-
-setGetActiveFilePath(() => {
-  const tab = getActiveTab();
-  return tab ? tab.path : null;
-});
-
-setIsFileDirty((path) => {
-  const idx = findTabByPath(path);
-  if (idx < 0) return false;
-  return getTabs()[idx].dirty;
-});
-
-setOnFileDelete((filePath) => {
-  const idx = findTabByPath(filePath);
-  if (idx >= 0) closeTab(idx);
-});
-
-setOnFileRefresh(async (filePath, fileName) => {
-  const existingIdx = findTabByPath(filePath);
-  if (existingIdx >= 0) {
-    switchToTab(existingIdx);
-    await reloadTabFromDisk(getTabs()[existingIdx]);
-  } else {
-    // Not open — open fresh from disk
-    showLoading("Loading " + fileName + "...");
-    try {
-      const content = await readFile(filePath);
-      const modTime = await getFileModTime(filePath);
-      openTab(filePath, fileName, content, modTime);
-      hideLoading();
-      hideWelcome();
-      status.textContent = "Loaded " + fileName;
-    } catch (e) {
-      hideLoading();
-      status.textContent = "Load failed: " + e.message;
-    }
-  }
-});
 
 // ── Wire hooks ─────────────────────────────────────────────────────────────
 
@@ -227,14 +162,18 @@ registerOnSectionReady(() => {
   setTimeout(refreshTableWidgets, 50);
 });
 
-window.addEventListener("resize", () => setTimeout(rebuildAnchorMap, 400));
+let _anchorRebuildTimer = null;
+window.addEventListener("resize", () => {
+  clearTimeout(_anchorRebuildTimer);
+  _anchorRebuildTimer = setTimeout(rebuildAnchorMap, 400);
+});
 
 // ── Auto-render on pause ───────────────────────────────────────────────────
 
 let restoreDone = false;
 let twRefreshTimer = null;
 
-cm.on("change", () => {
+function onChangeAutoRender() {
   if (!restoreDone) return;
   clearRenderTimeout();
   status.textContent = "Typing...";
@@ -244,218 +183,52 @@ cm.on("change", () => {
     clearTimeout(twRefreshTimer);
     twRefreshTimer = setTimeout(refreshTableWidgets, 200);
   }
-});
+}
+cm.on("change", onChangeAutoRender);
 
-// ── Dirty tracking ─────────────────────────────────────────────────────────
+// ── Dirty tracking (delegated to tab-wiring.js) ──────────────────────────
 
-let sidebarDirtyTimer = null;
-let changeNotifyTimer = null;
-cm.on("change", () => {
-  if (!hasOpenTabs()) return;
-  markActiveTabDirty();
-  const tab = getActiveTab();
-  if (tab) updateTitle(tab.name, true);
-  clearTimeout(sidebarDirtyTimer);
-  sidebarDirtyTimer = setTimeout(renderFileList, 300);
-  // Notify parent frame of content change (debounced)
-  if (window.__pagedEditorNotifyParent) {
-    clearTimeout(changeNotifyTimer);
-    changeNotifyTimer = setTimeout(() => {
-      const t = getActiveTab();
-      if (t) window.__pagedEditorNotifyParent("change", { file: t.path, name: t.name });
-    }, 500);
-  }
-});
+cm.on("change", onChangeDirtyTracking);
 
-// ── Gutter change markers ──────────────────────────────────────────────────
+// ── Editor decorations (delegated to editor-decorations.js) ────────────────
+
+const updateGutterMarkers = () => _updateGutterMarkers(getActiveTab);
+const applyHeadingMarks = () => _applyHeadingMarks(getActiveTab);
 
 let gutterTimer = null;
-const GUTTER_MODIFIED = "gutter-modified";
-const GUTTER_ADDED = "gutter-added";
-
-function updateGutterMarkers() {
-  const tab = getActiveTab();
-  if (!tab) return;
-
-  // Clear all existing markers
-  cm.eachLine((lineHandle) => {
-    cm.removeLineClass(lineHandle, "gutter", GUTTER_MODIFIED);
-    cm.removeLineClass(lineHandle, "gutter", GUTTER_ADDED);
-  });
-
-  const savedLines = (tab.savedContent || "").split("\n");
-  const currentLines = cm.getValue().split("\n");
-  const diff = computeDiff(savedLines, currentLines);
-
-  // Walk the diff to find modified and added lines in current content.
-  // A "del" followed by "add" at the same position = modified line.
-  // A standalone "add" = new line.
-  const modifiedLines = new Set();
-  const addedLines = new Set();
-
-  let i = 0;
-  while (i < diff.length) {
-    if (diff[i].type === "del") {
-      // Collect consecutive deletes
-      const delStart = i;
-      while (i < diff.length && diff[i].type === "del") i++;
-      // Collect consecutive adds following
-      const addStart = i;
-      while (i < diff.length && diff[i].type === "add") i++;
-      const addEnd = i;
-      // Pair them: min(dels, adds) are modifications, rest are pure add/del
-      const delCount = addStart - delStart;
-      const addCount = addEnd - addStart;
-      const paired = Math.min(delCount, addCount);
-      for (let j = 0; j < paired; j++) {
-        modifiedLines.add(diff[addStart + j].newLine - 1);
-      }
-      for (let j = paired; j < addCount; j++) {
-        addedLines.add(diff[addStart + j].newLine - 1);
-      }
-    } else if (diff[i].type === "add") {
-      addedLines.add(diff[i].newLine - 1);
-      i++;
-    } else {
-      i++;
-    }
-  }
-
-  for (const line of modifiedLines) cm.addLineClass(line, "gutter", GUTTER_MODIFIED);
-  for (const line of addedLines) cm.addLineClass(line, "gutter", GUTTER_ADDED);
-}
-
-cm.on("change", () => {
+function onChangeGutterMarkers() {
   if (!hasOpenTabs()) return;
   clearTimeout(gutterTimer);
   gutterTimer = setTimeout(updateGutterMarkers, 400);
-});
-
-// ── Page break decorations (inline replacement, cursor-aware) ─────────────
-
-let _pageBreakMarks = []; // {line, mark}
-
-function applyPageBreakMarks() {
-  for (const pm of _pageBreakMarks) pm.mark.clear();
-  _pageBreakMarks = [];
-
-  const cursorLine = cm.getCursor().line;
-
-  for (let i = 0; i < cm.lineCount(); i++) {
-    const text = cm.getLine(i).trim();
-    if (text !== '/newpage' && text !== '\\newpage') continue;
-    if (i === cursorLine) continue; // show raw text when cursor is on line
-
-    const el = document.createElement("span");
-    el.className = "cm-pagebreak-widget";
-    el.innerHTML = '<span class="cm-pagebreak-line"></span>'
-      + '<span class="cm-pagebreak-label">page break</span>'
-      + '<span class="cm-pagebreak-line"></span>'
-      + '<button class="cm-pagebreak-delete" title="Remove page break">\u00d7</button>';
-    el.querySelector(".cm-pagebreak-delete").addEventListener("mousedown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      const next = i + 1 < cm.lineCount() ? { line: i + 1, ch: 0 } : { line: i, ch: cm.getLine(i).length };
-      cm.replaceRange("", { line: i, ch: 0 }, next);
-    });
-
-    const lineLen = cm.getLine(i).length;
-    const mark = cm.markText(
-      { line: i, ch: 0 },
-      { line: i, ch: lineLen },
-      { replacedWith: el, handleMouseEvents: true },
-    );
-    _pageBreakMarks.push({ line: i, mark });
-  }
 }
+cm.on("change", onChangeGutterMarkers);
 
 let pageBreakTimer = null;
-cm.on("change", () => {
+function onChangePageBreaks() {
   clearTimeout(pageBreakTimer);
   pageBreakTimer = setTimeout(applyPageBreakMarks, 150);
-});
-cm.on("cursorActivity", () => {
-  // Re-apply immediately so cursor line gets raw text
+}
+function onCursorPageBreaks() {
   applyPageBreakMarks();
-});
+}
+cm.on("change", onChangePageBreaks);
+cm.on("cursorActivity", onCursorPageBreaks);
 setTimeout(applyPageBreakMarks, 200);
 
-// ── Heading number badges (inline, replacing # symbols) ───────────────────
-// markText replaces "# " / "## " / "### " with a badge showing the computed
-// section number. The mark is removed when the cursor is on that line so the
-// raw markdown is editable.
-
-let _headingMarks = []; // {line, mark}
-let _cursorLine = -1;
-
-function computeHeadingLabels() {
-  const labels = []; // {line, depth, label, hashLen}
-  // Detect partie number from markdown H1 or filename
-  let partieNum = 0;
-  for (let i = 0; i < cm.lineCount(); i++) {
-    const m = cm.getLine(i).match(/^#\s+(?:\d+\.?\s+)?Partie\s+(\d+)/i);
-    if (m) { partieNum = parseInt(m[1], 10); break; }
-  }
-  if (!partieNum) {
-    const tab = getActiveTab();
-    const fnMatch = tab?.name?.match(/^(\d+)/);
-    partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
-  }
-  if (!partieNum) return labels;
-
-  let h2Count = 0, h3Count = 0;
-  for (let i = 0; i < cm.lineCount(); i++) {
-    const line = cm.getLine(i);
-    const m = line.match(/^(#{1,3}) /);
-    if (!m) continue;
-    const depth = m[1].length;
-    let label = '';
-    if (depth === 1) { label = 'P' + partieNum; h2Count = 0; h3Count = 0; }
-    else if (depth === 2) { h2Count++; h3Count = 0; label = partieNum + '.' + h2Count; }
-    else if (depth === 3) { h3Count++; label = partieNum + '.' + h2Count + '.' + h3Count; }
-    if (label) labels.push({ line: i, depth, label, hashLen: m[1].length + 1 }); // +1 for the space
-  }
-  return labels;
-}
-
-function applyHeadingMarks() {
-  // Clear old marks
-  for (const hm of _headingMarks) hm.mark.clear();
-  _headingMarks = [];
-
-  const labels = computeHeadingLabels();
-  const cursorLine = cm.getCursor().line;
-
-  for (const { line, depth, label, hashLen } of labels) {
-    if (line === cursorLine) continue; // don't replace on cursor line
-
-    const badge = document.createElement("span");
-    badge.className = "cm-heading-badge";
-    badge.dataset.level = String(depth);
-    badge.textContent = label;
-
-    const mark = cm.markText(
-      { line, ch: 0 },
-      { line, ch: hashLen },
-      { replacedWith: badge, handleMouseEvents: true },
-    );
-    _headingMarks.push({ line, mark });
-  }
-}
-
 let headingBadgeTimer = null;
-function scheduleHeadingBadges() {
+function onChangeHeadingBadges() {
   clearTimeout(headingBadgeTimer);
   headingBadgeTimer = setTimeout(applyHeadingMarks, 150);
 }
-cm.on("change", scheduleHeadingBadges);
-cm.on("cursorActivity", () => {
+function onCursorHeadingBadges() {
   const cur = cm.getCursor().line;
-  if (cur !== _cursorLine) {
-    _cursorLine = cur;
-    applyHeadingMarks(); // immediate — no debounce on cursor move
+  if (cur !== getCursorLine()) {
+    setCursorLine(cur);
+    applyHeadingMarks();
   }
-});
+}
+cm.on("change", onChangeHeadingBadges);
+cm.on("cursorActivity", onCursorHeadingBadges);
 setTimeout(applyHeadingMarks, 200);
 
 // ── Format table button visibility ─────────────────────────────────────────
@@ -471,219 +244,33 @@ if (btnFormatTable) {
 
 // ── Document outline ───────────────────────────────────────────────────────
 
-const outlineList = document.getElementById("outlineList");
-const outlineSection = document.getElementById("outlineSection");
-let outlineHeadings = [];
-let stuckObserver = null;
-
-function buildOutline() {
-  outlineHeadings = [];
-  for (let i = 0; i < cm.lineCount(); i++) {
-    const m = cm.getLine(i)?.match(/^(#{1,4}) (.+)/);
-    if (m)
-      outlineHeadings.push({ line: i, level: m[1].length, text: m[2].trim() });
-  }
-
-  if (!outlineList) return;
-  if (stuckObserver) {
-    stuckObserver.disconnect();
-    stuckObserver = null;
-  }
-
-  outlineList.innerHTML = "";
-  const stickyItems = [];
-
-  // Compute section numbering using partie number from filename
-  const tab = getActiveTab();
-  const fnMatch = tab?.name?.match(/^(\d+)/);
-  const partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
-  const counters = [0, 0, 0]; // h2, h3, h4 counters
-  const numbers = outlineHeadings.map((h) => {
-    if (h.level === 1) {
-      // H1 = partie title, reset sub-counters
-      counters[0] = 0; counters[1] = 0; counters[2] = 0;
-      return partieNum ? `Partie ${partieNum}` : "";
-    }
-    const lvl = h.level - 2; // h2→0, h3→1, h4→2
-    counters[lvl]++;
-    for (let k = lvl + 1; k < counters.length; k++) counters[k] = 0;
-    const prefix = partieNum ? `${partieNum}.` : "";
-    return prefix + counters.slice(0, lvl + 1).join(".");
-  });
-
-  outlineHeadings.forEach((h, idx) => {
-    const el = document.createElement("div");
-    el.className = "outline-item";
-    el.dataset.level = h.level;
-    el.dataset.idx = idx;
-    // Strip existing leading number/partie prefix to avoid duplication
-    const cleanText = h.text.replace(/^(?:Partie\s+\d+\s*[—●\-]\s*|[\d.]+\s*)/i, "");
-    const num = numbers[idx];
-    el.textContent = num ? num + " " + cleanText : cleanText;
-    el.onclick = () => {
-      cm.setCursor({ line: h.line, ch: 0 });
-      cm.scrollIntoView(
-        { line: h.line, ch: 0 },
-        cm.getScrollInfo().clientHeight / 3,
-      );
-      cm.focus();
-    };
-    outlineList.appendChild(el);
-    if (h.level <= 3) stickyItems.push(el);
-  });
-
-  if (stickyItems.length > 0) {
-    stuckObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          entry.target.classList.toggle("stuck", entry.intersectionRatio < 1);
-        });
-      },
-      { root: outlineList, threshold: 1.0 },
-    );
-    stickyItems.forEach((el) => stuckObserver.observe(el));
-  }
-
-  if (outlineSection && outlineHeadings.length > 0) {
-    outlineSection.style.display = "";
-  }
-  updateOutlineHighlight();
-}
-
-let lastVisibleRange = "";
-
-function updateOutlineHighlight() {
-  if (!outlineList || outlineHeadings.length === 0) return;
-
-  const cursorLine = cm.getCursor().line;
-  const info = cm.getScrollInfo();
-  const topLine = cm.lineAtHeight(info.top, "local");
-  const bottomLine = cm.lineAtHeight(info.top + info.clientHeight, "local");
-
-  let firstVisible = -1,
-    lastVisible = -1;
-  for (let i = 0; i < outlineHeadings.length; i++) {
-    const sectionStart = outlineHeadings[i].line;
-    const sectionEnd =
-      i + 1 < outlineHeadings.length
-        ? outlineHeadings[i + 1].line - 1
-        : cm.lineCount() - 1;
-    if (sectionEnd >= topLine && sectionStart <= bottomLine) {
-      if (firstVisible < 0) firstVisible = i;
-      lastVisible = i;
-    }
-  }
-
-  let activeIdx = -1;
-  for (let i = outlineHeadings.length - 1; i >= 0; i--) {
-    if (outlineHeadings[i].line <= cursorLine) {
-      activeIdx = i;
-      break;
-    }
-  }
-
-  const centerLine = cm.lineAtHeight(info.top + info.clientHeight / 2, "local");
-  const proximity = new Array(outlineHeadings.length).fill(0);
-  if (firstVisible >= 0 && lastVisible >= firstVisible) {
-    for (let i = firstVisible; i <= lastVisible; i++) {
-      const headLine = outlineHeadings[i].line;
-      const nextLine =
-        i + 1 < outlineHeadings.length
-          ? outlineHeadings[i + 1].line
-          : cm.lineCount();
-      const sectionMid = (headLine + nextLine) / 2;
-      const halfSpan = Math.max(1, (bottomLine - topLine) / 2);
-      const dist = Math.abs(sectionMid - centerLine) / halfSpan;
-      proximity[i] = Math.max(0, 1 - dist);
-    }
-  }
-
-  const visKey =
-    firstVisible + ":" + lastVisible + ":" + activeIdx + ":" + centerLine;
-  if (visKey === lastVisibleRange) return;
-  lastVisibleRange = visKey;
-
-  const items = outlineList.querySelectorAll(".outline-item");
-  items.forEach((el, i) => {
-    el.classList.toggle("active", i === activeIdx);
-    const isVisible = i >= firstVisible && i <= lastVisible;
-    el.classList.toggle("visible", isVisible);
-    el.style.setProperty("--prox", isVisible ? proximity[i].toFixed(2) : "0");
-  });
-
-  if (firstVisible >= 0 && items[firstVisible] && items[lastVisible]) {
-    const firstEl = items[firstVisible];
-    const lastEl = items[lastVisible];
-    const rangeTop = firstEl.offsetTop - outlineList.offsetTop;
-    const rangeBottom =
-      lastEl.offsetTop - outlineList.offsetTop + lastEl.offsetHeight;
-    const rangeCenter = (rangeTop + rangeBottom) / 2;
-    outlineList.scrollTop = rangeCenter - outlineList.clientHeight / 2;
-  }
-}
+// Outline: delegated to outline-manager.js
+const _buildOutline = () => buildOutline(getActiveTab);
 
 let outlineTimer = null;
-cm.on("change", () => {
+function onChangeOutline() {
   clearTimeout(outlineTimer);
-  outlineTimer = setTimeout(buildOutline, 300);
-});
+  outlineTimer = setTimeout(_buildOutline, 300);
+}
+cm.on("change", onChangeOutline);
 cm.on("cursorActivity", updateOutlineHighlight);
 cm.on("scroll", updateOutlineHighlight);
-setTimeout(buildOutline, 200);
+setTimeout(_buildOutline, 200);
 
-// ── Desktop-style menu bar ─────────────────────────────────────────────────
+// ── Wire tab & sidebar callbacks (delegated to tab-wiring.js) ─────────────
 
-(function initMenubar() {
-  const menubar = document.querySelector(".menubar");
-  if (!menubar) return;
+wireTabCallbacks({
+  reattachCmListeners, detachCmListeners,
+  updateGutterMarkers, applyHeadingMarks,
+  buildOutline: _buildOutline, updateMenuState,
+  hideWelcome, showWelcome, doSave, reloadTabFromDisk,
+});
 
-  const backdrop = document.createElement("div");
-  backdrop.className = "menu-backdrop";
-  document.body.appendChild(backdrop);
+wireSidebarCallbacks({ hideWelcome, reloadTabFromDisk });
 
-  let openMenu = null;
+// ── Desktop-style menu bar (delegated to menu-state.js) ───────────────────
 
-  function openItem(item) {
-    if (openMenu === item) return;
-    closeAll();
-    item.classList.add("open");
-    backdrop.classList.add("active");
-    openMenu = item;
-  }
-
-  function closeAll() {
-    if (openMenu) openMenu.classList.remove("open");
-    backdrop.classList.remove("active");
-    openMenu = null;
-  }
-
-  menubar.querySelectorAll(".menu-trigger").forEach((trigger) => {
-    trigger.addEventListener("click", (e) => {
-      e.stopPropagation();
-      const item = trigger.closest(".menu-item");
-      if (openMenu === item) {
-        closeAll();
-      } else {
-        openItem(item);
-      }
-    });
-  });
-
-  menubar.querySelectorAll(".menu-item").forEach((item) => {
-    item.addEventListener("mouseenter", () => {
-      if (openMenu && openMenu !== item) openItem(item);
-    });
-  });
-
-  menubar.querySelectorAll(".menu-dropdown button").forEach((btn) => {
-    btn.addEventListener("click", () => closeAll());
-  });
-
-  backdrop.addEventListener("click", closeAll);
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && openMenu) closeAll();
-  });
-})();
+initMenubar();
 
 // ── Drag & drop .md files ──────────────────────────────────────────────────
 
@@ -700,228 +287,6 @@ cmEl.addEventListener("drop", (e) => {
     openFilePath(file.path);
   }
 });
-
-// ── Open a file by path ────────────────────────────────────────────────────
-
-async function openFilePath(filePath) {
-  // Check if already open
-  const existing = findTabByPath(filePath);
-  if (existing >= 0) {
-    openTab(filePath, filePath.split("/").pop());
-    return;
-  }
-
-  try {
-    showLoading("Loading...");
-    const text = await readFile(filePath);
-    const modTime = await getFileModTime(filePath);
-    const name = filePath.split("/").pop();
-    openTab(filePath, name, text, modTime);
-    hideLoading();
-    hideWelcome();
-    triggerRender();
-    addRecentFile(filePath);
-    await api.setAppState({ lastFile: filePath });
-    buildRecentUI();
-    status.textContent = "Loaded " + name;
-  } catch (e) {
-    hideLoading();
-    status.textContent = "Failed to load file: " + e.message;
-  }
-}
-
-// ── Reload tab from disk ───────────────────────────────────────────────────
-
-async function reloadTabFromDisk(tab) {
-  if (!tab || !tab.path) return;
-  try {
-    showLoading("Reloading " + tab.name + "...");
-    const content = await readFile(tab.path);
-    const modTime = await getFileModTime(tab.path);
-    cm.setValue(content);
-    markActiveTabClean(content, modTime);
-    updateGutterMarkers();
-    renderFileList();
-    hideLoading();
-    status.textContent = "Reloaded " + tab.name + " from disk";
-  } catch (e) {
-    hideLoading();
-    status.textContent = "Failed to reload: " + e.message;
-  }
-}
-
-// ── Save active tab ────────────────────────────────────────────────────────
-
-async function doSave() {
-  const tab = getActiveTab();
-  if (!tab) return;
-
-  applyPrettify();
-  const content = cm.getValue();
-
-  if (!tab.path) {
-    // Unsaved — trigger Save As
-    await doSaveAs();
-    return;
-  }
-
-  try {
-    const result = await saveWithConflictDetection(
-      tab.path,
-      content,
-      tab.savedContent,
-      tab.localFileModTime,
-    );
-
-    if (result.action === "cancel") {
-      status.textContent = "Save cancelled";
-      return;
-    }
-    if (result.action === "reload") {
-      cm.setValue(result.content);
-      markActiveTabClean(result.content, result.modTime);
-      updateGutterMarkers();
-      renderFileList();
-      status.textContent = "Loaded disk version of " + tab.name;
-      return;
-    }
-    if (result.action === "merge") {
-      cm.setValue(result.content);
-      if (result.hasConflicts) {
-        status.textContent =
-          "Merged with conflicts \u2014 search for <<<<<<< to resolve";
-        return;
-      }
-      // Fall through to save the merged content
-      await writeFile(tab.path, cm.getValue());
-      const modTime = await getFileModTime(tab.path);
-      markActiveTabClean(cm.getValue(), modTime);
-      updateGutterMarkers();
-      renderFileList();
-      status.textContent = "Saved " + tab.name;
-      return;
-    }
-
-    // Normal save
-    markActiveTabClean(content, result.modTime);
-    updateTitle(tab.name, false);
-    updateGutterMarkers();
-    renderFileList();
-    status.textContent = "Saved " + tab.name;
-    // Notify parent frame (React component) of save
-    if (window.__pagedEditorNotifyParent) {
-      window.__pagedEditorNotifyParent("save", { file: tab.path, name: tab.name });
-    }
-  } catch (e) {
-    status.textContent = "Save failed: " + e.message;
-  }
-}
-
-async function doSaveAs() {
-  const tab = getActiveTab();
-  if (!tab) return;
-
-  const filePath = await showSaveAsDialog(tab.name || "document.md");
-  if (!filePath) return;
-
-  applyPrettify();
-  try {
-    await writeFile(filePath, cm.getValue());
-    const modTime = await getFileModTime(filePath);
-    const name = filePath.split("/").pop();
-    updateActiveTabPath(filePath, name);
-    markActiveTabClean(cm.getValue(), modTime);
-    updateTitle(name, false);
-    updateGutterMarkers();
-    renderFileList();
-    status.textContent = "Saved as " + name;
-    addRecentFile(filePath);
-  } catch (e) {
-    status.textContent = "Save As failed: " + e.message;
-  }
-}
-
-// ── Unsaved changes dialog ─────────────────────────────────────────────────
-
-function showUnsavedDialog(fileName) {
-  return new Promise((resolve) => {
-    const overlay = document.createElement("div");
-    overlay.className = "modal-overlay open";
-
-    overlay.innerHTML = `
-      <div class="modal">
-        <h3>Unsaved Changes</h3>
-        <p style="color:#94a3b8;margin-bottom:4px;">
-          <strong style="color:#cdd6f4;">${fileName}</strong> has unsaved changes.
-        </p>
-        <div class="btn-row">
-          <button class="btn-cancel" data-action="cancel">Keep open</button>
-          <button class="btn-discard" data-action="discard">Discard</button>
-          <button class="btn-save" data-action="save">Save</button>
-        </div>
-      </div>
-    `;
-
-    overlay.addEventListener("click", (e) => {
-      const action = e.target.dataset?.action;
-      if (action) {
-        overlay.remove();
-        resolve(action);
-      }
-    });
-
-    document.addEventListener("keydown", function onKey(e) {
-      if (e.key === "Escape") {
-        document.removeEventListener("keydown", onKey);
-        overlay.remove();
-        resolve("cancel");
-      }
-    });
-
-    document.body.appendChild(overlay);
-  });
-}
-
-// ── Close active tab ───────────────────────────────────────────────────────
-
-async function closeCurrentTab() {
-  const tab = getActiveTab();
-  if (!tab) return;
-
-  if (tab.dirty) {
-    const action = await showUnsavedDialog(tab.name || "Untitled");
-    if (action === "cancel") return;
-    if (action === "save") await doSave();
-    // "discard" falls through
-  }
-
-  closeActiveTab();
-}
-
-// ── Open single file via dialog ────────────────────────────────────────────
-
-async function openLocalFile() {
-  const filePath = await showOpenFileDialog();
-  if (!filePath) return;
-  await openFilePath(filePath);
-}
-
-// ── Open folder and load first file ─────────────────────────────────────────
-
-async function openFolderAndLoadFirst(result) {
-  if (result && result.fileEntries.length > 0) {
-    const first = result.fileEntries[0];
-    const content = await readFile(first.path);
-    const modTime = await getFileModTime(first.path);
-    openTab(first.path, first.name, content, modTime);
-    hideWelcome();
-  }
-}
-
-async function openFolderByPathAndLoad(dirPath) {
-  const result = await openFolderByPath(dirPath);
-  await openFolderAndLoadFirst(result);
-}
 
 // ── Expose globals for onclick handlers in HTML ────────────────────────────
 
@@ -990,71 +355,24 @@ window.newDocument = newDocument;
 window.newFromTemplate = newFromTemplate;
 window.addAgent = addAgent;
 
-// ── Welcome screen ─────────────────────────────────────────────────────────
+// ── Initialize file-ops module with dependencies ──────────────────────────
 
-const welcomeScreen = document.getElementById("welcomeScreen");
+initFileOps({
+  cm, api, status,
+  findTabByPath, openTab, showLoading, hideLoading,
+  hideWelcome: () => hideWelcome(),
+  triggerRender, readFile, getFileModTime, addRecentFile,
+  buildRecentUI: () => buildRecentUI(),
+  getActiveTab, applyPrettify, saveWithConflictDetection,
+  markActiveTabClean, updateTitle, updateGutterMarkers, renderFileList,
+  writeFile, updateActiveTabPath, showSaveAsDialog, showOpenFileDialog,
+  closeActiveTab, openFolderByPath,
+});
 
-function hideWelcome() {
-  if (welcomeScreen) welcomeScreen.classList.add("hidden");
-}
-
-function showWelcome() {
-  if (welcomeScreen) welcomeScreen.classList.remove("hidden");
-}
-
-// ── Menu state ─────────────────────────────────────────────────────────────
+// ── Menu state (delegated to menu-state.js) ───────────────────────────────
 
 function updateMenuState() {
-  const hasContent = !!cm.getValue();
-  const hasFile = hasOpenTabs();
-  const hasFolder = !!getFolderPath();
-  const canSave = hasFile;
-
-  const set = (id, enabled) => {
-    const el = document.getElementById(id);
-    if (el) el.disabled = !enabled;
-  };
-
-  set("btnOpenLocal", true);
-  set("btnOpenFolder", true);
-  set("welcomeOpenLocal", true);
-  set("welcomeOpenFolder", true);
-  set("btnSave", canSave);
-  set("btnSaveAs", hasContent);
-  set("btnCloseFile", hasFile);
-  set("btnCloseFolder", hasFolder);
-
-  set("btnInsertTable", hasContent);
-  set("btnUndo", hasContent);
-  set("btnRedo", hasContent);
-  set("btnRender", hasContent);
-  set("btnPreviewTab", hasContent);
-  set("btnDownloadPdf", hasContent);
-  set("btnDownloadMemoire", hasFolder);
-  set("btnDownloadMemoire2", hasFolder);
-  set("btnToggleWrap", true);
-
-  updatePdfButtonLabel();
-}
-
-/** Update "Export PDF Partie N" buttons with the actual partie number. */
-function updatePdfButtonLabel() {
-  const tab = getActiveTab();
-  const fnMatch = tab?.name?.match(/^(\d+)/);
-  const num = fnMatch ? fnMatch[1] : "N";
-  const label = `Export PDF Partie ${num}`;
-  // Preview toolbar button — text node after the SVG
-  const toolbarBtn = document.querySelector('.pdf-download-btn:not(.memoire-btn)');
-  if (toolbarBtn) {
-    const textNode = Array.from(toolbarBtn.childNodes).find(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
-    if (textNode) textNode.textContent = `\n              ${label}\n            `;
-  }
-  // Menu dropdown button
-  const menuBtn = document.getElementById('btnDownloadPdf');
-  if (menuBtn) {
-    const span = menuBtn.querySelector('.menu-label');
-    if (span) span.textContent = label;
-  }
+  _updateMenuState(getActiveTab, hasOpenTabs, getFolderPath);
 }
 
 const BLANK_FRONTMATTER = `---
@@ -1120,230 +438,36 @@ function newFromTemplate() {
   triggerRender();
 }
 
-// ── Restore last session on startup ────────────────────────────────────────
+// ── Session restore & recent UI (delegated to session.js) ─────────────────
 
-async function tryRestore() {
-  const state = await api.getAppState();
+const sessionDeps = {
+  openFolderByPath,
+  openFilePath,
+  readFile,
+  getFileModTime,
+  openTab,
+  getFileEntries,
+  closeFolder,
+  findTabByPath,
+};
 
-  if (state.lastFolder) {
-    try {
-      await openFolderByPath(state.lastFolder);
-      // Restore open tabs
-      const openTabNames = state.openTabs || [];
-      const activeTabName = state.activeTab;
-      const entries = getFileEntries();
-
-      if (openTabNames.length > 0) {
-        for (const tabInfo of openTabNames) {
-          const name = typeof tabInfo === "string" ? tabInfo : tabInfo.name;
-          const path = typeof tabInfo === "object" ? tabInfo.path : null;
-          // Match by path first, then by name
-          const entry = (path && entries.find((e) => e.path === path))
-            || entries.find((e) => e.name === name);
-          if (entry) {
-            const content = await readFile(entry.path);
-            const modTime = await getFileModTime(entry.path);
-            openTab(entry.path, entry.name, content, modTime);
-          }
-        }
-        // Switch to previously active tab
-        if (activeTabName) {
-          // activeTab can be a path or a name
-          const entry = entries.find((e) => e.path === activeTabName)
-            || entries.find((e) => e.name === activeTabName);
-          if (entry) {
-            const idx = findTabByPath(entry.path);
-            if (idx >= 0) openTab(entry.path, entry.name);
-          }
-        }
-      } else if (state.lastFile) {
-        // Legacy: restore single file
-        const entry = entries.find((e) => e.name === state.lastFile);
-        if (entry) {
-          const content = await readFile(entry.path);
-          const modTime = await getFileModTime(entry.path);
-          openTab(entry.path, entry.name, content, modTime);
-        }
-      } else if (window.__pagedEditorWebMode && entries.length > 0) {
-        // Web mode first load — auto-open the first file
-        const first = entries[0];
-        const content = await readFile(first.path);
-        const modTime = await getFileModTime(first.path);
-        openTab(first.path, first.name, content, modTime);
-      }
-      return true;
-    } catch (e) {
-      console.warn("Folder restore failed:", e);
-      closeFolder();
-    }
-  }
-
-  // No folder — restore standalone file tabs
-  const standaloneOpenTabs = state.openTabs || [];
-  if (!state.lastFolder && standaloneOpenTabs.length > 0) {
-    for (const tabInfo of standaloneOpenTabs) {
-      const filePath = typeof tabInfo === "string" ? tabInfo : tabInfo.path;
-      if (filePath) {
-        try { await openFilePath(filePath); } catch (e) { console.warn("Tab restore failed:", filePath, e); }
-      }
-    }
-    // Switch to active tab
-    if (state.activeTab) {
-      const idx = findTabByPath(state.activeTab);
-      if (idx >= 0) openTab(state.activeTab, state.activeTab.split("/").pop());
-    }
-    return standaloneOpenTabs.length > 0;
-  }
-
-  if (state.lastFile && !state.lastFolder) {
-    try {
-      await openFilePath(state.lastFile);
-      return true;
-    } catch (e) {
-      console.warn("File restore failed:", e);
-    }
-  }
-
-  return false;
+function tryRestore() {
+  return _tryRestore(sessionDeps);
 }
 
-// ── Recent items UI ────────────────────────────────────────────────────────
-
-async function buildRecentUI() {
-  const state = await api.getAppState();
-  const recentFiles = state.recentFiles || [];
-  const recentFolders = state.recentFolders || [];
-
-  const container = document.getElementById("recentMenuContainer");
-  const menu = document.getElementById("recentMenu");
-  if (container && menu) {
-    if (recentFiles.length === 0 && recentFolders.length === 0) {
-      container.style.display = "none";
-    } else {
-      container.style.display = "";
-      menu.innerHTML = "";
-      if (recentFolders.length > 0) {
-        const label = document.createElement("div");
-        label.className = "submenu-section-label";
-        label.textContent = "Folders";
-        menu.appendChild(label);
-        for (const f of recentFolders) {
-          const btn = document.createElement("button");
-          btn.textContent = f.split("/").pop();
-          btn.title = f;
-          btn.onclick = () => openFolderByPathAndLoad(f);
-          menu.appendChild(btn);
-        }
-      }
-      if (recentFolders.length > 0 && recentFiles.length > 0) {
-        const div = document.createElement("div");
-        div.className = "menu-divider";
-        menu.appendChild(div);
-      }
-      if (recentFiles.length > 0) {
-        const label = document.createElement("div");
-        label.className = "submenu-section-label";
-        label.textContent = "Files";
-        menu.appendChild(label);
-        for (const f of recentFiles) {
-          const btn = document.createElement("button");
-          btn.textContent = f.split("/").pop();
-          btn.title = f;
-          btn.onclick = () => openFilePath(f);
-          menu.appendChild(btn);
-        }
-      }
-    }
-  }
-
-  const welcomeRecent = document.getElementById("welcomeRecent");
-  const welcomeFolders = document.getElementById("welcomeRecentFolders");
-  const welcomeFiles = document.getElementById("welcomeRecentFiles");
-  if (welcomeRecent && welcomeFolders && welcomeFiles) {
-    if (recentFiles.length === 0 && recentFolders.length === 0) {
-      welcomeRecent.style.display = "none";
-    } else {
-      welcomeRecent.style.display = "";
-      welcomeFolders.innerHTML = "";
-      welcomeFiles.innerHTML = "";
-
-      for (const f of recentFolders) {
-        const link = document.createElement("a");
-        link.className = "recent-link";
-        link.textContent = f;
-        link.href = "#";
-        link.onclick = (e) => {
-          e.preventDefault();
-          openFolderByPathAndLoad(f);
-        };
-        welcomeFolders.appendChild(link);
-      }
-      for (const f of recentFiles) {
-        const link = document.createElement("a");
-        link.className = "recent-link";
-        link.textContent = f;
-        link.href = "#";
-        link.onclick = (e) => {
-          e.preventDefault();
-          openFilePath(f);
-        };
-        welcomeFiles.appendChild(link);
-      }
-    }
-  }
+function buildRecentUI() {
+  return _buildRecentUI({ openFilePath, openFolderByPathAndLoad });
 }
 
-// ── Keyboard shortcuts ─────────────────────────────────────────────────────
+// ── Keyboard shortcuts & Electron menus (delegated to keyboard-shortcuts.js)
 
-document.addEventListener("keydown", (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "S") {
-    e.preventDefault();
-    doSaveAs();
-    return;
-  }
-  if ((e.ctrlKey || e.metaKey) && e.key === "s") {
-    e.preventDefault();
-    if (hasOpenTabs()) doSave();
-    else doSaveAs();
-  }
-  if ((e.ctrlKey || e.metaKey) && e.key === "o") {
-    e.preventDefault();
-    openLocalFile();
-  }
-  if ((e.ctrlKey || e.metaKey) && e.key === "n") {
-    e.preventDefault();
-    newDocument();
-  }
-  if ((e.ctrlKey || e.metaKey) && e.key === "w") {
-    e.preventDefault();
-    closeCurrentTab();
-  }
-});
-
-// ── Wire Electron menu events ──────────────────────────────────────────────
-
-if (api?.on) {
-  api.on("menu-new", () => newDocument());
-  api.on("menu-open-file", () => openLocalFile());
-  api.on("menu-open-folder", () => window.openFolder());
-  api.on("menu-save", () => {
-    if (hasOpenTabs()) doSave();
-    else doSaveAs();
-  });
-  api.on("menu-save-as", () => doSaveAs());
-  api.on("menu-close-file", () => closeCurrentTab());
-  api.on("menu-close-folder", () => window.closeFolder());
-  api.on("menu-insert-table", () => insertTable());
-  api.on("menu-render", () => triggerRender());
-  api.on("menu-preview-tab", () => openPreviewTab());
-  api.on("menu-download-pdf", () => window.downloadPdf());
-  api.on("menu-download-memoire", () => window.downloadFullMemoire());
-  api.on("menu-toggle-wrap", () => toggleWrap());
-  api.on("menu-toggle-cover", () => {}); // no-op: single-section mode
-  api.on("open-file-path", (filePath) => openFilePath(filePath));
-  api.on("open-folder-path", (folderPath) => openFolderByPathAndLoad(folderPath));
-  api.on("recent-cleared", () => buildRecentUI());
-}
+const shortcutActions = {
+  doSave, doSaveAs, openLocalFile, newDocument, closeCurrentTab, hasOpenTabs,
+  insertTable, triggerRender, openPreviewTab, toggleWrap,
+  openFilePath, openFolderByPathAndLoad, buildRecentUI,
+};
+setupKeyboardShortcuts(shortcutActions);
+wireElectronMenus(api, shortcutActions);
 
 // ── Warn before closing with unsaved changes ───────────────────────────────
 
