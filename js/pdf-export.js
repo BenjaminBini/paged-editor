@@ -2,38 +2,15 @@
 
 import { editor, status } from "./editor.js";
 import { parseFrontmatter } from "./utils.js";
-import {
-  parseMarkdownSync,
-  setHeadingCollector,
-  resetHeadingIdCounter,
-} from "./markdown.js";
-import { setActiveFileName, getActiveFileName } from "./parse-context.js";
-import { resolveMermaid, getMermaidQueue } from "./mermaid-render.js";
-import { detectPartieNum, getColorIndex, wrapSection } from "./markdown-helpers.js";
-import {
-  wrapInDocument,
-  buildHeaderText,
-  buildCoverHtml,
-  buildSommaireHtml,
-} from "./document.js";
+import { getActiveFileName } from "./parse-context.js";
+import { renderMarkdown } from "./render-pipeline.js";
+import { buildHeaderText, buildCoverHtml, buildSommaireHtml, wrapInDocument } from "./document.js";
 
 // ── Single-document export ──────────────────────────────────────────────────
 
 export async function buildPagedHtml(md) {
-  const { fm, body } = parseFrontmatter(md);
-  const headerText = buildHeaderText(fm);
-  const language = fm.language || "fr";
-
-  const partieNum = detectPartieNum(body, getActiveFileName());
-  const ci = getColorIndex(partieNum);
-
-  const html = parseMarkdownSync(body, ci, 0);
-  const queue = getMermaidQueue();
-  const resolved = await resolveMermaid(html, queue);
-
-  const sectionHtml = wrapSection(resolved, ci);
-
-  return wrapInDocument(sectionHtml, { gen: 0, headerText, language });
+  const result = await renderMarkdown(md, { fileName: getActiveFileName() });
+  return result.documentHtml;
 }
 
 export async function openPreviewTab() {
@@ -65,26 +42,16 @@ export async function buildFullMemoireHtml(sections) {
 
   const allHeadings = [];
   const sectionHtmlParts = [];
-  resetHeadingIdCounter();
+  let headingIdOffset = 0;
 
   for (const sec of sections) {
-    const { body } = parseFrontmatter(sec.markdown);
-
-    const partieNum = detectPartieNum(body, sec.name);
-    const ci = getColorIndex(partieNum);
-
-    const prevFileName = getActiveFileName();
-    setActiveFileName(sec.name);
-    setHeadingCollector(allHeadings);
-
-    let html = parseMarkdownSync(body, ci, 0);
-    const queue = getMermaidQueue();
-    html = await resolveMermaid(html, queue);
-
-    setHeadingCollector(null);
-    setActiveFileName(prevFileName);
-
-    sectionHtmlParts.push(wrapSection(html, ci));
+    const result = await renderMarkdown(sec.markdown, {
+      fileName: sec.name,
+      headingCollector: allHeadings,
+      headingIdOffset,
+    });
+    sectionHtmlParts.push(result.sectionHtml);
+    headingIdOffset = result.headingIdCounter;
   }
 
   const coverHtml = buildCoverHtml(fm);

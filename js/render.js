@@ -2,12 +2,8 @@
 // Manages the single-iframe lifecycle: trigger render, swap frames, scale/zoom.
 
 import { editor, previewContainer, status } from "./editor.js";
-import { parseFrontmatter } from "./utils.js";
-import { parseMarkdownSync } from "./markdown.js";
 import { getActiveFileName } from "./parse-context.js";
-import { resolveMermaid, getMermaidQueue } from "./mermaid-render.js";
-import { detectPartieNum, getColorIndex, wrapSection } from "./markdown-helpers.js";
-import { wrapInDocument, buildHeaderText } from "./document.js";
+import { renderMarkdown } from "./render-pipeline.js";
 
 // ── Hooks ───────────────────────────────────────────────────────────────────
 
@@ -39,31 +35,19 @@ export async function triggerRender() {
   status.textContent = "Rendering...";
   renderStartTime = performance.now();
 
-  const { fm, body } = parseFrontmatter(md);
-  const headerText = buildHeaderText(fm);
-  const language = fm.language || "fr";
-
   // Compute frontmatter line offset for source-line tracking
   const fmMatch = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
   const startLine = fmMatch ? fmMatch[0].split("\n").length - 1 : 0;
 
-  const partieNum = detectPartieNum(body, getActiveFileName());
-  const colorIdx = getColorIndex(partieNum);
-
-  // Phase 1: Sync parse (mermaid → placeholders)
-  let html = parseMarkdownSync(body, colorIdx, startLine);
-  const queue = getMermaidQueue();
-
-  // Phase 2: Resolve mermaid (cached where possible)
-  html = await resolveMermaid(html, queue);
-
-  const sectionHtml = wrapSection(html, colorIdx);
-
-  // Phase 3: Create iframe
   currentGen++;
   const gen = currentGen;
 
-  const doc = wrapInDocument(sectionHtml, { gen, headerText, language });
+  const result = await renderMarkdown(md, {
+    fileName: getActiveFileName(),
+    startLine,
+    gen,
+  });
+  const doc = result.documentHtml;
   const blob = new Blob([doc], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
 
