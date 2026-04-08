@@ -3,13 +3,13 @@
 import { editor, status } from "./editor.js";
 import { parseFrontmatter } from "./utils.js";
 import {
-  COLOR_PAIRS,
   parseMarkdownSync,
   setHeadingCollector,
   resetHeadingIdCounter,
 } from "./markdown.js";
 import { setActiveFileName, getActiveFileName } from "./parse-context.js";
 import { resolveMermaid, getMermaidQueue } from "./mermaid-render.js";
+import { detectPartieNum, getColorIndex, wrapSection } from "./markdown-helpers.js";
 import {
   wrapInDocument,
   buildHeaderText,
@@ -24,22 +24,14 @@ export async function buildPagedHtml(md) {
   const headerText = buildHeaderText(fm);
   const language = fm.language || "fr";
 
-  const pm = body.match(/^#\s+Partie\s+(\d+)/im);
-  let partieNum;
-  if (pm) {
-    partieNum = parseInt(pm[1], 10);
-  } else {
-    const fnMatch = getActiveFileName().match(/^(\d+)/);
-    partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
-  }
-  const ci = partieNum > 0 ? (partieNum - 1) % COLOR_PAIRS.length : 0;
+  const partieNum = detectPartieNum(body, getActiveFileName());
+  const ci = getColorIndex(partieNum);
 
   const html = parseMarkdownSync(body, ci, 0);
   const queue = getMermaidQueue();
   const resolved = await resolveMermaid(html, queue);
 
-  const pair = COLOR_PAIRS[ci % COLOR_PAIRS.length];
-  const sectionHtml = `<section class="level2" style="--section-color:${pair[0]};--section-color-light:${pair[1]}">\n${resolved}\n</section>`;
+  const sectionHtml = wrapSection(resolved, ci);
 
   return wrapInDocument(sectionHtml, { gen: 0, headerText, language });
 }
@@ -78,16 +70,8 @@ export async function buildFullMemoireHtml(sections) {
   for (const sec of sections) {
     const { body } = parseFrontmatter(sec.markdown);
 
-    const pm = body.match(/^#\s+Partie\s+(\d+)/im);
-    let partieNum;
-    if (pm) {
-      partieNum = parseInt(pm[1], 10);
-    } else {
-      const fnMatch = sec.name.match(/^(\d+)/);
-      partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
-    }
-    const ci = partieNum > 0 ? (partieNum - 1) % COLOR_PAIRS.length : 0;
-    const pair = COLOR_PAIRS[ci % COLOR_PAIRS.length];
+    const partieNum = detectPartieNum(body, sec.name);
+    const ci = getColorIndex(partieNum);
 
     const prevFileName = getActiveFileName();
     setActiveFileName(sec.name);
@@ -100,9 +84,7 @@ export async function buildFullMemoireHtml(sections) {
     setHeadingCollector(null);
     setActiveFileName(prevFileName);
 
-    sectionHtmlParts.push(
-      `<section class="level2" data-color-index="${ci % 5}" style="--section-color:${pair[0]};--section-color-light:${pair[1]}">\n${html}\n</section>`,
-    );
+    sectionHtmlParts.push(wrapSection(html, ci));
   }
 
   const coverHtml = buildCoverHtml(fm);

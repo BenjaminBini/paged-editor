@@ -1,6 +1,7 @@
 // outline-manager.js — Document outline panel (extracted from app.js)
 
 import { cm } from "./editor.js";
+import { detectPartieNum } from "./markdown-helpers.js";
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 
@@ -32,10 +33,8 @@ export function buildOutline(getActiveTab) {
   outlineList.innerHTML = "";
   const stickyItems = [];
 
-  // Compute section numbering using partie number from filename
   const tab = getActiveTab();
-  const fnMatch = tab?.name?.match(/^(\d+)/);
-  const partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
+  const partieNum = detectPartieNum(cm.getValue(), tab?.name || "");
   const counters = [0, 0, 0]; // h2, h3, h4 counters
   const numbers = outlineHeadings.map((h) => {
     if (h.level === 1) {

@@ -3,9 +3,10 @@
 
 import { editor, previewContainer, status } from "./editor.js";
 import { parseFrontmatter } from "./utils.js";
-import { COLOR_PAIRS, parseMarkdownSync } from "./markdown.js";
+import { parseMarkdownSync } from "./markdown.js";
 import { getActiveFileName } from "./parse-context.js";
 import { resolveMermaid, getMermaidQueue } from "./mermaid-render.js";
+import { detectPartieNum, getColorIndex, wrapSection } from "./markdown-helpers.js";
 import { wrapInDocument, buildHeaderText } from "./document.js";
 
 // ── Hooks ───────────────────────────────────────────────────────────────────
@@ -46,16 +47,8 @@ export async function triggerRender() {
   const fmMatch = md.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n/);
   const startLine = fmMatch ? fmMatch[0].split("\n").length - 1 : 0;
 
-  // Detect Partie number for color selection: from markdown or filename
-  const partieMatch2 = body.match(/^#\s+Partie\s+(\d+)/im);
-  let partieNum;
-  if (partieMatch2) {
-    partieNum = parseInt(partieMatch2[1], 10);
-  } else {
-    const fnMatch = getActiveFileName().match(/^(\d+)/);
-    partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
-  }
-  const colorIdx = partieNum > 0 ? (partieNum - 1) % COLOR_PAIRS.length : 0;
+  const partieNum = detectPartieNum(body, getActiveFileName());
+  const colorIdx = getColorIndex(partieNum);
 
   // Phase 1: Sync parse (mermaid → placeholders)
   let html = parseMarkdownSync(body, colorIdx, startLine);
@@ -64,9 +57,7 @@ export async function triggerRender() {
   // Phase 2: Resolve mermaid (cached where possible)
   html = await resolveMermaid(html, queue);
 
-  // Wrap in section element
-  const pair = COLOR_PAIRS[colorIdx % COLOR_PAIRS.length];
-  const sectionHtml = `<section class="level2" data-color-index="${colorIdx % 5}" style="--section-color:${pair[0]};--section-color-light:${pair[1]}">\n${html}\n</section>`;
+  const sectionHtml = wrapSection(html, colorIdx);
 
   // Phase 3: Create iframe
   currentGen++;

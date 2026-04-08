@@ -3,6 +3,7 @@
 
 import { cm } from "./editor.js";
 import { computeDiff } from "./diff-merge.js";
+import { detectPartieNum } from "./markdown-helpers.js";
 
 // ── Gutter change markers ──────────────────────────────────────────────────
 
@@ -110,16 +111,8 @@ let _cursorLine = -1;
 
 function computeHeadingLabels(getActiveTab) {
   const labels = [];
-  let partieNum = 0;
-  for (let i = 0; i < cm.lineCount(); i++) {
-    const m = cm.getLine(i).match(/^#\s+(?:\d+\.?\s+)?Partie\s+(\d+)/i);
-    if (m) { partieNum = parseInt(m[1], 10); break; }
-  }
-  if (!partieNum) {
-    const tab = getActiveTab();
-    const fnMatch = tab?.name?.match(/^(\d+)/);
-    partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
-  }
+  const tab = getActiveTab();
+  const partieNum = detectPartieNum(cm.getValue(), tab?.name || "");
   if (!partieNum) return labels;
 
   let h2Count = 0, h3Count = 0;

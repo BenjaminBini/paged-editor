@@ -3,6 +3,7 @@
 import { cm } from './editor.js';
 import { escapeHtml } from './utils.js';
 import { showDiffModal, threeWayMerge } from './diff-merge.js';
+import { showContextMenu } from './context-menu.js';
 
 const api = window.electronAPI;
 
@@ -251,79 +252,16 @@ export function renderFileList() {
 
 // ── File context menu ────────────────────────────────────────────────────────
 
-let _fileCtxMenu = null;
-
-function getOrCreateFileContextMenu() {
-  if (_fileCtxMenu) return _fileCtxMenu;
-  _fileCtxMenu = document.createElement("div");
-  _fileCtxMenu.className = "tab-context-menu";
-  _fileCtxMenu.style.display = "none";
-  document.body.appendChild(_fileCtxMenu);
-  document.addEventListener("mousedown", (e) => {
-    if (!_fileCtxMenu.contains(e.target)) _fileCtxMenu.style.display = "none";
-  });
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") _fileCtxMenu.style.display = "none";
-  });
-  return _fileCtxMenu;
-}
-
 function showFileContextMenu(x, y, f) {
-  const menu = getOrCreateFileContextMenu();
-  const items = [
-    {
-      label: "Open",
-      action: () => { if (_onFileClick) _onFileClick(f.path, f.name); },
-    },
-    {
-      label: "Refresh from Disk",
-      action: () => { if (_onFileRefresh) _onFileRefresh(f.path, f.name); },
-    },
+  showContextMenu(x, y, [
+    { label: "Open", action: () => { if (_onFileClick) _onFileClick(f.path, f.name); } },
+    { label: "Refresh from Disk", action: () => { if (_onFileRefresh) _onFileRefresh(f.path, f.name); } },
     { separator: true },
-    {
-      label: "Copy Path",
-      action: () => navigator.clipboard.writeText(f.path),
-    },
-    {
-      label: "Show in Finder",
-      disabled: !window.electronAPI || window.__pagedEditorWebMode,
-      action: () => window.electronAPI?.showInFinder(f.path),
-    },
+    { label: "Copy Path", action: () => navigator.clipboard.writeText(f.path) },
+    { label: "Show in Finder", disabled: !window.electronAPI || window.__pagedEditorWebMode, action: () => window.electronAPI?.showInFinder(f.path) },
     { separator: true },
-    {
-      label: "Delete File",
-      action: () => deleteFileWithConfirm(f),
-    },
-  ];
-
-  menu.innerHTML = "";
-  items.forEach((item) => {
-    if (item.separator) {
-      const sep = document.createElement("div");
-      sep.className = "tab-ctx-separator";
-      menu.appendChild(sep);
-      return;
-    }
-    const el = document.createElement("div");
-    el.className = "tab-ctx-item" + (item.disabled ? " disabled" : "");
-    el.textContent = item.label;
-    if (!item.disabled) {
-      el.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        _fileCtxMenu.style.display = "none";
-        item.action();
-      });
-    }
-    menu.appendChild(el);
-  });
-
-  menu.style.display = "block";
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const mw = menu.offsetWidth;
-  const mh = menu.offsetHeight;
-  menu.style.left = (x + mw > vw ? vw - mw - 4 : x) + "px";
-  menu.style.top  = (y + mh > vh ? vh - mh - 4 : y) + "px";
+    { label: "Delete File", action: () => deleteFileWithConfirm(f) },
+  ]);
 }
 
 // ── File creation ────────────────────────────────────────────────────────────

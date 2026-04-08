@@ -3,7 +3,7 @@
 import { state } from "./markdown-state.js";
 import { resetMermaidQueue } from "./mermaid-render.js";
 import { getActiveFileName } from "./parse-context.js";
-import { COLOR_PAIRS } from "./markdown-helpers.js";
+import { COLOR_PAIRS, detectPartieNum } from "./markdown-helpers.js";
 import "./marked-renderer.js"; // registers marked plugins (side-effect import)
 
 export { COLOR_PAIRS };
@@ -26,14 +26,7 @@ export function parseMarkdownSync(md, colorIdx, startLine) {
   state.h2Count = 0;
   state.h3Count = 0;
 
-  // Detect partie number: from markdown H1, or from filename prefix
-  const partieMatch = md.match(/^#\s+Partie\s+(\d+)/im);
-  if (partieMatch) {
-    state.partieNum = parseInt(partieMatch[1], 10);
-  } else {
-    const fnMatch = getActiveFileName().match(/^(\d+)/);
-    state.partieNum = fnMatch ? parseInt(fnMatch[1], 10) : 0;
-  }
+  state.partieNum = detectPartieNum(md, getActiveFileName());
 
   const tokens = marked.lexer(md);
 

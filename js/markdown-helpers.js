@@ -31,6 +31,32 @@ export function decodeEntities(s) {
     .replace(/&#x27;/g, "'");
 }
 
+/**
+ * Detect partie number from markdown body (H1 "Partie N") or filename prefix ("01-...").
+ * Returns 0 if no partie number found.
+ */
+export function detectPartieNum(body, fileName) {
+  const m = body.match(/^#\s+Partie\s+(\d+)/im);
+  if (m) return parseInt(m[1], 10);
+  const fnMatch = fileName.match(/^(\d+)/);
+  return fnMatch ? parseInt(fnMatch[1], 10) : 0;
+}
+
+/**
+ * Get color pair index from partie number. Returns 0 if no partie.
+ */
+export function getColorIndex(partieNum) {
+  return partieNum > 0 ? (partieNum - 1) % COLOR_PAIRS.length : 0;
+}
+
+/**
+ * Wrap parsed HTML in a <section> element with color CSS vars.
+ */
+export function wrapSection(html, colorIdx) {
+  const pair = COLOR_PAIRS[colorIdx % COLOR_PAIRS.length];
+  return `<section class="level2" data-color-index="${colorIdx % 5}" style="--section-color:${pair[0]};--section-color-light:${pair[1]}">\n${html}\n</section>`;
+}
+
 export function buildUnderline(pair) {
   return (
     '<span class="beorn-underline">' +
