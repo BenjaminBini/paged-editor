@@ -17,11 +17,13 @@ let _onSwitch = null;   // called after tab switch (for render, outline, etc.)
 let _onAllClosed = null; // called when last tab is closed
 let _onSave = null;     // called to save a tab by index
 let _onRefresh = null;  // called to reload a tab from disk
+let _onBeforeSwap = null; // called before cm.swapDoc() so listeners can be cleaned up
 
 export function onTabSwitch(fn) { _onSwitch = fn; }
 export function onAllTabsClosed(fn) { _onAllClosed = fn; }
 export function onTabSaveRequest(fn) { _onSave = fn; }
 export function onTabRefreshRequest(fn) { _onRefresh = fn; }
+export function onBeforeDocSwap(fn) { _onBeforeSwap = fn; }
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -58,7 +60,7 @@ export function closeTab(idx) {
 
   if (tabs.length === 0) {
     activeTabIdx = -1;
-    // Swap to a blank doc so CM has something
+    if (_onBeforeSwap) _onBeforeSwap();
     cm.swapDoc(CodeMirror.Doc("", "markdown"));
     renderTabBar();
     if (_onAllClosed) _onAllClosed();
@@ -94,6 +96,7 @@ export function closeTabsToLeft(idx) {
 export function closeAllTabs() {
   tabs.splice(0);
   activeTabIdx = -1;
+  if (_onBeforeSwap) _onBeforeSwap();
   cm.swapDoc(CodeMirror.Doc("", "markdown"));
   renderTabBar();
   if (_onAllClosed) _onAllClosed();
@@ -109,6 +112,7 @@ export function switchToTab(idx) {
 
   activeTabIdx = idx;
   const tab = tabs[idx];
+  if (_onBeforeSwap) _onBeforeSwap();
   cm.swapDoc(tab.doc);
   cm.refresh();
 

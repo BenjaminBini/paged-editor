@@ -1,7 +1,7 @@
 // file-manager.js — file I/O and folder management (pure I/O, no tab state)
 
 import { cm } from './editor.js';
-import { escapeHtml } from './render.js';
+import { escapeHtml } from './utils.js';
 import { showDiffModal, threeWayMerge } from './diff-merge.js';
 
 const api = window.electronAPI;
@@ -17,18 +17,6 @@ const fileSidebar  = document.getElementById("fileSidebar");
 const fileList     = document.getElementById("fileList");
 const folderNameEl = document.getElementById("folderName");
 const btnSave      = document.getElementById("btnSave");
-
-// ── refreshTableWidgets hook ────────────────────────────────────────────────
-
-let _refreshTableWidgets = null;
-
-export function refreshTableWidgets() {
-  if (typeof _refreshTableWidgets === "function") _refreshTableWidgets();
-}
-
-export function registerRefreshTableWidgets(fn) {
-  _refreshTableWidgets = fn;
-}
 
 // ── Markdown prettifier ─────────────────────────────────────────────────────
 

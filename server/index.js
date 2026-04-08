@@ -17,8 +17,17 @@ import { createEditorRouter } from "./router.js";
 const PORT = parseInt(process.env.PORT || "3000", 10);
 const WORKSPACE = resolve(process.env.WORKSPACE || process.cwd());
 
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
+
 const app = express();
-app.use(cors());
+app.use(cors({ origin: CORS_ORIGIN }));
+app.use((_req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; frame-src 'self' blob:;"
+  );
+  next();
+});
 app.use(createEditorRouter({ workspace: WORKSPACE }));
 
 app.listen(PORT, () => {

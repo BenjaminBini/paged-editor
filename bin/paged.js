@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const { execSync, spawn } = require("child_process");
+const { spawn } = require("child_process");
 const path = require("path");
 const fs = require("fs");
 
@@ -34,11 +34,14 @@ if (fs.existsSync(mainJs)) {
 } else {
   // Packaged app: use the paged:// protocol
   const url = `paged:///${resolved}`;
+  let cmd, args;
   if (process.platform === "darwin") {
-    execSync(`open "${url}"`);
+    cmd = "open"; args = [url];
   } else if (process.platform === "linux") {
-    execSync(`xdg-open "${url}"`);
+    cmd = "xdg-open"; args = [url];
   } else {
-    execSync(`start "" "${url}"`);
+    cmd = "cmd"; args = ["/c", "start", "", url];
   }
+  const child = spawn(cmd, args, { detached: true, stdio: "ignore" });
+  child.unref();
 }

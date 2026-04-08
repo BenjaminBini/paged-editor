@@ -72,21 +72,28 @@ function findAllTableRanges() {
   return ranges;
 }
 
-// Build markdown lines from widget DOM
+// Build markdown lines from widget DOM — uses direct DOM traversal (O(n)) instead of querySelectorAll
 function widgetToMarkdown(tw) {
   const table = tw.wrapper.querySelector("table");
   if (!table) return null;
-  const headerCells = Array.from(table.querySelectorAll("thead th")).map(th => th.textContent);
-  const bodyRows = Array.from(table.querySelectorAll("tbody tr")).map(tr =>
-    Array.from(tr.querySelectorAll("td")).map(td => td.textContent)
+  const thead = table.tHead;
+  const tbody = table.tBodies[0];
+  if (!thead || !tbody) return null;
+  const headRow = thead.rows[0];
+  if (!headRow) return null;
+  const headerCells = Array.from(headRow.cells).map(th => th.textContent);
+  const bodyRows = Array.from(tbody.rows).map(tr =>
+    Array.from(tr.cells).map(td => td.textContent)
   );
   const colCount = Math.max(headerCells.length, ...bodyRows.map(r => r.length));
   const allRows = [headerCells, null, ...bodyRows];
   const widths = Array(colCount).fill(3);
-  allRows.forEach(row => {
-    if (!row) return;
-    row.forEach((cell, ci) => { widths[ci] = Math.max(widths[ci], (cell || "").length, 3); });
-  });
+  for (const row of allRows) {
+    if (!row) continue;
+    for (let ci = 0; ci < row.length; ci++) {
+      widths[ci] = Math.max(widths[ci], (row[ci] || "").length, 3);
+    }
+  }
   return allRows.map(row => {
     if (!row) return "| " + widths.map(w => "-".repeat(w)).join(" | ") + " |";
     const cells = [];
@@ -301,10 +308,10 @@ function widgetMatchesCM(tw) {
   if (startLine === null || endLine === null) return false;
   const cmRows = parseTable(startLine, endLine);
   const table = tw.wrapper.querySelector("table");
-  if (!table) return false;
-  const wHeaders = Array.from(table.querySelectorAll("thead th")).map(th => th.textContent);
-  const wBody = Array.from(table.querySelectorAll("tbody tr")).map(tr =>
-    Array.from(tr.querySelectorAll("td")).map(td => td.textContent)
+  if (!table || !table.tHead || !table.tBodies[0]) return false;
+  const wHeaders = Array.from(table.tHead.rows[0].cells).map(th => th.textContent);
+  const wBody = Array.from(table.tBodies[0].rows).map(tr =>
+    Array.from(tr.cells).map(td => td.textContent)
   );
   // Find separator in CM
   let sepIdx = -1;
