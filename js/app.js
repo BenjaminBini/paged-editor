@@ -4,7 +4,6 @@ import {
   cm,
   status,
   toggleWrap,
-  showLoading,
   hideLoading,
 } from "./editor.js";
 import { on as busOn } from "./event-bus.js";
@@ -41,18 +40,9 @@ import {
 } from "./table-widget.js";
 import {
   openFolder,
-  openFolderByPath,
   closeFolder,
   renderFileList,
   readFile,
-  writeFile,
-  getFileModTime,
-  saveWithConflictDetection,
-  showSaveAsDialog,
-  showOpenFileDialog,
-  addRecentFile,
-  applyPrettify,
-  updateTitle,
   getFolderPath,
   getFileEntries,
   createNewFile,
@@ -60,14 +50,10 @@ import {
 } from "./file-manager.js";
 import {
   openTab,
-  closeActiveTab,
   getActiveTab,
   getTabs,
   hasOpenTabs,
-  markActiveTabClean,
-  updateActiveTabPath,
   isActiveTabDirty,
-  findTabByPath,
 } from "./tab-bar.js";
 import { closeDiffModal, resolveConflict } from "./diff-merge.js";
 import {
@@ -82,7 +68,7 @@ import {
   setGetConversation, setGetSection,
 } from './chat-sidebar.js';
 import { buildOutline, updateOutlineHighlight } from "./outline-manager.js";
-import { tryRestore as _tryRestore, buildRecentUI as _buildRecentUI } from "./session.js";
+import { tryRestore, buildRecentUI } from "./session.js";
 import { setupKeyboardShortcuts, wireElectronMenus } from "./keyboard-shortcuts.js";
 import {
   hideWelcome, showWelcome, initMenubar,
@@ -321,18 +307,15 @@ window.newDocument = newDocument;
 window.newFromTemplate = newFromTemplate;
 window.addAgent = addAgent;
 
-// ── Initialize file-ops module with dependencies ──────────────────────────
+// ── Initialize file-ops (only late-bound callbacks that can't be imported) ──
 
-initFileOps({
-  cm, platform, status,
-  findTabByPath, openTab, showLoading, hideLoading,
-  hideWelcome: () => hideWelcome(),
-  triggerRender, readFile, getFileModTime, addRecentFile,
-  buildRecentUI: () => buildRecentUI(),
-  getActiveTab, applyPrettify, saveWithConflictDetection,
-  markActiveTabClean, updateTitle, updateGutterMarkers, renderFileList,
-  writeFile, updateActiveTabPath, showSaveAsDialog, showOpenFileDialog,
-  closeActiveTab, openFolderByPath,
+initFileOps({ buildRecentUI });
+
+// Notify parent frame (React component) on save
+busOn("file-saved", ({ file, name }) => {
+  if (window.__pagedEditorNotifyParent) {
+    window.__pagedEditorNotifyParent("save", { file, name });
+  }
 });
 
 // ── Menu state (delegated to menu-state.js) ───────────────────────────────
@@ -404,26 +387,7 @@ function newFromTemplate() {
   triggerRender();
 }
 
-// ── Session restore & recent UI (delegated to session.js) ─────────────────
-
-const sessionDeps = {
-  openFolderByPath,
-  openFilePath,
-  readFile,
-  getFileModTime,
-  openTab,
-  getFileEntries,
-  closeFolder,
-  findTabByPath,
-};
-
-function tryRestore() {
-  return _tryRestore(sessionDeps);
-}
-
-function buildRecentUI() {
-  return _buildRecentUI({ openFilePath, openFolderByPathAndLoad });
-}
+// session.js now imports its own deps directly — no wrappers needed
 
 // ── Keyboard shortcuts & Electron menus (delegated to keyboard-shortcuts.js)
 

@@ -1,19 +1,13 @@
 // session.js — Session persistence, restoration, and recent items UI.
 
 import * as platform from "./platform.js";
+import { readFile, getFileModTime, openFolderByPath, closeFolder, getFileEntries } from "./file-manager.js";
+import { openTab, findTabByPath } from "./tab-bar.js";
+import { openFilePath, openFolderByPathAndLoad } from "./file-ops.js";
 
 // ── Session restore ────────────────────────────────────────────────────────
 
-export async function tryRestore({
-  openFolderByPath,
-  openFilePath,
-  readFile,
-  getFileModTime,
-  openTab,
-  getFileEntries,
-  closeFolder,
-  findTabByPath,
-}) {
+export async function tryRestore() {
   const state = await platform.getAppState();
 
   if (state.lastFolder) {
@@ -30,8 +24,7 @@ export async function tryRestore({
           const entry = (path && entries.find((e) => e.path === path))
             || entries.find((e) => e.name === name);
           if (entry) {
-            const content = await readFile(entry.path);
-            const modTime = await getFileModTime(entry.path);
+            const [content, modTime] = await Promise.all([readFile(entry.path), getFileModTime(entry.path)]);
             openTab(entry.path, entry.name, content, modTime);
           }
         }
@@ -46,14 +39,12 @@ export async function tryRestore({
       } else if (state.lastFile) {
         const entry = entries.find((e) => e.name === state.lastFile);
         if (entry) {
-          const content = await readFile(entry.path);
-          const modTime = await getFileModTime(entry.path);
+          const [content, modTime] = await Promise.all([readFile(entry.path), getFileModTime(entry.path)]);
           openTab(entry.path, entry.name, content, modTime);
         }
       } else if (platform.isWebMode && entries.length > 0) {
         const first = entries[0];
-        const content = await readFile(first.path);
-        const modTime = await getFileModTime(first.path);
+        const [content, modTime] = await Promise.all([readFile(first.path), getFileModTime(first.path)]);
         openTab(first.path, first.name, content, modTime);
       }
       return true;
@@ -93,7 +84,7 @@ export async function tryRestore({
 
 // ── Recent items UI ────────────────────────────────────────────────────────
 
-export async function buildRecentUI({ openFilePath, openFolderByPathAndLoad }) {
+export async function buildRecentUI() {
   const state = await platform.getAppState();
   const recentFiles = state.recentFiles || [];
   const recentFolders = state.recentFolders || [];
@@ -156,10 +147,7 @@ export async function buildRecentUI({ openFilePath, openFolderByPathAndLoad }) {
         link.className = "recent-link";
         link.textContent = f;
         link.href = "#";
-        link.onclick = (e) => {
-          e.preventDefault();
-          openFolderByPathAndLoad(f);
-        };
+        link.onclick = (e) => { e.preventDefault(); openFolderByPathAndLoad(f); };
         welcomeFolders.appendChild(link);
       }
       for (const f of recentFiles) {
@@ -167,10 +155,7 @@ export async function buildRecentUI({ openFilePath, openFolderByPathAndLoad }) {
         link.className = "recent-link";
         link.textContent = f;
         link.href = "#";
-        link.onclick = (e) => {
-          e.preventDefault();
-          openFilePath(f);
-        };
+        link.onclick = (e) => { e.preventDefault(); openFilePath(f); };
         welcomeFiles.appendChild(link);
       }
     }

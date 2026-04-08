@@ -1,61 +1,84 @@
-// file-ops.js — File open/save/reload operations (extracted from app.js).
-// Receives dependencies via init() to avoid circular imports.
-// Access via ctx.functionName() — initialized once at startup.
+// file-ops.js — File open/save/reload operations.
+// Uses direct imports instead of a context bag for static-analyzable dependencies.
 
-let ctx = null;
+import { cm, status, showLoading, hideLoading } from "./editor.js";
+import {
+  readFile, writeFile, getFileModTime, saveWithConflictDetection,
+  showSaveAsDialog, showOpenFileDialog, addRecentFile, applyPrettify,
+  updateTitle, renderFileList, openFolderByPath,
+} from "./file-manager.js";
+import {
+  openTab, closeActiveTab, getActiveTab, markActiveTabClean,
+  updateActiveTabPath, findTabByPath,
+} from "./tab-bar.js";
+import { triggerRender } from "./render.js";
+import { hideWelcome } from "./menu-state.js";
+import { updateGutterMarkers } from "./editor-decorations.js";
+import * as platform from "./platform.js";
+import { emit } from "./event-bus.js";
 
-export function initFileOps(dependencies) {
-  ctx = dependencies;
+// ── Late-bound callbacks (set once at init to avoid circular deps) ─────────
+
+let _buildRecentUI = null;
+
+export function initFileOps({ buildRecentUI }) {
+  _buildRecentUI = buildRecentUI;
 }
 
+// ── Open a file by path ────────────────────────────────────────────────────
+
 export async function openFilePath(filePath) {
-  const existing = ctx.findTabByPath(filePath);
+  const existing = findTabByPath(filePath);
   if (existing >= 0) {
-    ctx.openTab(filePath, filePath.split("/").pop());
+    openTab(filePath, filePath.split("/").pop());
     return;
   }
 
   try {
-    ctx.showLoading("Loading...");
-    const [text, modTime] = await Promise.all([ctx.readFile(filePath), ctx.getFileModTime(filePath)]);
+    showLoading("Loading...");
+    const [text, modTime] = await Promise.all([readFile(filePath), getFileModTime(filePath)]);
     const name = filePath.split("/").pop();
-    ctx.openTab(filePath, name, text, modTime);
-    ctx.hideLoading();
-    ctx.hideWelcome();
-    ctx.triggerRender();
-    ctx.addRecentFile(filePath);
-    await ctx.platform.setAppState({ lastFile: filePath });
-    ctx.buildRecentUI();
-    ctx.status.textContent = "Loaded " + name;
+    openTab(filePath, name, text, modTime);
+    hideLoading();
+    hideWelcome();
+    triggerRender();
+    addRecentFile(filePath);
+    await platform.setAppState({ lastFile: filePath });
+    if (_buildRecentUI) _buildRecentUI();
+    status.textContent = "Loaded " + name;
   } catch (e) {
-    ctx.hideLoading();
-    ctx.status.textContent = "Failed to load file: " + e.message;
+    hideLoading();
+    status.textContent = "Failed to load file: " + e.message;
   }
 }
+
+// ── Reload tab from disk ───────────────────────────────────────────────────
 
 export async function reloadTabFromDisk(tab) {
   if (!tab || !tab.path) return;
   try {
-    ctx.showLoading("Reloading " + tab.name + "...");
-    const [content, modTime] = await Promise.all([ctx.readFile(tab.path), ctx.getFileModTime(tab.path)]);
-    ctx.cm.setValue(content);
-    ctx.markActiveTabClean(content, modTime);
-    ctx.updateGutterMarkers();
-    ctx.renderFileList();
-    ctx.hideLoading();
-    ctx.status.textContent = "Reloaded " + tab.name + " from disk";
+    showLoading("Reloading " + tab.name + "...");
+    const [content, modTime] = await Promise.all([readFile(tab.path), getFileModTime(tab.path)]);
+    cm.setValue(content);
+    markActiveTabClean(content, modTime);
+    updateGutterMarkers(getActiveTab);
+    renderFileList();
+    hideLoading();
+    status.textContent = "Reloaded " + tab.name + " from disk";
   } catch (e) {
-    ctx.hideLoading();
-    ctx.status.textContent = "Failed to reload: " + e.message;
+    hideLoading();
+    status.textContent = "Failed to reload: " + e.message;
   }
 }
 
+// ── Save ───────────────────────────────────────────────────────────────────
+
 export async function doSave() {
-  const tab = ctx.getActiveTab();
+  const tab = getActiveTab();
   if (!tab) return;
 
-  ctx.applyPrettify();
-  const content = ctx.cm.getValue();
+  applyPrettify();
+  const content = cm.getValue();
 
   if (!tab.path) {
     await doSaveAs();
@@ -63,75 +86,75 @@ export async function doSave() {
   }
 
   try {
-    const result = await ctx.saveWithConflictDetection(
+    const result = await saveWithConflictDetection(
       tab.path, content, tab.savedContent, tab.localFileModTime,
     );
 
     if (result.action === "cancel") {
-      ctx.status.textContent = "Save cancelled";
+      status.textContent = "Save cancelled";
       return;
     }
     if (result.action === "reload") {
-      ctx.cm.setValue(result.content);
-      ctx.markActiveTabClean(result.content, result.modTime);
-      ctx.updateGutterMarkers();
-      ctx.renderFileList();
-      ctx.status.textContent = "Loaded disk version of " + tab.name;
+      cm.setValue(result.content);
+      markActiveTabClean(result.content, result.modTime);
+      updateGutterMarkers(getActiveTab);
+      renderFileList();
+      status.textContent = "Loaded disk version of " + tab.name;
       return;
     }
     if (result.action === "merge") {
-      ctx.cm.setValue(result.content);
+      cm.setValue(result.content);
       if (result.hasConflicts) {
-        ctx.status.textContent =
+        status.textContent =
           "Merged with conflicts \u2014 search for <<<<<<< to resolve";
         return;
       }
-      await ctx.writeFile(tab.path, ctx.cm.getValue());
-      const modTime = await ctx.getFileModTime(tab.path);
-      ctx.markActiveTabClean(ctx.cm.getValue(), modTime);
-      ctx.updateGutterMarkers();
-      ctx.renderFileList();
-      ctx.status.textContent = "Saved " + tab.name;
+      await writeFile(tab.path, cm.getValue());
+      const modTime = await getFileModTime(tab.path);
+      markActiveTabClean(cm.getValue(), modTime);
+      updateGutterMarkers(getActiveTab);
+      renderFileList();
+      status.textContent = "Saved " + tab.name;
       return;
     }
 
     // Normal save
-    ctx.markActiveTabClean(content, result.modTime);
-    ctx.updateTitle(tab.name, false);
-    ctx.updateGutterMarkers();
-    ctx.renderFileList();
-    ctx.status.textContent = "Saved " + tab.name;
-    if (window.__pagedEditorNotifyParent) {
-      window.__pagedEditorNotifyParent("save", { file: tab.path, name: tab.name });
-    }
+    markActiveTabClean(content, result.modTime);
+    updateTitle(tab.name, false);
+    updateGutterMarkers(getActiveTab);
+    renderFileList();
+    status.textContent = "Saved " + tab.name;
+    emit("file-saved", { file: tab.path, name: tab.name });
   } catch (e) {
-    ctx.status.textContent = "Save failed: " + e.message;
+    status.textContent = "Save failed: " + e.message;
   }
 }
 
 export async function doSaveAs() {
-  const tab = ctx.getActiveTab();
+  const tab = getActiveTab();
   if (!tab) return;
 
-  const filePath = await ctx.showSaveAsDialog(tab.name || "document.md");
+  const filePath = await showSaveAsDialog(tab.name || "document.md");
   if (!filePath) return;
 
-  ctx.applyPrettify();
+  applyPrettify();
   try {
-    await ctx.writeFile(filePath, ctx.cm.getValue());
-    const modTime = await ctx.getFileModTime(filePath);
+    await writeFile(filePath, cm.getValue());
+    const modTime = await getFileModTime(filePath);
     const name = filePath.split("/").pop();
-    ctx.updateActiveTabPath(filePath, name);
-    ctx.markActiveTabClean(ctx.cm.getValue(), modTime);
-    ctx.updateTitle(name, false);
-    ctx.updateGutterMarkers();
-    ctx.renderFileList();
-    ctx.status.textContent = "Saved as " + name;
-    ctx.addRecentFile(filePath);
+    updateActiveTabPath(filePath, name);
+    markActiveTabClean(cm.getValue(), modTime);
+    updateTitle(name, false);
+    updateGutterMarkers(getActiveTab);
+    renderFileList();
+    status.textContent = "Saved as " + name;
+    addRecentFile(filePath);
   } catch (e) {
-    ctx.status.textContent = "Save As failed: " + e.message;
+    status.textContent = "Save As failed: " + e.message;
   }
 }
+
+// ── Unsaved changes dialog ─────────────────────────────────────────────────
 
 export function showUnsavedDialog(fileName) {
   return new Promise((resolve) => {
@@ -172,8 +195,10 @@ export function showUnsavedDialog(fileName) {
   });
 }
 
+// ── Close active tab ───────────────────────────────────────────────────────
+
 export async function closeCurrentTab() {
-  const tab = ctx.getActiveTab();
+  const tab = getActiveTab();
   if (!tab) return;
 
   if (tab.dirty) {
@@ -182,11 +207,13 @@ export async function closeCurrentTab() {
     if (action === "save") await doSave();
   }
 
-  ctx.closeActiveTab();
+  closeActiveTab();
 }
 
+// ── Open dialogs ───────────────────────────────────────────────────────────
+
 export async function openLocalFile() {
-  const filePath = await ctx.showOpenFileDialog();
+  const filePath = await showOpenFileDialog();
   if (!filePath) return;
   await openFilePath(filePath);
 }
@@ -194,13 +221,13 @@ export async function openLocalFile() {
 export async function openFolderAndLoadFirst(result) {
   if (result && result.fileEntries.length > 0) {
     const first = result.fileEntries[0];
-    const [content, modTime] = await Promise.all([ctx.readFile(first.path), ctx.getFileModTime(first.path)]);
-    ctx.openTab(first.path, first.name, content, modTime);
-    ctx.hideWelcome();
+    const [content, modTime] = await Promise.all([readFile(first.path), getFileModTime(first.path)]);
+    openTab(first.path, first.name, content, modTime);
+    hideWelcome();
   }
 }
 
 export async function openFolderByPathAndLoad(dirPath) {
-  const result = await ctx.openFolderByPath(dirPath);
+  const result = await openFolderByPath(dirPath);
   await openFolderAndLoadFirst(result);
 }
