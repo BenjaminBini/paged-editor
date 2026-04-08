@@ -1,0 +1,33 @@
+{
+  "name": "@paged-editor/server",
+  "version": "1.0.0",
+  "description": "File server middleware for paged-editor — Express and Hono routers",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./router": "./router.js",
+    "./hono-router": "./hono-router.js"
+  },
+  "files": [
+    "index.js",
+    "router.js",
+    "hono-router.js"
+  ],
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": ["paged-editor", "markdown", "editor", "hono", "express"],
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0"
+  },
+  "peerDependencies": {
+    "hono": ">=4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "hono": { "optional": true }
+  }
+}
