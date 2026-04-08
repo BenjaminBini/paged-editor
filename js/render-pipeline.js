@@ -207,14 +207,13 @@ export async function renderMarkdown(md, options = {}) {
 
   let html = marked.parser(tokens).replace(/\{src:[^}]+\}/g, "");
 
+  // Capture heading counter immediately after sync parse (before any await)
+  const headingIdCounter = _ctx.headingIdCounter;
+
   const queue = getMermaidQueue();
   html = await resolveMermaid(html, queue);
 
   const sectionHtml = wrapSection(html, colorIdx);
-
-  // Capture counter before clearing context
-  const headingIdCounter = _ctx.headingIdCounter;
-  _ctx = null;
 
   return {
     sectionHtml,
