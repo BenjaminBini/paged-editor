@@ -161,7 +161,13 @@ function buildRenderer(ctx) {
 
     paragraph(token) {
       const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
-      return `<p${sl}>${this.parser.parseInline(token.tokens)}</p>\n`;
+      // Convert \newpage and /newpage to a page break div (handled by CSS break-after: page)
+      const text = this.parser.parseInline(token.tokens);
+      const stripped = text.replace(/<[^>]*>/g, "").trim();
+      if (stripped === "\\newpage" || stripped === "/newpage") {
+        return `<div class="page-break"${sl}></div>\n`;
+      }
+      return `<p${sl}>${text}</p>\n`;
     },
 
     blockquote(token) {

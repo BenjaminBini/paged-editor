@@ -32,8 +32,6 @@ export function wrapInDocument(bodyHtml, opts) {
   <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet" />
   <style>${PDF_CSS}</style>
   <style>${PAGED_CSS}</style>
-  <style>@page :first { margin: 20mm 18mm 25mm 18mm; }</style>
-  <style>.pagedjs_pages { padding:  0; }</style>
   ${BEORN_LOGO_DATA_URI ? "<style>.pagedjs_page::after { background-image: url(" + BEORN_LOGO_DATA_URI + "); }</style>" : ""}
   <script>window.PagedConfig = { auto: false };<\/script>
 </head>
