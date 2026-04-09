@@ -13,6 +13,19 @@ export const cm = CodeMirror.fromTextArea(document.getElementById("editor-textar
   gutters: ["CodeMirror-linenumbers"],
 });
 
+function updateScrollPastEndPadding() {
+  const wrapper = cm.getWrapperElement();
+  const scroller = wrapper.querySelector(".CodeMirror-scroll");
+  const sizer = wrapper.querySelector(".CodeMirror-sizer");
+  if (!scroller || !sizer) return;
+
+  const lineHeight = cm.defaultTextHeight
+    ? cm.defaultTextHeight()
+    : parseFloat(getComputedStyle(wrapper).lineHeight) || 0;
+  const extraBottom = Math.max(0, Math.round(scroller.clientHeight / 2 - lineHeight));
+  sizer.style.paddingBottom = extraBottom + "px";
+}
+
 // ── Content-loaded event ─────────────────────────────────────────────────────
 // Emitted after setValue or swapDoc so interested modules can react.
 
@@ -21,8 +34,22 @@ import { emit } from "./event-bus.js";
 const _cmSetValue = cm.setValue.bind(cm);
 cm.setValue = function (v) {
   _cmSetValue(v);
-  setTimeout(() => emit("content-loaded"), 0);
+  requestAnimationFrame(() => {
+    updateScrollPastEndPadding();
+    emit("content-loaded");
+  });
 };
+
+const _cmRefresh = cm.refresh.bind(cm);
+cm.refresh = function () {
+  const result = _cmRefresh();
+  requestAnimationFrame(updateScrollPastEndPadding);
+  return result;
+};
+
+cm.on("update", updateScrollPastEndPadding);
+window.addEventListener("resize", () => requestAnimationFrame(updateScrollPastEndPadding));
+requestAnimationFrame(updateScrollPastEndPadding);
 
 // ── Compatibility shim ────────────────────────────────────────────────────────
 
@@ -60,5 +87,6 @@ export function hideLoading() {
 export function toggleWrap() {
   const on = !cm.getOption("lineWrapping");
   cm.setOption("lineWrapping", on);
+  requestAnimationFrame(updateScrollPastEndPadding);
   document.getElementById("btnWrap").classList.toggle("active", on);
 }
