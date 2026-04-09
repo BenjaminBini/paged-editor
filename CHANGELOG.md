@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.3.0] – 2026-04-09
+
+### Features
+- **Graceful window close** — Electron now intercepts the window-close event and asks the frontend to handle unsaved tabs before confirming. Closing with dirty files presents a save/discard/cancel dialog.
+- **Batch unsaved-changes flow** — All close actions (close tab, close tabs to left/right, close all, close window) now route through a unified resolver. When multiple dirty tabs are open, a single dialog offers "Save all / Discard all / Keep open" instead of one prompt per tab.
+- **Table widget: disabled toolbar states** — Toolbar buttons (move row up/down, remove row/col) are now disabled when the action is unavailable (e.g. "move up" on the first row). State updates on every focus change.
+- **Table widget: column focus persistence** — Operations on rows and columns now land on the same column index after the change, instead of always jumping to column 0.
+
+### Fixes
+- **Inline code syntax highlighting** — Fenced code spans inside Markdown are now styled in sky-blue bold via a custom `cm-code` token, matching the dark-theme palette.
+- **Outline sidebar readability** — Active heading is now displayed in bold white; H1–H4 hierarchy uses higher-contrast colours and slightly larger font sizes.
+- **Ctrl+W reliability** — Key detection now checks both `e.key` and `e.code` to handle keyboard layouts where `key` may not match the Latin letter.
+- **doSave return value** — `doSave` now returns a boolean so callers can detect a cancelled or failed save and abort a close sequence.
+
+---
+
 ## [1.1.0] – 2026-04-09
 
 ### Features
