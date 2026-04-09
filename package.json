@@ -10,8 +10,18 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
+  "files": [
+    "main.js",
+    "preload.js",
+    "index.html",
+    "js/",
+    "css/",
+    "assets/",
+    "bin/paged.js",
+    "CHANGELOG.md"
+  ],
   "bin": {
-    "paged": "./bin/paged.js"
+    "paged": "bin/paged.js"
   },
   "scripts": {
     "start": "electron .",

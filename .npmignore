@@ -1,6 +1,10 @@
 .superpowers/
+.playwright-mcp/
 docs/superpowers/
 docs/architecture.html
+docs/rendering-pipeline.html
+docs/app-flows.html
 .github/
 .vscode/
 packages/
+demo/
