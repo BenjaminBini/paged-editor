@@ -619,6 +619,20 @@ img {
   border-radius: 8px;
   margin: var(--space-md) 0;
 }
+figure.md-image {
+  margin: var(--space-lg) 0;
+  text-align: center;
+}
+figure.md-image img {
+  display: block;
+  margin: 0 auto;
+}
+figure.md-image figcaption {
+  margin-top: var(--space-sm);
+  color: var(--text-light);
+  font-size: 9pt;
+  font-style: italic;
+}
 
 /* ── Pagination ── */
 .pdf-content > section.level2:first-of-type {

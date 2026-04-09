@@ -44,6 +44,17 @@ function resolveAssetUrl(href = "") {
   }
 }
 
+function renderImageTag(parser, token) {
+  const text = token.tokens
+    ? parser.parseInline(token.tokens, parser.textRenderer)
+    : token.text || "";
+  const href = resolveAssetUrl(token.href || "");
+  let html = `<img src="${escapeHtml(href)}" alt="${escapeHtml(text)}"`;
+  if (token.title) html += ` title="${escapeHtml(token.title)}"`;
+  html += ">";
+  return { html, text };
+}
+
 function pruneEmptyTrailingTokens(tokens) {
   while (tokens.length) {
     const last = tokens[tokens.length - 1];
@@ -149,6 +160,16 @@ marked.use({
 
     paragraph(token) {
       const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const standaloneImage = token.tokens?.length === 1 && token.tokens[0]?.type === "image"
+        ? token.tokens[0]
+        : null;
+      if (standaloneImage) {
+        const image = renderImageTag(this.parser, standaloneImage);
+        const caption = image.text
+          ? `\n<figcaption>${escapeHtml(image.text)}</figcaption>`
+          : "";
+        return `<figure class="md-image"${sl}>${image.html}${caption}\n</figure>\n`;
+      }
       const text = this.parser.parseInline(token.tokens);
       const stripped = text.replace(/<[^>]*>/g, "").trim();
       if (stripped === "\\newpage" || stripped === "/newpage") {
@@ -216,14 +237,7 @@ marked.use({
     },
 
     image(token) {
-      const text = token.tokens
-        ? this.parser.parseInline(token.tokens, this.parser.textRenderer)
-        : token.text || "";
-      const href = resolveAssetUrl(token.href || "");
-      let html = `<img src="${escapeHtml(href)}" alt="${escapeHtml(text)}"`;
-      if (token.title) html += ` title="${escapeHtml(token.title)}"`;
-      html += ">";
-      return html;
+      return renderImageTag(this.parser, token).html;
     },
   },
 
