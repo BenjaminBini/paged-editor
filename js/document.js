@@ -16,7 +16,12 @@ export function buildHeaderText(fm) {
 // ── Iframe HTML wrapper ─────────────────────────────────────────────────────
 
 export function wrapInDocument(bodyHtml, opts) {
-  const { gen, headerText, language } = opts;
+  const {
+    gen,
+    headerText,
+    language,
+    hasCoverPage = false,
+  } = opts;
   const {
     PDF_CSS,
     PAGED_CSS,
@@ -41,6 +46,20 @@ export function wrapInDocument(bodyHtml, opts) {
 
   // Prefer blob URL for the logo too (avoids inlining 147 KB base64 per render).
   const logoUrl = BEORN_LOGO_BLOB_URL || BEORN_LOGO_DATA_URI;
+  const firstPageOverride = hasCoverPage
+    ? ""
+    : `<style>
+  /* Content-only previews should use the common first-page layout. */
+  @page :first {
+    margin: 20mm 18mm 25mm 18mm;
+    @bottom-center {
+      content: counter(page);
+      font-family: "Hanken Grotesk", sans-serif;
+      font-size: 8pt;
+      color: #718096;
+    }
+  }
+  </style>`;
 
   return `<!doctype html>
 <html lang="${language}">
@@ -49,6 +68,7 @@ export function wrapInDocument(bodyHtml, opts) {
   ${FONTS_CSS ? "<style>" + FONTS_CSS + "</style>" : '<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet" />'}
   <style>${PDF_CSS}</style>
   <style>${PAGED_CSS}</style>
+  ${firstPageOverride}
   ${logoUrl ? "<style>.pagedjs_page::after { background-image: url(" + logoUrl + "); }</style>" : ""}
   <script>window.PagedConfig = { auto: false };<\/script>
 </head>

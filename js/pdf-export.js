@@ -60,7 +60,12 @@ export async function buildFullMemoireHtml(sections) {
   const bodyHtml =
     coverHtml + "\n" + sommaireHtml + "\n" + sectionHtmlParts.join("\n");
 
-  return wrapInDocument(bodyHtml, { gen: 0, headerText, language });
+  return wrapInDocument(bodyHtml, {
+    gen: 0,
+    headerText,
+    language,
+    hasCoverPage: true,
+  });
 }
 
 export async function previewFullMemoire(sections, defaultName) {
