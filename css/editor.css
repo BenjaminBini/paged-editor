@@ -56,6 +56,7 @@
 .editor-pane .cm-tag { color: #f38ba8 !important; }
 .editor-pane .cm-attribute { color: #89b4fa !important; }
 .editor-pane .cm-def { color: #89dceb !important; }
+.editor-pane .cm-variable-2 { color: #cdd6f4 !important; } /* list items — inherit base text color instead of default dark navy */
 /* ── Page break inline widget ── */
 .cm-pagebreak-widget {
   display: inline-flex; align-items: center; gap: 8px;
