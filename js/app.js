@@ -120,6 +120,7 @@ busOn("content-loaded", () => {
   if (cm.getValue()) hideWelcome();
   else if (!hasOpenTabs()) showWelcome();
   for (const tw of tableWidgets.values()) destroyTableWidget(tw);
+  setTableRangesDirty();
   setTimeout(refreshTableWidgets, 50);
   setTimeout(updateMenuState, 0);
 });

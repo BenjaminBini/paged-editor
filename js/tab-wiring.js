@@ -4,7 +4,7 @@
 import { status, showLoading, hideLoading } from "./editor.js";
 import { setActiveFileName } from "./parse-context.js";
 import { triggerRender } from "./render.js";
-import { refreshTableWidgets } from "./table-widget.js";
+import { refreshTableWidgets, setTableRangesDirty } from "./table-widget.js";
 import {
   renderFileList, readFile, getFileModTime, updateTitle, getFolderPath,
   setOnFileClick, setOnFileRefresh, setGetActiveFilePath, setIsFileDirty,
@@ -65,6 +65,7 @@ export function wireTabCallbacks({
     setActiveFileName(tab.name);
     triggerRender();
     setTimeout(buildOutline, 50);
+    setTableRangesDirty();
     setTimeout(refreshTableWidgets, 150);
     setTimeout(updateGutterMarkers, 50);
     setTimeout(applyHeadingMarks, 50);
