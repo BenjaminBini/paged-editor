@@ -1,6 +1,7 @@
 // document.js — HTML document wrapper and cover/sommaire builders.
 
 import { getAssets } from "./assets.js";
+import { renderTemplate } from "./template-engine.js";
 import { escapeHtml } from "./utils.js";
 
 // ── Header text ─────────────────────────────────────────────────────────────
@@ -27,6 +28,9 @@ export function wrapInDocument(bodyHtml, opts) {
     PDF_CSS,
     PAGED_CSS,
     FONTS_CSS,
+    COVER_TEMPLATE,
+    TOC_TEMPLATE,
+    CONTENT_TEMPLATE,
     PAGED_JS_BLOB_URL,
     PAGED_JS_TEXT,
     SECTION_INIT_BLOB_URL,
@@ -47,42 +51,41 @@ export function wrapInDocument(bodyHtml, opts) {
 
   // Prefer blob URL for the logo too (avoids inlining 147 KB base64 per render).
   const logoUrl = BEORN_LOGO_BLOB_URL || BEORN_LOGO_DATA_URI;
-  const firstPageOverride = hasCoverPage
-    ? ""
-    : `<style>
-  /* Content-only previews should use the common first-page layout. */
-  @page :first {
-    margin: 20mm 18mm 25mm 18mm;
-    @bottom-center {
-      content: counter(page);
-      font-family: "Hanken Grotesk", sans-serif;
-      font-size: 8pt;
-      color: #718096;
-    }
+  const coverTemplate = COVER_TEMPLATE;
+  const tocTemplate = TOC_TEMPLATE || COVER_TEMPLATE;
+  const contentTemplate = CONTENT_TEMPLATE;
+  if (!coverTemplate || !contentTemplate) {
+    throw new Error("Document templates are not loaded yet.");
   }
-  </style>`;
+  const template = hasCoverPage
+    ? coverTemplate
+    : bodyHtml.includes('class="beorn-cover-sommaire"')
+      ? tocTemplate
+      : contentTemplate;
 
-  return `<!doctype html>
-<html lang="${language}">
-<head>
-  <meta charset="UTF-8" />
-  ${assetBaseHref ? `<base href="${escapeHtml(assetBaseHref)}" />` : ""}
-  ${FONTS_CSS ? "<style>" + FONTS_CSS + "</style>" : '<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet" />'}
-  <style>${PDF_CSS}</style>
-  <style>${PAGED_CSS}</style>
-  ${firstPageOverride}
-  ${logoUrl ? "<style>.pagedjs_page::after { background-image: url(" + logoUrl + "); }</style>" : ""}
-  <script>window.PagedConfig = { auto: false };<\/script>
-</head>
-<body>
-  <div class="pdf-page-gradient"></div>
-  ${headerText ? '<div class="pdf-running-header">' + headerText + "</div>" : ""}
-  <div class="pdf-content">${bodyHtml}</div>
-  ${pagedJsTag}
-  <script>window.__gen = ${gen};<\/script>
-  ${sectionInitTag}
-</body>
-</html>`;
+  const substitutions = {
+    "{{LANG}}": language,
+    "{{BASE_HREF}}": assetBaseHref
+      ? `<base href="${escapeHtml(assetBaseHref)}" />`
+      : "",
+    "{{FONTS_TAG}}": FONTS_CSS
+      ? "<style>" + FONTS_CSS + "</style>"
+      : '<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet" />',
+    "{{PDF_CSS}}": PDF_CSS,
+    "{{PAGED_CSS}}": PAGED_CSS,
+    "{{LOGO_STYLE}}": logoUrl
+      ? "<style>.pagedjs_page::after { background-image: url(" + logoUrl + "); }</style>"
+      : "",
+    "{{RUNNING_HEADER}}": headerText
+      ? '<div class="pdf-running-header">' + headerText + "</div>"
+      : "",
+    "{{BODY_HTML}}": bodyHtml,
+    "{{PAGED_JS_TAG}}": pagedJsTag,
+    "{{GEN}}": String(gen),
+    "{{SECTION_INIT_TAG}}": sectionInitTag,
+  };
+
+  return renderTemplate(template, substitutions);
 }
 
 // ── Cover page ──────────────────────────────────────────────────────────────

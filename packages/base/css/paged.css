@@ -47,25 +47,6 @@ body {
   font-size: 8pt;
   color: #718096;
 }
-.pdf-page-footer {
-  position: static;
-  padding: 0;
-}
-.pagedjs_page .pdf-page-footer {
-  position: absolute;
-  bottom: 8mm;
-  left: 18mm;
-}
-/* Hide fixed elements — we use .pagedjs_bleed-top for gradient instead */
-.pdf-page-gradient {
-  display: none;
-}
-.pdf-running-header {
-  display: none;
-}
-.pagedjs_page .pdf-running-header {
-  display: flex;
-}
 /* Hide watermark on cover pages (named page "cover") */
 .pagedjs_named_page::after {
   display: none;

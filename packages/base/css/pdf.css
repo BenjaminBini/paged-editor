@@ -19,7 +19,13 @@
 @page {
   size: A4;
   margin: 20mm 18mm 25mm 18mm;
-  @bottom-center {
+  @top {
+    content: element(pdf-page-gradient);
+  }
+  @top-center {
+    content: element(pdf-running-header);
+  }
+  @bottom {
     content: counter(page);
     font-family: "Hanken Grotesk", sans-serif;
     font-size: 8pt;
@@ -28,13 +34,19 @@
 }
 @page cover {
   margin: 0;
-  @bottom-center {
+  @top {
+    content: none;
+  }
+  @top-center {
+    content: none;
+  }
+  @bottom {
     content: none;
   }
 }
 @page sommaire {
   margin: 20mm 18mm 25mm 18mm;
-  @bottom-center {
+  @bottom {
     content: counter(page);
     font-family: "Hanken Grotesk", sans-serif;
     font-size: 8pt;
@@ -43,7 +55,13 @@
 }
 @page :first {
   margin: 0;
-  @bottom-center {
+  @top {
+    content: none;
+  }
+  @top-center {
+    content: none;
+  }
+  @bottom {
     content: none;
   }
 }
@@ -239,11 +257,8 @@ h3 {
 
 /* ── Running header (document title on every page) ── */
 .pdf-running-header {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 20mm;
+  position: running(pdf-running-header);
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -253,16 +268,14 @@ h3 {
   color: #c0c8d4;
   text-transform: uppercase;
   letter-spacing: 0.35em;
-  padding: 0 18mm;
-  z-index: 50;
+  width: 100%;
 }
 
 /* ── Top gradient (every page) ── */
 .pdf-page-gradient {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  position: running(pdf-page-gradient);
+  display: block;
+  width: 100%;
   height: 6px;
   background: linear-gradient(
     90deg,
@@ -271,20 +284,11 @@ h3 {
     var(--purple) 65%,
     var(--magenta) 100%
   );
-  z-index: 100;
 }
 
 /* ── Page footer ── */
 .pdf-page-footer {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 0;
-  z-index: 100;
+  display: none;
 }
 .pdf-page-footer-logo {
   height: 22px;

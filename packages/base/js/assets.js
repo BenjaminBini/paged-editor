@@ -5,6 +5,9 @@ let SECTION_INIT_TEXT = "";
 let PDF_CSS = "";
 let PAGED_CSS = "";
 let FONTS_CSS = "";
+let COVER_TEMPLATE = "";
+let TOC_TEMPLATE = "";
+let CONTENT_TEMPLATE = "";
 let BEORN_LOGO_DATA_URI = "";
 let PARTNER_LOGO_DATA_URI = "";
 
@@ -62,6 +65,15 @@ export const pagedReady = Promise.all([
   fetchText("css/paged.css").then((t) => {
     PAGED_CSS = t;
   }),
+  fetchText("js/templates/cover-template.html").then((t) => {
+    COVER_TEMPLATE = t;
+  }),
+  fetchText("js/templates/toc-template.html").then((t) => {
+    TOC_TEMPLATE = t;
+  }),
+  fetchText("js/templates/content-template.html").then((t) => {
+    CONTENT_TEMPLATE = t;
+  }),
   fetch(GOOGLE_FONTS_URL).then((r) => r.ok ? r.text() : "").then((t) => {
     FONTS_CSS = t;
   }).catch(() => {}),
@@ -86,6 +98,9 @@ export function getAssets() {
     PDF_CSS,
     PAGED_CSS,
     FONTS_CSS,
+    COVER_TEMPLATE,
+    TOC_TEMPLATE,
+    CONTENT_TEMPLATE,
     BEORN_LOGO_DATA_URI,
     BEORN_LOGO_BLOB_URL,
     PARTNER_LOGO_DATA_URI,

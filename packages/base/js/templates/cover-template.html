@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="{{LANG}}">
+<head>
+  <meta charset="UTF-8" />
+  {{BASE_HREF}}
+  {{FONTS_TAG}}
+  <style>{{PDF_CSS}}</style>
+  <style>{{PAGED_CSS}}</style>
+  {{LOGO_STYLE}}
+  <script>window.PagedConfig = { auto: false };</script>
+</head>
+<body>
+  <div class="pdf-page-gradient"></div>
+  {{RUNNING_HEADER}}
+  <div class="pdf-content">{{BODY_HTML}}</div>
+  {{PAGED_JS_TAG}}
+  <script>window.__gen = {{GEN}};</script>
+  {{SECTION_INIT_TAG}}
+</body>
+</html>
