@@ -2,15 +2,25 @@
 
 import { editor, status } from "./editor.js";
 import { parseFrontmatter } from "./utils.js";
-import { getActiveFileName } from "./parse-context.js";
+import { getActiveFileName, getActiveFilePath } from "./parse-context.js";
 import { renderMarkdown } from "./render-pipeline.js";
 import { buildHeaderText, buildCoverHtml, buildSommaireHtml, wrapInDocument } from "./document.js";
 import * as platform from "./platform.js";
+import { getFolderPath } from "./file-manager.js";
+import { getAssetBaseHref } from "./workspace-assets.js";
+
+async function resolveAssetBaseHref() {
+  return await getAssetBaseHref(getActiveFilePath() || getFolderPath() || "workspace");
+}
 
 // ── Single-document export ──────────────────────────────────────────────────
 
 export async function buildPagedHtml(md) {
-  const result = await renderMarkdown(md, { fileName: getActiveFileName() });
+  const assetBaseHref = await resolveAssetBaseHref();
+  const result = await renderMarkdown(md, {
+    assetBaseHref,
+    fileName: getActiveFileName(),
+  });
   return result.documentHtml;
 }
 
@@ -39,6 +49,7 @@ export async function buildFullMemoireHtml(sections) {
   const { fm } = parseFrontmatter(first.markdown);
   const headerText = buildHeaderText(fm);
   const language = fm.language || "fr";
+  const assetBaseHref = await resolveAssetBaseHref();
 
   const allHeadings = [];
   const sectionHtmlParts = [];
@@ -46,6 +57,7 @@ export async function buildFullMemoireHtml(sections) {
 
   for (const sec of sections) {
     const result = await renderMarkdown(sec.markdown, {
+      assetBaseHref,
       fileName: sec.name,
       headingCollector: allHeadings,
       headingIdOffset,
@@ -61,6 +73,7 @@ export async function buildFullMemoireHtml(sections) {
     coverHtml + "\n" + sommaireHtml + "\n" + sectionHtmlParts.join("\n");
 
   return wrapInDocument(bodyHtml, {
+    assetBaseHref,
     gen: 0,
     headerText,
     language,

@@ -2,9 +2,10 @@
 // Manages the single-iframe lifecycle: trigger render, swap frames, scale/zoom.
 
 import { editor, previewContainer, status } from "./editor.js";
-import { getActiveFileName } from "./parse-context.js";
+import { getActiveFileName, getActiveFilePath } from "./parse-context.js";
 import { renderMarkdown } from "./render-pipeline.js";
 import { emit } from "./event-bus.js";
+import { getAssetBaseHref } from "./workspace-assets.js";
 
 
 // ── Single iframe state ─────────────────────────────────────────────────────
@@ -36,8 +37,10 @@ export async function triggerRender() {
 
   currentGen++;
   const gen = currentGen;
+  const assetBaseHref = await getAssetBaseHref(getActiveFilePath());
 
   const result = await renderMarkdown(md, {
+    assetBaseHref,
     fileName: getActiveFileName(),
     startLine,
     gen,

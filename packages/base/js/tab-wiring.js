@@ -2,7 +2,7 @@
 // Handles tab switch reactions, sidebar↔tab wiring, dirty tracking, persistence.
 
 import { status, showLoading, hideLoading } from "./editor.js";
-import { setActiveFileName } from "./parse-context.js";
+import { setActiveFileContext } from "./parse-context.js";
 import { triggerRender } from "./render.js";
 import { refreshTableWidgets, setTableRangesDirty } from "./table-widget.js";
 import {
@@ -62,7 +62,7 @@ export function wireTabCallbacks({
     reattachCmListeners();
     updateTitle(tab.name, tab.dirty);
     renderFileList();
-    setActiveFileName(tab.name);
+    setActiveFileContext(tab.name, tab.path);
     triggerRender();
     setTimeout(buildOutline, 50);
     setTableRangesDirty();
@@ -76,6 +76,7 @@ export function wireTabCallbacks({
   onAllTabsClosed(() => {
     reattachCmListeners();
     updateTitle(null, false);
+    setActiveFileContext("", "");
     if (getFolderPath()) {
       renderFileList();
     } else {

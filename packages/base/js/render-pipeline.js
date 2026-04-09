@@ -28,6 +28,22 @@ function stripTrailingPageBreakRaw(value = "") {
   return value.replace(PAGE_BREAK_RAW_RE, "");
 }
 
+function isAbsoluteUrl(value = "") {
+  return /^[a-z][a-z\d+.-]*:/i.test(value) || value.startsWith("//");
+}
+
+function resolveAssetUrl(href = "") {
+  if (!href) return href;
+  if (href.startsWith("#") || isAbsoluteUrl(href)) return href;
+  if (!_ctx?.assetBaseHref) return href;
+
+  try {
+    return new URL(href, _ctx.assetBaseHref).href;
+  } catch {
+    return href;
+  }
+}
+
 function pruneEmptyTrailingTokens(tokens) {
   while (tokens.length) {
     const last = tokens[tokens.length - 1];
@@ -198,6 +214,17 @@ marked.use({
       const langClass = lang ? ` class="language-${escapeHtml(lang)}"` : "";
       return `<pre${sl}><code${langClass}>${escapeHtml(text)}</code></pre>\n`;
     },
+
+    image(token) {
+      const text = token.tokens
+        ? this.parser.parseInline(token.tokens, this.parser.textRenderer)
+        : token.text || "";
+      const href = resolveAssetUrl(token.href || "");
+      let html = `<img src="${escapeHtml(href)}" alt="${escapeHtml(text)}"`;
+      if (token.title) html += ` title="${escapeHtml(token.title)}"`;
+      html += ">";
+      return html;
+    },
   },
 
   hooks: {
@@ -218,6 +245,7 @@ marked.use({
  * @param {string} md - Raw markdown (with frontmatter)
  * @param {object} options
  * @param {string} options.fileName - Active file name (for partie detection)
+ * @param {string} [options.assetBaseHref] - Base URL used by relative asset links
  * @param {number} [options.startLine=0] - Line offset for source-line tracking
  * @param {number} [options.gen=0] - Generation counter for iframe swap
  * @param {Array} [options.headingCollector] - Array to push heading data into (for TOC)
@@ -225,6 +253,7 @@ marked.use({
  */
 export async function renderMarkdown(md, options = {}) {
   const {
+    assetBaseHref = "",
     fileName = "",
     startLine = 0,
     gen = 0,
@@ -241,6 +270,7 @@ export async function renderMarkdown(md, options = {}) {
 
   // Set per-render context (read by the renderer registered above)
   _ctx = {
+    assetBaseHref,
     colorIdx,
     partieNum,
     h2Count: 0,
@@ -277,7 +307,7 @@ export async function renderMarkdown(md, options = {}) {
 
   return {
     sectionHtml,
-    documentHtml: wrapInDocument(sectionHtml, { gen, headerText, language }),
+    documentHtml: wrapInDocument(sectionHtml, { assetBaseHref, gen, headerText, language }),
     frontmatter: fm,
     headerText,
     language,

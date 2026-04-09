@@ -16,6 +16,7 @@ import { hideWelcome } from "./menu-state.js";
 import { updateGutterMarkers } from "./editor-decorations.js";
 import * as platform from "./platform.js";
 import { emit } from "./event-bus.js";
+import { setActiveFileContext } from "./parse-context.js";
 
 // ── Late-bound callbacks (set once at init to avoid circular deps) ─────────
 
@@ -144,6 +145,7 @@ export async function doSaveAs() {
     const modTime = await getFileModTime(filePath);
     const name = filePath.split("/").pop();
     updateActiveTabPath(filePath, name);
+    setActiveFileContext(name, filePath);
     markActiveTabClean(cm.getValue(), modTime);
     updateTitle(name, false);
     updateGutterMarkers(getActiveTab);
