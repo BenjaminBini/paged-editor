@@ -22,6 +22,7 @@ function parseTable(start, end) {
   const rows = [];
   for (let i = start; i <= end; i++) {
     const line = cm.getLine(i);
+    if (line == null) continue; // stale line number after doc change/swap
     const cells = line.split("|").slice(1);
     if (cells.length && cells[cells.length - 1].trim() === "") cells.pop();
     rows.push(cells.map(c => c.trim()));
