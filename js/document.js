@@ -21,10 +21,26 @@ export function wrapInDocument(bodyHtml, opts) {
     PDF_CSS,
     PAGED_CSS,
     FONTS_CSS,
+    PAGED_JS_BLOB_URL,
     PAGED_JS_TEXT,
+    SECTION_INIT_BLOB_URL,
     SECTION_INIT_TEXT,
     BEORN_LOGO_DATA_URI,
+    BEORN_LOGO_BLOB_URL,
   } = getAssets();
+
+  // Use stable blob URLs so Firefox caches compiled bytecode across renders.
+  // Without a stable URL every new HTML blob triggers a full recompile of the
+  // 921 KB Paged.js polyfill (SpiderMonkey's JIT cache is keyed by script URL).
+  const pagedJsTag = PAGED_JS_BLOB_URL
+    ? `<script src="${PAGED_JS_BLOB_URL}"><\/script>`
+    : `<script>${PAGED_JS_TEXT}<\/script>`;
+  const sectionInitTag = SECTION_INIT_BLOB_URL
+    ? `<script src="${SECTION_INIT_BLOB_URL}"><\/script>`
+    : `<script>${SECTION_INIT_TEXT}<\/script>`;
+
+  // Prefer blob URL for the logo too (avoids inlining 147 KB base64 per render).
+  const logoUrl = BEORN_LOGO_BLOB_URL || BEORN_LOGO_DATA_URI;
 
   return `<!doctype html>
 <html lang="${language}">
@@ -33,16 +49,16 @@ export function wrapInDocument(bodyHtml, opts) {
   ${FONTS_CSS ? "<style>" + FONTS_CSS + "</style>" : '<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet" />'}
   <style>${PDF_CSS}</style>
   <style>${PAGED_CSS}</style>
-  ${BEORN_LOGO_DATA_URI ? "<style>.pagedjs_page::after { background-image: url(" + BEORN_LOGO_DATA_URI + "); }</style>" : ""}
+  ${logoUrl ? "<style>.pagedjs_page::after { background-image: url(" + logoUrl + "); }</style>" : ""}
   <script>window.PagedConfig = { auto: false };<\/script>
 </head>
 <body>
   <div class="pdf-page-gradient"></div>
   ${headerText ? '<div class="pdf-running-header">' + headerText + "</div>" : ""}
   <div class="pdf-content">${bodyHtml}</div>
-  <script>${PAGED_JS_TEXT}<\/script>
+  ${pagedJsTag}
   <script>window.__gen = ${gen};<\/script>
-  <script>${SECTION_INIT_TEXT}<\/script>
+  ${sectionInitTag}
 </body>
 </html>`;
 }
