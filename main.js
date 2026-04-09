@@ -5,6 +5,9 @@ const os = require("os");
 const { WebSocketServer } = require("ws");
 const crypto = require("crypto");
 
+// Static assets live in the base package (index.html, js/, css/, assets/)
+const BASE_ROOT = path.dirname(require.resolve("@benjaminbini/paged-editor-base/package.json"));
+
 // ── App state persistence ────────────────────────────────────────────────────
 const STATE_FILE = path.join(app.getPath("userData"), "app-state.json");
 let appState = { lastFolder: null, lastFile: null, recentFiles: [], recentFolders: [] };
@@ -41,7 +44,7 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
-  mainWindow.loadFile("index.html");
+  mainWindow.loadFile(path.join(BASE_ROOT, "index.html"));
 }
 
 // ── IPC handlers ─────────────────────────────────────────────────────────────

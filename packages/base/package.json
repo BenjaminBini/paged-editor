@@ -1,0 +1,27 @@
+{
+  "name": "@benjaminbini/paged-editor-base",
+  "version": "1.2.0",
+  "description": "Shared static assets for paged-editor (index.html, js/, css/, assets/) with Node.js server helper",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BenjaminBini/paged-editor.git",
+    "directory": "packages/base"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "exports": {
+    "./server": {
+      "import": "./server.mjs",
+      "types": "./server.d.ts"
+    }
+  },
+  "files": [
+    "server.mjs",
+    "server.d.ts",
+    "index.html",
+    "js/",
+    "css/",
+    "assets/"
+  ]
+}

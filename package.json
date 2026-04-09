@@ -1,7 +1,7 @@
 {
-  "name": "@benjaminbini/paged-editor",
-  "version": "1.1.0",
-  "description": "Markdown to PDF editor with Paged.js",
+  "name": "@benjaminbini/paged-editor-electron",
+  "version": "1.2.0",
+  "description": "Electron desktop app for paged-editor",
   "main": "main.js",
   "repository": {
     "type": "git",
@@ -10,13 +10,13 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
+  "workspaces": [
+    "packages/*",
+    "server"
+  ],
   "files": [
     "main.js",
     "preload.js",
-    "index.html",
-    "js/",
-    "css/",
-    "assets/",
     "bin/paged.js",
     "CHANGELOG.md"
   ],
@@ -36,10 +36,6 @@
     "files": [
       "main.js",
       "preload.js",
-      "index.html",
-      "js/**/*",
-      "css/**/*",
-      "assets/**/*",
       "node_modules/**/*",
       "bin/paged.js"
     ],
@@ -84,13 +80,14 @@
       ]
     }
   },
-  "devDependencies": {
-    "electron": "^41.0.4",
-    "electron-builder": "^26.8.1"
-  },
   "dependencies": {
+    "@benjaminbini/paged-editor-base": "^1.2.0",
     "marked": "^15.0.7",
     "pdf-lib": "^1.17.1",
     "ws": "^8.20.0"
+  },
+  "devDependencies": {
+    "electron": "^41.0.4",
+    "electron-builder": "^26.8.1"
   }
 }
