@@ -59,20 +59,22 @@ export async function triggerRender() {
   iframe.style.background = "transparent";
   iframe.dataset.gen = String(gen);
 
-  // Position off-screen until ready
-  if (currentFrame) {
-    iframe.style.position = "absolute";
-    iframe.style.left = "-9999px";
-    iframe.style.visibility = "hidden";
-  }
-
-  // Remove previous pending frame if a newer render started
+  // Kill the previous frames immediately so only one Paged.js instance runs
+  // at a time. Having an old iframe alive during rendering causes Firefox
+  // to split CPU between Paged.js instances, turning a 200ms render into 2-4s.
   if (pendingFrame) {
     if (pendingFrame._blobUrl) URL.revokeObjectURL(pendingFrame._blobUrl);
     pendingFrame.remove();
+    pendingFrame = null;
   }
-  pendingFrame = iframe;
+  if (currentFrame) {
+    currentFrame.remove();
+    if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+    currentFrame = null;
+    currentBlobUrl = null;
+  }
 
+  pendingFrame = iframe;
   previewWrapper.appendChild(iframe);
   iframe.src = url;
 
@@ -91,17 +93,9 @@ window.addEventListener("message", (e) => {
   const iframe = pendingFrame;
   if (!iframe) return;
 
-  // Swap: reveal new frame, remove old
-  if (currentFrame) currentFrame.remove();
-  if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-
   currentFrame = iframe;
   currentBlobUrl = iframe._blobUrl;
   pendingFrame = null;
-
-  iframe.style.position = "";
-  iframe.style.left = "";
-  iframe.style.visibility = "";
 
   scalePreview();
 
