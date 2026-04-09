@@ -4,25 +4,27 @@ export function setupKeyboardShortcuts(actions) {
   const { doSave, doSaveAs, openLocalFile, newDocument, closeCurrentTab, hasOpenTabs } = actions;
 
   document.addEventListener("keydown", (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "S") {
+    const key = e.key?.toLowerCase();
+
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && key === "s") {
       e.preventDefault();
       doSaveAs();
       return;
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+    if ((e.ctrlKey || e.metaKey) && key === "s") {
       e.preventDefault();
       if (hasOpenTabs()) doSave();
       else doSaveAs();
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === "o") {
+    if ((e.ctrlKey || e.metaKey) && key === "o") {
       e.preventDefault();
       openLocalFile();
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === "n") {
+    if ((e.ctrlKey || e.metaKey) && key === "n") {
       e.preventDefault();
       newDocument();
     }
-    if ((e.ctrlKey || e.metaKey) && (e.key?.toLowerCase() === "w" || e.code === "KeyW")) {
+    if ((e.ctrlKey || e.metaKey) && key === "w") {
       e.preventDefault();
       closeCurrentTab();
     }

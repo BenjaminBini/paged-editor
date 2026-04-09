@@ -13,7 +13,7 @@ interface EditorMessage {
 }
 
 export interface PagedEditorProps {
-  /** Base URL of the paged-editor server (e.g., "http://localhost:3000") */
+  /** URL or same-origin path where the paged-editor server is mounted (e.g., "/editor") */
   apiUrl: string;
 
   /** Additional CSS class for the container div */
@@ -45,7 +45,7 @@ export interface PagedEditorProps {
  * function App() {
  *   return (
  *     <PagedEditor
- *       apiUrl="http://localhost:3000"
+ *       apiUrl="/editor"
  *       onSave={(file, name) => console.log('Saved:', name)}
  *       style={{ width: '100%', height: '100vh' }}
  *     />

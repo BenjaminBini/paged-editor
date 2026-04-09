@@ -27,18 +27,50 @@
     return location.pathname.replace(/\/(?:index\.html)?$/, "") || "";
   }
 
-  const API_BASE = resolveApiBase();
-
   // State key for localStorage
   const STATE_KEY = "paged-editor-state";
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
+  function isLoopbackHostname(hostname) {
+    return hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname === "0.0.0.0" ||
+      hostname === "::1" ||
+      hostname === "[::1]";
+  }
+
+  function normalizeApiBase(value) {
+    if (!value) return value;
+    try {
+      const url = new URL(value, window.location.href);
+      const rawIsAbsolute = /^[a-z][a-z\d+.-]*:\/\//i.test(value);
+      if (!rawIsAbsolute) return value;
+
+      // Embedded deployments sometimes pass an internal localhost URL that only
+      // works on the host machine. When the editor is opened from another
+      // computer through a reverse proxy, fall back to the current public
+      // origin while keeping the same path.
+      if (isLoopbackHostname(url.hostname) && !isLoopbackHostname(window.location.hostname)) {
+        return url.pathname + url.search + url.hash;
+      }
+
+      return url.href.replace(/\/$/, "");
+    } catch {
+      return value;
+    }
+  }
+
   // When API_BASE is auto-detected (standalone server), paths include /api prefix.
   // When API_BASE is explicit (embedded via hash), it already points to the API root,
   // so we strip the /api prefix from paths.
-  const _hasExplicitBase = !!window.__PAGED_EDITOR_API_URL ||
+  const _explicitBaseValue = window.__PAGED_EDITOR_API_URL ||
+    new URLSearchParams(location.hash.slice(1)).get("apiBase");
+
+  const _hasExplicitBase = !!_explicitBaseValue ||
     new URLSearchParams(location.hash.slice(1)).has("apiBase");
+
+  const API_BASE = normalizeApiBase(resolveApiBase());
 
   function api(path, opts) {
     const cleanPath = _hasExplicitBase ? path.replace(/^\/api/, "") : path;

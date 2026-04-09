@@ -81,6 +81,7 @@ export function updateMenuState(getActiveTab, hasOpenTabs, getFolderPath) {
   const hasFile = hasOpenTabs();
   const hasFolder = !!getFolderPath();
   const canSave = hasFile;
+  const canEdit = hasFile;
 
   const set = (id, enabled) => {
     const el = document.getElementById(id);
@@ -96,9 +97,17 @@ export function updateMenuState(getActiveTab, hasOpenTabs, getFolderPath) {
   set("btnCloseFile", hasFile);
   set("btnCloseFolder", hasFolder);
 
-  set("btnInsertTable", hasContent);
-  set("btnUndo", hasContent);
-  set("btnRedo", hasContent);
+  set("btnInsertTable", canEdit);
+  set("btnUndo", canEdit);
+  set("btnRedo", canEdit);
+  set("btnFmtBold", canEdit);
+  set("btnFmtItalic", canEdit);
+  set("btnFmtUnderline", canEdit);
+  set("btnFmtHeading", canEdit);
+  set("btnFmtSymbol", canEdit);
+  set("btnFmtTable", canEdit);
+  set("btnFmtImage", canEdit);
+  set("btnFmtMermaid", canEdit);
   set("btnRender", hasContent);
   set("btnPreviewTab", hasContent);
   set("btnDownloadPdf", hasContent);

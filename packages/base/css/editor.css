@@ -8,6 +8,80 @@
   font-size: 11px; font-weight: 600; text-transform: uppercase;
   letter-spacing: 0.05em; flex-shrink: 0;
 }
+.editor-format-bar {
+  min-height: 40px;
+  background: #252536;
+  border-bottom: 1px solid #2d2d3f;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  flex-wrap: wrap;
+  flex-shrink: 0;
+}
+.editor-format-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.editor-format-sep {
+  width: 1px;
+  align-self: stretch;
+  background: #3a3a52;
+}
+.editor-format-btn {
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #3a3a52;
+  background: #1b1b29;
+  color: #cdd6f4;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 28px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease,
+    box-shadow 0.12s ease;
+}
+.editor-format-btn:hover:not(:disabled) {
+  background: #313154;
+  border-color: #4c5f87;
+}
+.editor-format-btn.active:not(:disabled) {
+  background: #33486c;
+  border-color: #6d96ca;
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.editor-format-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.editor-format-btn.icon-only {
+  width: 30px;
+  min-width: 30px;
+  padding: 0;
+}
+.editor-format-btn svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+.fmt-underline {
+  text-decoration: underline;
+}
 #editor-wrapper {
   flex: 1; overflow: hidden; position: relative;
 }
@@ -31,12 +105,29 @@
 }
 .editor-pane .CodeMirror-gutters { background: #1e1e2e !important; border-right: 1px solid #2d2d3f !important; }
 .editor-pane .CodeMirror-linenumber { color: #4a4a6a !important; border-left: 2px solid transparent; }
+.editor-pane .cm-editor { height: 100%; }
+.editor-pane .cm-scroller {
+  overflow: auto;
+  font-family: "JetBrains Mono", "SF Mono", monospace !important;
+  font-size: 13px !important;
+  line-height: 1.7 !important;
+}
+.editor-pane .cm-content { caret-color: #cdd6f4; }
+.editor-pane .cm-gutters {
+  background: #1e1e2e !important;
+  border-right: 1px solid #2d2d3f !important;
+}
+.editor-pane .cm-gutterElement { color: #4a4a6a !important; }
 .gutter-modified .CodeMirror-linenumber { border-left-color: #89b4fa !important; }
 .gutter-added .CodeMirror-linenumber { border-left-color: #a6e3a1 !important; }
 .editor-pane .cm-cursor-gutter .CodeMirror-linenumber { background: #3373b3 !important; color: #fff !important; border-radius: 2px; }
 .editor-pane .CodeMirror-cursor { border-left-color: #cdd6f4 !important; }
+.editor-pane .cm-cursor,
+.editor-pane .cm-dropCursor { border-left-color: #cdd6f4 !important; }
 .editor-pane .CodeMirror-selected { background: #364a6e !important; }
 .editor-pane .CodeMirror-focused .CodeMirror-selected { background: #364a6e !important; }
+.editor-pane .cm-selectionBackground,
+.editor-pane .cm-selectionLayer .cm-selectionBackground { background: #364a6e !important; }
 .editor-pane .CodeMirror .CodeMirror-matchingbracket { color: #89dceb !important; }
 /* Markdown syntax colors */
 .editor-pane .cm-header { color: #f0a840 !important; font-weight: 700 !important; }

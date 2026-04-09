@@ -88,6 +88,7 @@ import {
   requestCloseAllTabs, requestCloseTab, requestCloseTabsToLeft, requestCloseTabsToRight,
   requestWindowClose,
 } from "./file-ops.js";
+import { initFormattingToolbar } from "./formatting-toolbar.js";
 import {
   updateGutterMarkers as _updateGutterMarkers,
   applyPageBreakMarks,
@@ -231,6 +232,7 @@ wireSidebarCallbacks({ hideWelcome, reloadTabFromDisk });
 // ── Desktop-style menu bar (delegated to menu-state.js) ───────────────────
 
 initMenubar();
+initFormattingToolbar();
 
 // ── Drag & drop .md files ──────────────────────────────────────────────────
 

@@ -143,7 +143,7 @@ import { PagedEditor } from "@paged-editor/react";
 function DocsPage() {
   return (
     <PagedEditor
-      apiUrl="http://localhost:3000/editor"
+      apiUrl="/editor"
       onSave={(file, name) => console.log("Saved:", name)}
       onChange={(file, name) => console.log("Changed:", name)}
       onReady={() => console.log("Editor loaded")}
@@ -157,7 +157,7 @@ function DocsPage() {
 
 | Prop | Type | Description |
 |------|------|-------------|
-| `apiUrl` | `string` | **Required.** URL where the editor server is mounted |
+| `apiUrl` | `string` | **Required.** URL or same-origin path where the editor server is mounted |
 | `className` | `string` | CSS class for the container div |
 | `style` | `CSSProperties` | Inline styles for the container div |
 | `onReady` | `() => void` | Called when the editor iframe finishes loading |

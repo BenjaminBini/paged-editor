@@ -1,25 +1,19 @@
 // tab-bar.js — Multi-tab state and tab bar UI
 
-import { cm, markdownMode } from './editor.js';
-import { showContextMenu } from './context-menu.js';
-import { canShowInFinder, showInFinder } from './platform.js';
+import { captureEditorSnapshot, cm, restoreEditorSnapshot } from "./editor.js";
+import { showContextMenu } from "./context-menu.js";
+import { canShowInFinder, showInFinder } from "./platform.js";
 
-// ── Tab state ───────────────────────────────────────────────────────────────
-
-const tabs = [];      // [{ path, name, doc, savedContent, localFileModTime, dirty }]
+const tabs = []; // [{ path, name, editorState, savedContent, localFileModTime, dirty }]
 let activeTabIdx = -1;
-
-// ── DOM refs ────────────────────────────────────────────────────────────────
 
 const tabBarTabs = document.getElementById("tabBarTabs");
 
-// ── Callbacks ───────────────────────────────────────────────────────────────
-
-let _onSwitch = null;   // called after tab switch (for render, outline, etc.)
-let _onAllClosed = null; // called when last tab is closed
-let _onSave = null;     // called to save a tab by index
-let _onRefresh = null;  // called to reload a tab from disk
-let _onBeforeSwap = null; // called before cm.swapDoc() so listeners can be cleaned up
+let _onSwitch = null;
+let _onAllClosed = null;
+let _onSave = null;
+let _onRefresh = null;
+let _onBeforeSwap = null;
 let _onCloseRequest = null;
 let _onCloseTabsToLeftRequest = null;
 let _onCloseTabsToRightRequest = null;
@@ -35,23 +29,34 @@ export function onTabsToLeftCloseRequest(fn) { _onCloseTabsToLeftRequest = fn; }
 export function onTabsToRightCloseRequest(fn) { _onCloseTabsToRightRequest = fn; }
 export function onAllTabsCloseRequest(fn) { _onCloseAllTabsRequest = fn; }
 
-// ── Public API ──────────────────────────────────────────────────────────────
+function blankEditorState() {
+  return {
+    content: "",
+    selection: { anchor: { line: 0, ch: 0 }, head: { line: 0, ch: 0 } },
+    scroll: { left: 0, top: 0 },
+  };
+}
+
+function storeActiveEditorState() {
+  if (activeTabIdx < 0 || activeTabIdx >= tabs.length) return;
+  tabs[activeTabIdx].editorState = captureEditorSnapshot();
+}
 
 export function openTab(path, name, content, modTime) {
-  // If already open, switch to it
-  const existing = tabs.findIndex(t => t.path && t.path === path);
+  const existing = tabs.findIndex((t) => t.path && t.path === path);
   if (existing >= 0) {
     switchToTab(existing);
     return existing;
   }
 
-  // Create new CodeMirror Doc
-  const doc = CodeMirror.Doc(content || "", markdownMode);
-
   const tab = {
-    path,          // null for unsaved new docs
+    path,
     name,
-    doc,
+    editorState: {
+      content: content || "",
+      selection: { anchor: { line: 0, ch: 0 }, head: { line: 0, ch: 0 } },
+      scroll: { left: 0, top: 0 },
+    },
     savedContent: content || "",
     localFileModTime: modTime || 0,
     dirty: false,
@@ -65,22 +70,20 @@ export function openTab(path, name, content, modTime) {
 
 export function closeTab(idx) {
   if (idx < 0 || idx >= tabs.length) return;
+  if (idx === activeTabIdx) storeActiveEditorState();
 
   tabs.splice(idx, 1);
 
   if (tabs.length === 0) {
     activeTabIdx = -1;
     if (_onBeforeSwap) _onBeforeSwap();
-    cm.swapDoc(CodeMirror.Doc("", markdownMode));
+    restoreEditorSnapshot(blankEditorState());
     renderTabBar();
     if (_onAllClosed) _onAllClosed();
     return;
   }
 
-  // Adjust active index
-  if (idx <= activeTabIdx) {
-    activeTabIdx = Math.max(0, activeTabIdx - 1);
-  }
+  if (idx <= activeTabIdx) activeTabIdx = Math.max(0, activeTabIdx - 1);
   switchToTab(activeTabIdx);
 }
 
@@ -90,6 +93,7 @@ export function closeActiveTab() {
 
 export function closeTabsToRight(idx) {
   if (idx < 0 || idx >= tabs.length - 1) return;
+  if (activeTabIdx > idx) storeActiveEditorState();
   tabs.splice(idx + 1);
   if (activeTabIdx > idx) activeTabIdx = idx;
   switchToTab(Math.min(activeTabIdx, tabs.length - 1));
@@ -97,9 +101,10 @@ export function closeTabsToRight(idx) {
 
 export function closeTabsToLeft(idx) {
   if (idx <= 0 || idx >= tabs.length) return;
+  if (activeTabIdx < idx) storeActiveEditorState();
   tabs.splice(0, idx);
   const newActive = activeTabIdx < idx ? 0 : activeTabIdx - idx;
-  activeTabIdx = 0; // will be set by switchToTab
+  activeTabIdx = 0;
   switchToTab(Math.max(0, newActive));
 }
 
@@ -107,7 +112,7 @@ export function closeAllTabs() {
   tabs.splice(0);
   activeTabIdx = -1;
   if (_onBeforeSwap) _onBeforeSwap();
-  cm.swapDoc(CodeMirror.Doc("", markdownMode));
+  restoreEditorSnapshot(blankEditorState());
   renderTabBar();
   if (_onAllClosed) _onAllClosed();
 }
@@ -115,21 +120,15 @@ export function closeAllTabs() {
 export function switchToTab(idx) {
   if (idx < 0 || idx >= tabs.length) return;
 
-  // Save scroll position of current tab before switching
   if (activeTabIdx >= 0 && activeTabIdx < tabs.length) {
-    tabs[activeTabIdx].scrollPos = cm.getScrollInfo();
+    storeActiveEditorState();
   }
 
   activeTabIdx = idx;
   const tab = tabs[idx];
   if (_onBeforeSwap) _onBeforeSwap();
-  cm.swapDoc(tab.doc);
+  restoreEditorSnapshot(tab.editorState || blankEditorState());
   cm.refresh();
-
-  // Restore scroll position
-  if (tab.scrollPos) {
-    setTimeout(() => cm.scrollTo(tab.scrollPos.left, tab.scrollPos.top), 0);
-  }
 
   renderTabBar();
   if (_onSwitch) _onSwitch(tab);
@@ -156,6 +155,7 @@ export function markActiveTabClean(newSavedContent, modTime) {
   if (!tab) return;
   tab.dirty = false;
   tab.savedContent = newSavedContent;
+  tab.editorState = captureEditorSnapshot();
   if (modTime !== undefined) tab.localFileModTime = modTime;
   renderTabBar();
 }
@@ -177,9 +177,8 @@ export function hasOpenTabs() {
   return tabs.length > 0;
 }
 
-// Find tab by path (for sidebar highlight)
 export function findTabByPath(path) {
-  return tabs.findIndex(t => t.path === path);
+  return tabs.findIndex((t) => t.path === path);
 }
 
 function requestCloseTab(idx) {
@@ -201,8 +200,6 @@ function requestCloseAllTabs() {
   if (_onCloseAllTabsRequest) return _onCloseAllTabsRequest();
   return closeAllTabs();
 }
-
-// ── Tab bar rendering ───────────────────────────────────────────────────────
 
 export function renderTabBar() {
   if (!tabBarTabs) return;
@@ -241,12 +238,10 @@ export function renderTabBar() {
 
     el.appendChild(indicator);
 
-    // Middle-click to close
     el.addEventListener("mousedown", (e) => {
       if (e.button === 1) { e.preventDefault(); requestCloseTab(i); }
     });
 
-    // Right-click context menu
     el.addEventListener("contextmenu", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -256,8 +251,6 @@ export function renderTabBar() {
     tabBarTabs.appendChild(el);
   });
 }
-
-// ── Tab context menu ────────────────────────────────────────────────────────
 
 function showTabContextMenu(x, y, tabIdx) {
   const tab = tabs[tabIdx];
@@ -275,11 +268,9 @@ function showTabContextMenu(x, y, tabIdx) {
   ]);
 }
 
-// ── Session persistence helpers ─────────────────────────────────────────────
-
 export function getSessionState() {
   return {
-    openTabs: tabs.map(t => ({ path: t.path, name: t.name })),
+    openTabs: tabs.map((t) => ({ path: t.path, name: t.name })),
     activeTab: activeTabIdx >= 0 ? tabs[activeTabIdx]?.path || tabs[activeTabIdx]?.name : null,
   };
 }

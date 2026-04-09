@@ -11,13 +11,6 @@
 
     <!-- External libs (non-module, loaded as globals) -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.css"
-    />
-    <script src="https://cdn.jsdelivr.net/npm/codemirror@5/lib/codemirror.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/codemirror@5/mode/markdown/markdown.min.js"></script>
-
     <!-- Modular CSS -->
     <link rel="stylesheet" href="css/reset.css" />
     <link rel="stylesheet" href="css/layout.css" />
@@ -301,6 +294,126 @@
       <div class="editor-pane" id="editorPane">
         <div class="pane-header" id="tabBar">
           <div class="tab-bar-tabs" id="tabBarTabs"></div>
+        </div>
+        <div class="editor-format-bar" id="editorFormatBar">
+          <div class="editor-format-group">
+            <button
+              id="btnFmtBold"
+              class="editor-format-btn"
+              type="button"
+              title="Bold"
+              data-format-action="bold"
+            >
+              <strong>B</strong>
+            </button>
+            <button
+              id="btnFmtItalic"
+              class="editor-format-btn"
+              type="button"
+              title="Italic"
+              data-format-action="italic"
+            >
+              <em>I</em>
+            </button>
+            <button
+              id="btnFmtUnderline"
+              class="editor-format-btn"
+              type="button"
+              title="Underline"
+              data-format-action="underline"
+            >
+              <span class="fmt-underline">U</span>
+            </button>
+          </div>
+          <span class="editor-format-sep"></span>
+          <div class="editor-format-group">
+            <button
+              id="btnFmtHeading"
+              class="editor-format-btn icon-only"
+              type="button"
+              title="Title levels"
+              aria-label="Title levels"
+              data-format-action="heading-menu"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 6v12" />
+                <path d="M10 6v12" />
+                <path d="M4 12h6" />
+                <path d="M15 8h5" />
+                <path d="M15 12h4" />
+                <path d="M15 16h5" />
+              </svg>
+            </button>
+            <button
+              id="btnFmtSymbol"
+              class="editor-format-btn icon-only"
+              type="button"
+              title="Insert symbol"
+              aria-label="Insert symbol"
+              data-format-action="symbol-menu"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3v4" />
+                <path d="M12 17v4" />
+                <path d="M3 12h4" />
+                <path d="M17 12h4" />
+                <path d="m6.5 6.5 2.5 2.5" />
+                <path d="m15 15 2.5 2.5" />
+                <path d="m17.5 6.5-2.5 2.5" />
+                <path d="m9 15-2.5 2.5" />
+                <circle cx="12" cy="12" r="2.5" />
+              </svg>
+            </button>
+          </div>
+          <span class="editor-format-sep"></span>
+          <div class="editor-format-group">
+            <button
+              id="btnFmtTable"
+              class="editor-format-btn icon-only"
+              type="button"
+              title="Insert table"
+              aria-label="Insert table"
+              data-format-action="table"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="1.5" />
+                <path d="M3 10h18" />
+                <path d="M9 5v14" />
+                <path d="M15 5v14" />
+              </svg>
+            </button>
+            <button
+              id="btnFmtImage"
+              class="editor-format-btn icon-only"
+              type="button"
+              title="Insert image"
+              aria-label="Insert image"
+              data-format-action="image"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="5" width="18" height="14" rx="2" />
+                <circle cx="9" cy="10" r="1.5" />
+                <path d="m21 15-4.5-4.5L8 19" />
+              </svg>
+            </button>
+            <button
+              id="btnFmtMermaid"
+              class="editor-format-btn icon-only"
+              type="button"
+              title="Insert Mermaid diagram"
+              aria-label="Insert Mermaid diagram"
+              data-format-action="mermaid"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3" y="4" width="6" height="4" rx="1" />
+                <rect x="15" y="10" width="6" height="4" rx="1" />
+                <rect x="3" y="16" width="6" height="4" rx="1" />
+                <path d="M9 6h3a3 3 0 0 1 3 3v1" />
+                <path d="M9 18h3a3 3 0 0 0 3-3v-1" />
+              </svg>
+            </button>
+          </div>
+          <input id="toolbarImageInput" type="file" accept="image/*" multiple hidden />
         </div>
         <div id="editor-wrapper">
           <div id="editor-loading">
