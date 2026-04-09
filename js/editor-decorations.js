@@ -59,6 +59,7 @@ export function updateGutterMarkers(getActiveTab) {
 
 let _pageBreakMarks = [];
 let _pbCursorLine = -1;
+let _pageBreakMarksDirty = true;
 
 function isPageBreakLine(lineNum) {
   const text = cm.getLine(lineNum)?.trim();
@@ -68,10 +69,14 @@ function isPageBreakLine(lineNum) {
 export function applyPageBreakMarks() {
   const cursorLine = cm.getCursor().line;
   const prevLine = _pbCursorLine;
+  const needsRebuild = _pageBreakMarksDirty;
   _pbCursorLine = cursorLine;
-  // Skip rebuild if cursor hasn't moved, or moved between non-pagebreak lines
-  if (cursorLine === prevLine) return;
-  if (!isPageBreakLine(cursorLine) && !isPageBreakLine(prevLine) && _pageBreakMarks.length > 0) return;
+  _pageBreakMarksDirty = false;
+  // Skip rebuild if nothing changed and the cursor move can't affect widgets.
+  if (!needsRebuild) {
+    if (cursorLine === prevLine) return;
+    if (!isPageBreakLine(cursorLine) && !isPageBreakLine(prevLine) && _pageBreakMarks.length > 0) return;
+  }
 
   for (const pm of _pageBreakMarks) pm.mark.clear();
   _pageBreakMarks = [];
@@ -157,4 +162,7 @@ export function applyHeadingMarks(getActiveTab) {
 export function getCursorLine() { return _cursorLine; }
 export function setCursorLine(line) { _cursorLine = line; }
 
-export function resetPageBreakCache() { _pbCursorLine = -1; }
+export function resetPageBreakCache() {
+  _pbCursorLine = -1;
+  _pageBreakMarksDirty = true;
+}
