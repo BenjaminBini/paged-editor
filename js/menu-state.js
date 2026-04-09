@@ -7,11 +7,17 @@ import { cm } from "./editor.js";
 const welcomeScreen = document.getElementById("welcomeScreen");
 
 export function hideWelcome() {
-  if (welcomeScreen) welcomeScreen.classList.add("hidden");
+  if (welcomeScreen) {
+    welcomeScreen.classList.remove("loading");
+    welcomeScreen.classList.add("hidden");
+  }
 }
 
 export function showWelcome() {
-  if (welcomeScreen) welcomeScreen.classList.remove("hidden");
+  if (welcomeScreen) {
+    welcomeScreen.classList.remove("loading");
+    welcomeScreen.classList.remove("hidden");
+  }
 }
 
 // ── Desktop-style menu bar ─────────────────────────────────────────────────
