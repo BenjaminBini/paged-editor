@@ -17,7 +17,6 @@ let pendingFrame = null;
 let currentBlobUrl = null;
 let currentGen = 0;
 let renderStartTime = 0;
-let renderMarkdownMs = 0; // time spent in renderMarkdown for current render
 
 // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -38,17 +37,14 @@ export async function triggerRender() {
   currentGen++;
   const gen = currentGen;
 
-  const t0 = performance.now();
   const result = await renderMarkdown(md, {
     fileName: getActiveFileName(),
     startLine,
     gen,
   });
-  renderMarkdownMs = Math.round(performance.now() - t0);
   const doc = result.documentHtml;
   const blob = new Blob([doc], { type: "text/html;charset=utf-8" });
   const url = URL.createObjectURL(blob);
-  console.log(`[render #${gen}] renderMarkdown=${renderMarkdownMs}ms htmlSize=${(doc.length/1024).toFixed(0)}KB`);
 
   const iframe = document.createElement("iframe");
   iframe.className = "section-frame";
@@ -100,7 +96,6 @@ window.addEventListener("message", (e) => {
   scalePreview();
 
   const elapsed = Math.round(performance.now() - renderStartTime);
-  console.log(`[render #${gen}] total=${elapsed}ms pagedjs≈${elapsed - renderMarkdownMs}ms`);
   status.textContent = pages + " pages — " + elapsed + "ms";
 
   emit("section-ready");
