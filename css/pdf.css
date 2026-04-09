@@ -675,13 +675,15 @@ p + ol {
   page-break-before: avoid;
 }
 .page-break {
-  break-after: page !important;
-  page-break-after: always !important;
   height: 1px;
   margin: 0;
   padding: 0;
   border: none;
   visibility: hidden;
+}
+.page-break + * {
+  break-before: page !important;
+  page-break-before: always !important;
 }
 .pdf-content ul li::before {
   box-shadow: none;
