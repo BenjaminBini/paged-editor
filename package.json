@@ -1,6 +1,6 @@
 {
   "name": "@benjaminbini/paged-editor",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Markdown to PDF editor with Paged.js",
   "main": "main.js",
   "repository": {
