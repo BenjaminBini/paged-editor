@@ -45,6 +45,13 @@
     return fetch(API_BASE + cleanPath, opts);
   }
 
+  function resolveWorkspaceAssetBaseHref() {
+    const path = _hasExplicitBase
+      ? API_BASE.replace(/\/$/, "") + "/workspace/"
+      : API_BASE.replace(/\/$/, "") + "/api/workspace/";
+    return new URL(path, window.location.href).href;
+  }
+
   function encName(name) {
     return encodeURIComponent(name);
   }
@@ -94,6 +101,15 @@
         body: JSON.stringify({ content }),
       });
       if (!resp.ok) throw new Error("Failed to write file: " + filePath);
+    },
+
+    async writeBinaryFile(filePath, base64Content) {
+      const resp = await api("/api/assets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ path: filePath, contentBase64: base64Content }),
+      });
+      if (!resp.ok) throw new Error("Failed to write binary file: " + filePath);
     },
 
     // Delete a file
@@ -175,6 +191,10 @@
     // Startup path — not used in web mode
     async hasStartupPath() {
       return false;
+    },
+
+    async getWorkspaceAssetBaseHref(_filePath) {
+      return resolveWorkspaceAssetBaseHref();
     },
 
     // AI agent collaboration — minimal web stubs

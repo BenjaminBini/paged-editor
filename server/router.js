@@ -17,8 +17,8 @@
 import { Router } from "express";
 import express from "express";
 import { existsSync } from "node:fs";
-import { readdir, readFile, writeFile, stat, unlink } from "node:fs/promises";
-import { join, resolve, basename } from "node:path";
+import { readdir, readFile, writeFile, stat, unlink, mkdir } from "node:fs/promises";
+import { join, resolve, basename, dirname, relative, isAbsolute } from "node:path";
 
 /**
  * @typedef {Object} EditorRouterOptions
@@ -71,6 +71,33 @@ export function createEditorRouter(options) {
     return clean;
   }
 
+  function isWithinDir(parentDir, childPath) {
+    const rel = relative(parentDir, childPath);
+    return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+  }
+
+  function sanitizeRelativePath(filePath) {
+    if (typeof filePath !== "string") return null;
+    const clean = filePath
+      .replace(/\\/g, "/")
+      .split("/")
+      .filter(Boolean);
+    if (!clean.length || clean.some((part) => part === "." || part === ".." || part.startsWith("."))) {
+      return null;
+    }
+    return clean.join("/");
+  }
+
+  function resolveWorkspaceAsset(relPath) {
+    const clean = sanitizeRelativePath(relPath);
+    if (!clean || !clean.startsWith("assets/")) return null;
+
+    const filePath = resolve(workDir, clean);
+    if (!isWithinDir(workDir, filePath)) return null;
+
+    return { clean, filePath };
+  }
+
   async function listMarkdownFiles() {
     const entries = await readdir(workDir, { withFileTypes: true });
     return entries
@@ -81,7 +108,7 @@ export function createEditorRouter(options) {
 
   // ── Middleware ────────────────────────────────────────────────────────────
 
-  router.use(express.json({ limit: "10mb" }));
+  router.use(express.json({ limit: "25mb" }));
 
   // Serve editor static files
   router.use(express.static(editorRoot, { index: false }));
@@ -196,6 +223,26 @@ export function createEditorRouter(options) {
     }
   });
 
+  router.post("/api/assets", async (req, res) => {
+    await ensureResolved();
+
+    const { path: relPath, contentBase64 } = req.body;
+    const asset = resolveWorkspaceAsset(relPath);
+    if (!asset) return res.status(400).json({ error: "Invalid asset path" });
+    if (typeof contentBase64 !== "string" || !contentBase64) {
+      return res.status(400).json({ error: "Missing contentBase64 field" });
+    }
+
+    try {
+      await mkdir(dirname(asset.filePath), { recursive: true });
+      await writeFile(asset.filePath, Buffer.from(contentBase64, "base64"));
+      const s = await stat(asset.filePath);
+      res.status(201).json({ ok: true, path: asset.clean, modifiedAt: s.mtimeMs });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   router.delete("/api/files/:name", async (req, res) => {
     await ensureResolved();
     if (mode === "file") {
@@ -212,6 +259,22 @@ export function createEditorRouter(options) {
       if (e.code === "ENOENT") return res.status(404).json({ error: "File not found" });
       res.status(500).json({ error: e.message });
     }
+  });
+
+  router.get(/^\/api\/workspace\/(.+)$/, async (req, res) => {
+    await ensureResolved();
+
+    const asset = resolveWorkspaceAsset(decodeURIComponent(req.params[0] || ""));
+    if (!asset) return res.status(400).json({ error: "Invalid asset path" });
+
+    res.sendFile(asset.filePath, (err) => {
+      if (!err) return;
+      if (err.code === "ENOENT") {
+        if (!res.headersSent) res.status(404).json({ error: "File not found" });
+        return;
+      }
+      if (!res.headersSent) res.status(500).json({ error: err.message });
+    });
   });
 
   // Serve index.html at the mount root

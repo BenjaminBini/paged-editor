@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("electronAPI", {
   readFile: (filePath) => ipcRenderer.invoke("read-file", filePath),
   writeFile: (filePath, content) => ipcRenderer.invoke("write-file", filePath, content),
+  writeBinaryFile: (filePath, base64Content) => ipcRenderer.invoke("write-binary-file", filePath, base64Content),
   readDir: (dirPath) => ipcRenderer.invoke("read-dir", dirPath),
   getFileModTime: (filePath) => ipcRenderer.invoke("get-file-mod-time", filePath),
   deleteFile: (filePath) => ipcRenderer.invoke("delete-file", filePath),
@@ -18,6 +19,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getAppState: () => ipcRenderer.invoke("get-app-state"),
   setAppState: (partial) => ipcRenderer.invoke("set-app-state", partial),
   hasStartupPath: () => ipcRenderer.invoke("has-startup-path"),
+  getWorkspaceAssetBaseHref: (filePath) => ipcRenderer.invoke("get-workspace-asset-base-href", filePath),
   // AI agent collaboration
   getWsPort: () => ipcRenderer.invoke("get-ws-port"),
   getWsHost: () => ipcRenderer.invoke("get-ws-host"),

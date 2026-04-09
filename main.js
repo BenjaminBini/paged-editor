@@ -2,6 +2,7 @@ const { app, BrowserWindow, Menu, ipcMain, dialog, shell } = require("electron")
 const path = require("path");
 const fs = require("fs/promises");
 const os = require("os");
+const { pathToFileURL } = require("url");
 const { WebSocketServer } = require("ws");
 const crypto = require("crypto");
 
@@ -73,6 +74,12 @@ ipcMain.handle("read-file", async (_e, filePath) => {
 
 ipcMain.handle("write-file", async (_e, filePath, content) => {
   await fs.writeFile(filePath, content, "utf-8");
+});
+
+ipcMain.handle("write-binary-file", async (_e, filePath, base64Content) => {
+  const dirPath = path.dirname(filePath);
+  await fs.mkdir(dirPath, { recursive: true });
+  await fs.writeFile(filePath, Buffer.from(base64Content, "base64"));
 });
 
 ipcMain.handle("read-dir", async (_e, dirPath) => {
@@ -267,6 +274,15 @@ ipcMain.handle("set-app-state", async (_e, partial) => {
 ipcMain.handle("get-ws-port", () => wsPort);
 ipcMain.handle("get-ws-host", () => os.hostname());
 ipcMain.handle("has-startup-path", () => startupPathPending);
+ipcMain.handle("get-workspace-asset-base-href", (_e, filePath) => {
+  if (!filePath) return "";
+  const targetPath = String(filePath);
+  const dirPath = targetPath.toLowerCase().endsWith(".md")
+    ? path.dirname(targetPath)
+    : targetPath;
+  const href = pathToFileURL(dirPath.endsWith(path.sep) ? dirPath : dirPath + path.sep).href;
+  return href.endsWith("/") ? href : href + "/";
+});
 
 ipcMain.handle("generate-agent-key", () => {
   const key = crypto.randomUUID();

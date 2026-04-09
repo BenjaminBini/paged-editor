@@ -48,6 +48,7 @@ import {
   createNewFile,
   refreshFileList,
 } from "./file-manager.js";
+import { saveImageAsset } from "./workspace-assets.js";
 import {
   openTab,
   getActiveTab,
@@ -245,6 +246,51 @@ cmEl.addEventListener("drop", (e) => {
     e.stopPropagation();
     openFilePath(file.path);
   }
+});
+
+cmEl.addEventListener("paste", async (e) => {
+  const imageFiles = Array.from(e.clipboardData?.items || [])
+    .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+    .map((item) => item.getAsFile())
+    .filter(Boolean);
+
+  if (!imageFiles.length) return;
+
+  e.preventDefault();
+  e.stopPropagation();
+
+  const tab = getActiveTab();
+  if (!tab?.path) {
+    status.textContent = "Save the Markdown file before pasting images";
+    return;
+  }
+
+  const assets = [];
+  for (const file of imageFiles) {
+    try {
+      assets.push(await saveImageAsset(tab.path, file));
+    } catch (err) {
+      status.textContent = "Failed to paste image: " + err.message;
+      return;
+    }
+  }
+
+  if (!assets.length) {
+    status.textContent = "Clipboard image could not be read";
+    return;
+  }
+
+  cm.operation(() => {
+    const markdown = assets
+      .map((asset) => `![${asset.altText}](${asset.markdownPath})`)
+      .join("\n\n");
+    cm.replaceSelection(markdown);
+    cm.focus();
+  });
+
+  status.textContent = assets.length === 1
+    ? "Pasted image as " + assets[0].markdownPath
+    : "Pasted " + assets.length + " images";
 });
 
 // ── Expose globals for onclick handlers in HTML ────────────────────────────

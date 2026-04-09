@@ -15,6 +15,7 @@ if (!api) {
 
 export const readFile       = (path) => api.readFile(path);
 export const writeFile      = (path, content) => api.writeFile(path, content);
+export const writeBinaryFile = (path, base64) => api.writeBinaryFile(path, base64);
 export const deleteFile     = (path) => api.deleteFile(path);
 export const readDir        = (path) => api.readDir(path);
 export const getFileModTime = (path) => api.getFileModTime(path);
@@ -42,6 +43,7 @@ export const setAppState = (partial) => api.setAppState(partial);
 // ── Startup ────────────────────────────────────────────────────────────────
 
 export const hasStartupPath = () => api.hasStartupPath();
+export const getWorkspaceAssetBaseHref = (path) => api.getWorkspaceAssetBaseHref?.(path) || "";
 
 // ── AI agent collaboration ─────────────────────────────────────────────────
 

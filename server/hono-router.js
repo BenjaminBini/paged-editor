@@ -20,7 +20,7 @@
 
 import { Hono } from "hono";
 import { readdir, readFile, writeFile, stat, unlink, mkdir } from "node:fs/promises";
-import { join, resolve, basename, relative, isAbsolute } from "node:path";
+import { join, resolve, basename, dirname, relative, isAbsolute, extname } from "node:path";
 
 /**
  * @typedef {Object} EditorRouteOptions
@@ -44,9 +44,33 @@ function sanitizeName(name) {
   return clean;
 }
 
+function sanitizeRelativePath(filePath) {
+  if (typeof filePath !== "string") return null;
+  const clean = filePath
+    .replace(/\\/g, "/")
+    .split("/")
+    .filter(Boolean);
+  if (!clean.length || clean.some((part) => part === "." || part === ".." || part.startsWith("."))) {
+    return null;
+  }
+  return clean.join("/");
+}
+
 function isWithinDir(parentDir, childPath) {
   const rel = relative(parentDir, childPath);
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
+}
+
+function getMimeType(filePath) {
+  switch (extname(filePath).toLowerCase()) {
+    case ".gif": return "image/gif";
+    case ".jpg":
+    case ".jpeg": return "image/jpeg";
+    case ".png": return "image/png";
+    case ".svg": return "image/svg+xml";
+    case ".webp": return "image/webp";
+    default: return "application/octet-stream";
+  }
 }
 
 /**
@@ -67,6 +91,16 @@ export function createEditorRoutes(options) {
     if (!isWithinDir(resolve("."), dir) && !isAbsolute(workspace)) return null;
     if (autoCreate) await mkdir(dir, { recursive: true });
     return dir;
+  }
+
+  function resolveWorkspaceAsset(dir, relPath) {
+    const clean = sanitizeRelativePath(relPath);
+    if (!clean || !clean.startsWith("assets/")) return null;
+
+    const filePath = resolve(dir, clean);
+    if (!isWithinDir(dir, filePath)) return null;
+
+    return { clean, filePath };
   }
 
   // GET /config
@@ -197,6 +231,29 @@ export function createEditorRoutes(options) {
     }
   });
 
+  // POST /assets
+  app.post("/assets", async (c) => {
+    const dir = await getWorkDir(c);
+    if (!dir) return c.json({ error: "Invalid workspace" }, 400);
+
+    const body = await c.req.json();
+    if (typeof body.contentBase64 !== "string" || !body.contentBase64) {
+      return c.json({ error: "Missing contentBase64 field" }, 400);
+    }
+
+    const asset = resolveWorkspaceAsset(dir, body.path);
+    if (!asset) return c.json({ error: "Invalid asset path" }, 400);
+
+    try {
+      await mkdir(dirname(asset.filePath), { recursive: true });
+      await writeFile(asset.filePath, Buffer.from(body.contentBase64, "base64"));
+      const s = await stat(asset.filePath);
+      return c.json({ ok: true, path: asset.clean, modifiedAt: s.mtimeMs }, 201);
+    } catch {
+      return c.json({ error: "Write failed" }, 500);
+    }
+  });
+
   // DELETE /files/:name
   app.delete("/files/:name", async (c) => {
     const dir = await getWorkDir(c);
@@ -214,6 +271,26 @@ export function createEditorRoutes(options) {
     } catch (e) {
       if (e.code === "ENOENT") return c.json({ error: "File not found" }, 404);
       return c.json({ error: "Delete failed" }, 500);
+    }
+  });
+
+  // GET /workspace/*
+  app.get("/workspace/*", async (c) => {
+    const dir = await getWorkDir(c);
+    if (!dir) return c.json({ error: "Invalid workspace" }, 400);
+
+    const relPath = decodeURIComponent(c.req.path.split("/workspace/")[1] || "");
+    const asset = resolveWorkspaceAsset(dir, relPath);
+    if (!asset) return c.json({ error: "Invalid asset path" }, 400);
+
+    try {
+      const content = await readFile(asset.filePath);
+      return new Response(content, {
+        headers: { "Content-Type": getMimeType(asset.filePath) },
+      });
+    } catch (e) {
+      if (e.code === "ENOENT") return c.json({ error: "File not found" }, 404);
+      return c.json({ error: "Read failed" }, 500);
     }
   });
 
