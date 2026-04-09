@@ -33,6 +33,8 @@ async function saveAppState() {
 
 // ── Window ───────────────────────────────────────────────────────────────────
 let mainWindow = null;
+let allowWindowClose = false;
+let quittingRequested = false;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -45,6 +47,22 @@ function createWindow() {
     },
   });
   mainWindow.loadFile(path.join(BASE_ROOT, "index.html"));
+
+  mainWindow.on("close", (event) => {
+    if (!mainWindow || allowWindowClose) {
+      allowWindowClose = false;
+      return;
+    }
+    if (mainWindow.webContents.isLoadingMainFrame()) return;
+    event.preventDefault();
+    mainWindow.webContents.send("window-close-requested");
+  });
+
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+    allowWindowClose = false;
+    quittingRequested = false;
+  });
 }
 
 // ── IPC handlers ─────────────────────────────────────────────────────────────
@@ -102,6 +120,19 @@ ipcMain.handle("show-save-dialog", async (_e, defaultName) => {
 
 ipcMain.handle("set-title", (_e, title) => {
   if (mainWindow) mainWindow.setTitle(title);
+});
+
+ipcMain.handle("confirm-window-close", () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return false;
+  allowWindowClose = true;
+  if (quittingRequested) app.quit();
+  else mainWindow.close();
+  return true;
+});
+
+ipcMain.handle("cancel-window-close", () => {
+  quittingRequested = false;
+  return true;
 });
 
 // ── PDF generation helper ─────────────────────────────────────────────────
@@ -328,7 +359,7 @@ function buildMenu() {
         { label: "Save", accelerator: "CmdOrCtrl+S", click: () => mainWindow.webContents.send("menu-save") },
         { label: "Save As...", accelerator: "CmdOrCtrl+Shift+S", click: () => mainWindow.webContents.send("menu-save-as") },
         { type: "separator" },
-        { label: "Close File", click: () => mainWindow.webContents.send("menu-close-file") },
+        { label: "Close File", accelerator: "CmdOrCtrl+W", click: () => mainWindow.webContents.send("menu-close-file") },
         { label: "Close Folder", click: () => mainWindow.webContents.send("menu-close-folder") },
         ...(process.platform !== "darwin" ? [{ type: "separator" }, { role: "quit" }] : []),
       ],
@@ -421,6 +452,10 @@ const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
 } else {
+  app.on("before-quit", () => {
+    quittingRequested = true;
+  });
+
   app.on("second-instance", (_event, argv) => {
     // Focus the existing window
     if (mainWindow) {

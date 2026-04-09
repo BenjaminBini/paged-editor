@@ -8,8 +8,8 @@ import {
   updateTitle, renderFileList, openFolderByPath,
 } from "./file-manager.js";
 import {
-  openTab, closeActiveTab, getActiveTab, markActiveTabClean,
-  updateActiveTabPath, findTabByPath,
+  openTab, closeTab, getActiveTab, getActiveTabIdx, getTabs, markActiveTabClean,
+  switchToTab, updateActiveTabPath, findTabByPath,
 } from "./tab-bar.js";
 import { triggerRender } from "./render.js";
 import { hideWelcome } from "./menu-state.js";
@@ -75,14 +75,13 @@ export async function reloadTabFromDisk(tab) {
 
 export async function doSave() {
   const tab = getActiveTab();
-  if (!tab) return;
+  if (!tab) return false;
 
   applyPrettify();
   const content = cm.getValue();
 
   if (!tab.path) {
-    await doSaveAs();
-    return;
+    return doSaveAs();
   }
 
   try {
@@ -92,7 +91,7 @@ export async function doSave() {
 
     if (result.action === "cancel") {
       status.textContent = "Save cancelled";
-      return;
+      return false;
     }
     if (result.action === "reload") {
       cm.setValue(result.content);
@@ -100,14 +99,14 @@ export async function doSave() {
       updateGutterMarkers(getActiveTab);
       renderFileList();
       status.textContent = "Loaded disk version of " + tab.name;
-      return;
+      return true;
     }
     if (result.action === "merge") {
       cm.setValue(result.content);
       if (result.hasConflicts) {
         status.textContent =
           "Merged with conflicts \u2014 search for <<<<<<< to resolve";
-        return;
+        return false;
       }
       await writeFile(tab.path, cm.getValue());
       const modTime = await getFileModTime(tab.path);
@@ -115,7 +114,7 @@ export async function doSave() {
       updateGutterMarkers(getActiveTab);
       renderFileList();
       status.textContent = "Saved " + tab.name;
-      return;
+      return true;
     }
 
     // Normal save
@@ -125,17 +124,19 @@ export async function doSave() {
     renderFileList();
     status.textContent = "Saved " + tab.name;
     emit("file-saved", { file: tab.path, name: tab.name });
+    return true;
   } catch (e) {
     status.textContent = "Save failed: " + e.message;
+    return false;
   }
 }
 
 export async function doSaveAs() {
   const tab = getActiveTab();
-  if (!tab) return;
+  if (!tab) return false;
 
   const filePath = await showSaveAsDialog(tab.name || "document.md");
-  if (!filePath) return;
+  if (!filePath) return false;
 
   applyPrettify();
   try {
@@ -149,28 +150,65 @@ export async function doSaveAs() {
     renderFileList();
     status.textContent = "Saved as " + name;
     addRecentFile(filePath);
+    return true;
   } catch (e) {
     status.textContent = "Save As failed: " + e.message;
+    return false;
   }
 }
 
 // ── Unsaved changes dialog ─────────────────────────────────────────────────
 
-export function showUnsavedDialog(fileName) {
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => (
+    {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    }[char]
+  ));
+}
+
+function restoreActiveTab(idx) {
+  const tabs = getTabs();
+  if (!tabs.length || idx < 0) return;
+  switchToTab(Math.min(idx, tabs.length - 1));
+}
+
+export function showUnsavedDialog(targetLabel, options = {}) {
   return new Promise((resolve) => {
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay open";
+    const count = options.count || 1;
+    const safeLabel = escapeHtml(targetLabel || "Untitled");
+    const saveLabel = options.saveLabel || (count > 1 ? "Save all" : "Save");
+    const discardLabel = options.discardLabel || (count > 1 ? "Discard all" : "Discard");
+    const cancelLabel = options.cancelLabel || "Keep open";
+    const verb = count > 1 ? "have" : "has";
+
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      cleanup();
+      resolve("cancel");
+    };
+
+    function cleanup() {
+      document.removeEventListener("keydown", onKey);
+      overlay.remove();
+    }
 
     overlay.innerHTML = `
       <div class="modal">
-        <h3>Unsaved Changes</h3>
+        <h3>${escapeHtml(options.title || "Unsaved Changes")}</h3>
         <p style="color:#94a3b8;margin-bottom:4px;">
-          <strong style="color:#cdd6f4;">${fileName}</strong> has unsaved changes.
+          <strong style="color:#cdd6f4;">${safeLabel}</strong> ${verb} unsaved changes.
         </p>
         <div class="btn-row">
-          <button class="btn-cancel" data-action="cancel">Keep open</button>
-          <button class="btn-discard" data-action="discard">Discard</button>
-          <button class="btn-save" data-action="save">Save</button>
+          <button class="btn-cancel" data-action="cancel">${escapeHtml(cancelLabel)}</button>
+          <button class="btn-discard" data-action="discard">${escapeHtml(discardLabel)}</button>
+          <button class="btn-save" data-action="save">${escapeHtml(saveLabel)}</button>
         </div>
       </div>
     `;
@@ -178,36 +216,120 @@ export function showUnsavedDialog(fileName) {
     overlay.addEventListener("click", (e) => {
       const action = e.target.dataset?.action;
       if (action) {
-        overlay.remove();
+        cleanup();
         resolve(action);
       }
     });
 
-    document.addEventListener("keydown", function onKey(e) {
-      if (e.key === "Escape") {
-        document.removeEventListener("keydown", onKey);
-        overlay.remove();
-        resolve("cancel");
-      }
-    });
-
+    document.addEventListener("keydown", onKey);
     document.body.appendChild(overlay);
   });
 }
 
-// ── Close active tab ───────────────────────────────────────────────────────
+async function resolveUnsavedTabs(tabIndexes) {
+  const requestedIndexes = [...new Set(tabIndexes)]
+    .filter((idx) => Number.isInteger(idx) && idx >= 0)
+    .sort((a, b) => a - b);
 
-export async function closeCurrentTab() {
-  const tab = getActiveTab();
-  if (!tab) return;
+  if (!requestedIndexes.length) return true;
 
-  if (tab.dirty) {
-    const action = await showUnsavedDialog(tab.name || "Untitled");
-    if (action === "cancel") return;
-    if (action === "save") await doSave();
+  const tabs = getTabs();
+  const dirtyTabs = requestedIndexes
+    .map((idx) => ({ idx, tab: tabs[idx] }))
+    .filter(({ tab }) => tab?.dirty);
+
+  if (!dirtyTabs.length) return true;
+
+  const originalActiveIdx = getActiveTabIdx();
+  const count = dirtyTabs.length;
+  const action = await showUnsavedDialog(
+    count === 1 ? (dirtyTabs[0].tab.name || "Untitled") : `${count} files`,
+    { count },
+  );
+
+  if (action === "cancel") {
+    restoreActiveTab(originalActiveIdx);
+    return false;
   }
 
-  closeActiveTab();
+  if (action === "save") {
+    for (const { idx } of dirtyTabs) {
+      if (!getTabs()[idx]) continue;
+      switchToTab(idx);
+      await doSave();
+      if (getTabs()[idx]?.dirty) {
+        restoreActiveTab(originalActiveIdx);
+        return false;
+      }
+    }
+  }
+
+  restoreActiveTab(originalActiveIdx);
+  return true;
+}
+
+function closeTabsByIndexes(tabIndexes) {
+  [...new Set(tabIndexes)]
+    .filter((idx) => Number.isInteger(idx) && idx >= 0)
+    .sort((a, b) => b - a)
+    .forEach((idx) => closeTab(idx));
+}
+
+// ── Close active tab ───────────────────────────────────────────────────────
+
+export async function requestCloseTab(idx) {
+  if (!(await resolveUnsavedTabs([idx]))) return false;
+  closeTabsByIndexes([idx]);
+  return true;
+}
+
+export async function requestCloseTabsToLeft(idx) {
+  const indexes = [];
+  for (let i = 0; i < idx; i++) indexes.push(i);
+  if (!(await resolveUnsavedTabs(indexes))) return false;
+  closeTabsByIndexes(indexes);
+  return true;
+}
+
+export async function requestCloseTabsToRight(idx) {
+  const indexes = [];
+  for (let i = idx + 1; i < getTabs().length; i++) indexes.push(i);
+  if (!(await resolveUnsavedTabs(indexes))) return false;
+  closeTabsByIndexes(indexes);
+  return true;
+}
+
+export async function requestCloseAllTabs() {
+  const indexes = getTabs().map((_tab, idx) => idx);
+  if (!(await resolveUnsavedTabs(indexes))) return false;
+  closeTabsByIndexes(indexes);
+  return true;
+}
+
+let pendingWindowClose = null;
+
+export async function requestWindowClose() {
+  if (pendingWindowClose) return pendingWindowClose;
+  pendingWindowClose = (async () => {
+    const indexes = getTabs().map((_tab, idx) => idx);
+    if (!(await resolveUnsavedTabs(indexes))) {
+      await platform.cancelWindowClose?.();
+      return false;
+    }
+    await platform.confirmWindowClose?.();
+    return true;
+  })();
+  try {
+    return await pendingWindowClose;
+  } finally {
+    pendingWindowClose = null;
+  }
+}
+
+export async function closeCurrentTab() {
+  const idx = getActiveTabIdx();
+  if (idx < 0) return false;
+  return requestCloseTab(idx);
 }
 
 // ── Open dialogs ───────────────────────────────────────────────────────────

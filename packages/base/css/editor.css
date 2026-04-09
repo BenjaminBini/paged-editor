@@ -48,7 +48,12 @@
 .editor-pane .cm-link { color: #89b4fa !important; }
 .editor-pane .cm-url { color: #6c7086 !important; }
 .editor-pane .cm-quote { color: #a6adc8 !important; font-style: italic !important; }
-.editor-pane .cm-comment { color: #6c7086 !important; }
+.editor-pane .cm-comment { color: #8b91ab !important; }
+.editor-pane .cm-code {
+  color: #f6c177 !important;
+  font-weight: 600 !important;
+  text-shadow: 0 0 0.01px currentColor;
+}
 .editor-pane .cm-keyword { color: #cba6f7 !important; }
 .editor-pane .cm-atom { color: #fab387 !important; }
 .editor-pane .cm-string { color: #a6e3a1 !important; }

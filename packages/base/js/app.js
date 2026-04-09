@@ -53,7 +53,10 @@ import {
   getActiveTab,
   getTabs,
   hasOpenTabs,
-  isActiveTabDirty,
+  onAllTabsCloseRequest,
+  onTabCloseRequest,
+  onTabsToLeftCloseRequest,
+  onTabsToRightCloseRequest,
 } from "./tab-bar.js";
 import { closeDiffModal, resolveConflict } from "./diff-merge.js";
 import {
@@ -81,6 +84,8 @@ import {
 import {
   initFileOps, openFilePath, reloadTabFromDisk, doSave, doSaveAs,
   closeCurrentTab, openLocalFile, openFolderAndLoadFirst, openFolderByPathAndLoad,
+  requestCloseAllTabs, requestCloseTab, requestCloseTabsToLeft, requestCloseTabsToRight,
+  requestWindowClose,
 } from "./file-ops.js";
 import {
   updateGutterMarkers as _updateGutterMarkers,
@@ -311,6 +316,10 @@ window.addAgent = addAgent;
 // ── Initialize file-ops (only late-bound callbacks that can't be imported) ──
 
 initFileOps({ buildRecentUI });
+onTabCloseRequest(requestCloseTab);
+onTabsToLeftCloseRequest(requestCloseTabsToLeft);
+onTabsToRightCloseRequest(requestCloseTabsToRight);
+onAllTabsCloseRequest(requestCloseAllTabs);
 
 // Notify parent frame (React component) on save
 busOn("file-saved", ({ file, name }) => {
@@ -400,14 +409,20 @@ const shortcutActions = {
 setupKeyboardShortcuts(shortcutActions);
 wireElectronMenus(platform, shortcutActions);
 
-// ── Warn before closing with unsaved changes ───────────────────────────────
+// ── Close interception ─────────────────────────────────────────────────────
 
-window.addEventListener("beforeunload", (e) => {
-  if (isActiveTabDirty()) {
-    e.preventDefault();
-    e.returnValue = "";
-  }
-});
+if (platform.isWebMode) {
+  window.addEventListener("beforeunload", (e) => {
+    if (getTabs().some((tab) => tab.dirty)) {
+      e.preventDefault();
+      e.returnValue = "";
+    }
+  });
+} else {
+  platform.on("window-close-requested", () => {
+    requestWindowClose();
+  });
+}
 
 // ── Startup ────────────────────────────────────────────────────────────────
 

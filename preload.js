@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   showSaveDialog: (defaultName) => ipcRenderer.invoke("show-save-dialog", defaultName),
   showInFinder: (filePath) => ipcRenderer.invoke("show-in-finder", filePath),
   setTitle: (title) => ipcRenderer.invoke("set-title", title),
+  confirmWindowClose: () => ipcRenderer.invoke("confirm-window-close"),
+  cancelWindowClose: () => ipcRenderer.invoke("cancel-window-close"),
   previewPdf: (htmlContent, defaultName) => ipcRenderer.invoke("preview-pdf", htmlContent, defaultName),
   savePdfAs: (defaultName) => ipcRenderer.invoke("save-pdf-as", defaultName),
   getAppState: () => ipcRenderer.invoke("get-app-state"),
@@ -28,6 +30,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
       "menu-save", "menu-save-as", "menu-close-file", "menu-close-folder",
       "menu-insert-table", "menu-render", "menu-preview-tab", "menu-download-pdf", "menu-download-memoire", "menu-toggle-wrap", "menu-toggle-cover",
       "open-file-path", "open-folder-path", "recent-cleared",
+      "window-close-requested",
       "agent-connected", "agent-disconnected", "agent-message",
     ];
     if (validChannels.includes(channel)) {

@@ -22,7 +22,7 @@ export function setupKeyboardShortcuts(actions) {
       e.preventDefault();
       newDocument();
     }
-    if ((e.ctrlKey || e.metaKey) && e.key === "w") {
+    if ((e.ctrlKey || e.metaKey) && (e.key?.toLowerCase() === "w" || e.code === "KeyW")) {
       e.preventDefault();
       closeCurrentTab();
     }

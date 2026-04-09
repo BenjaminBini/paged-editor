@@ -16,13 +16,14 @@
 
 import { Router } from "express";
 import express from "express";
+import { existsSync } from "node:fs";
 import { readdir, readFile, writeFile, stat, unlink } from "node:fs/promises";
 import { join, resolve, basename } from "node:path";
 
 /**
  * @typedef {Object} EditorRouterOptions
  * @property {string} workspace - Absolute path to a folder or a single .md file
- * @property {string} [editorRoot] - Path to the editor static files (defaults to project root)
+ * @property {string} [editorRoot] - Path to the editor static files
  */
 
 /**
@@ -36,9 +37,7 @@ export function createEditorRouter(options) {
   if (!workspace) throw new Error("workspace option is required");
 
   const workspacePath = resolve(workspace);
-  const editorRoot = options.editorRoot
-    ? resolve(options.editorRoot)
-    : resolve(import.meta.dirname, "..");
+  const editorRoot = resolveEditorRoot(options.editorRoot);
 
   const router = Router();
 
@@ -221,4 +220,18 @@ export function createEditorRouter(options) {
   });
 
   return router;
+}
+
+function resolveEditorRoot(explicitRoot) {
+  if (explicitRoot) return resolve(explicitRoot);
+
+  const candidates = [
+    resolve(import.meta.dirname, "..", "packages/base"),
+    resolve(import.meta.dirname, ".."),
+  ];
+
+  const match = candidates.find((candidate) => existsSync(join(candidate, "index.html")));
+  if (match) return match;
+
+  return candidates[0];
 }

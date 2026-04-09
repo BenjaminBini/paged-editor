@@ -1,6 +1,6 @@
 // tab-bar.js — Multi-tab state and tab bar UI
 
-import { cm } from './editor.js';
+import { cm, markdownMode } from './editor.js';
 import { showContextMenu } from './context-menu.js';
 import { canShowInFinder, showInFinder } from './platform.js';
 
@@ -20,12 +20,20 @@ let _onAllClosed = null; // called when last tab is closed
 let _onSave = null;     // called to save a tab by index
 let _onRefresh = null;  // called to reload a tab from disk
 let _onBeforeSwap = null; // called before cm.swapDoc() so listeners can be cleaned up
+let _onCloseRequest = null;
+let _onCloseTabsToLeftRequest = null;
+let _onCloseTabsToRightRequest = null;
+let _onCloseAllTabsRequest = null;
 
 export function onTabSwitch(fn) { _onSwitch = fn; }
 export function onAllTabsClosed(fn) { _onAllClosed = fn; }
 export function onTabSaveRequest(fn) { _onSave = fn; }
 export function onTabRefreshRequest(fn) { _onRefresh = fn; }
 export function onBeforeDocSwap(fn) { _onBeforeSwap = fn; }
+export function onTabCloseRequest(fn) { _onCloseRequest = fn; }
+export function onTabsToLeftCloseRequest(fn) { _onCloseTabsToLeftRequest = fn; }
+export function onTabsToRightCloseRequest(fn) { _onCloseTabsToRightRequest = fn; }
+export function onAllTabsCloseRequest(fn) { _onCloseAllTabsRequest = fn; }
 
 // ── Public API ──────────────────────────────────────────────────────────────
 
@@ -38,7 +46,7 @@ export function openTab(path, name, content, modTime) {
   }
 
   // Create new CodeMirror Doc
-  const doc = CodeMirror.Doc(content || "", "markdown");
+  const doc = CodeMirror.Doc(content || "", markdownMode);
 
   const tab = {
     path,          // null for unsaved new docs
@@ -63,7 +71,7 @@ export function closeTab(idx) {
   if (tabs.length === 0) {
     activeTabIdx = -1;
     if (_onBeforeSwap) _onBeforeSwap();
-    cm.swapDoc(CodeMirror.Doc("", "markdown"));
+    cm.swapDoc(CodeMirror.Doc("", markdownMode));
     renderTabBar();
     if (_onAllClosed) _onAllClosed();
     return;
@@ -99,7 +107,7 @@ export function closeAllTabs() {
   tabs.splice(0);
   activeTabIdx = -1;
   if (_onBeforeSwap) _onBeforeSwap();
-  cm.swapDoc(CodeMirror.Doc("", "markdown"));
+  cm.swapDoc(CodeMirror.Doc("", markdownMode));
   renderTabBar();
   if (_onAllClosed) _onAllClosed();
 }
@@ -174,6 +182,26 @@ export function findTabByPath(path) {
   return tabs.findIndex(t => t.path === path);
 }
 
+function requestCloseTab(idx) {
+  if (_onCloseRequest) return _onCloseRequest(idx);
+  return closeTab(idx);
+}
+
+function requestCloseTabsToLeft(idx) {
+  if (_onCloseTabsToLeftRequest) return _onCloseTabsToLeftRequest(idx);
+  return closeTabsToLeft(idx);
+}
+
+function requestCloseTabsToRight(idx) {
+  if (_onCloseTabsToRightRequest) return _onCloseTabsToRightRequest(idx);
+  return closeTabsToRight(idx);
+}
+
+function requestCloseAllTabs() {
+  if (_onCloseAllTabsRequest) return _onCloseAllTabsRequest();
+  return closeAllTabs();
+}
+
 // ── Tab bar rendering ───────────────────────────────────────────────────────
 
 export function renderTabBar() {
@@ -207,7 +235,7 @@ export function renderTabBar() {
     closeBtn.textContent = "\u00d7";
     closeBtn.onclick = (e) => {
       e.stopPropagation();
-      closeTab(i);
+      requestCloseTab(i);
     };
     indicator.appendChild(closeBtn);
 
@@ -215,7 +243,7 @@ export function renderTabBar() {
 
     // Middle-click to close
     el.addEventListener("mousedown", (e) => {
-      if (e.button === 1) { e.preventDefault(); closeTab(i); }
+      if (e.button === 1) { e.preventDefault(); requestCloseTab(i); }
     });
 
     // Right-click context menu
@@ -237,10 +265,10 @@ function showTabContextMenu(x, y, tabIdx) {
     { label: "Save", disabled: !tab.dirty, action: () => { if (_onSave) { switchToTab(tabIdx); _onSave(); } } },
     { label: "Refresh from Disk", disabled: !tab.path, action: () => { if (_onRefresh) { switchToTab(tabIdx); _onRefresh(tab); } } },
     { separator: true },
-    { label: "Close", action: () => closeTab(tabIdx) },
-    { label: "Close Tabs to the Left", disabled: tabIdx === 0, action: () => closeTabsToLeft(tabIdx) },
-    { label: "Close Tabs to the Right", disabled: tabIdx >= tabs.length - 1, action: () => closeTabsToRight(tabIdx) },
-    { label: "Close All", action: () => closeAllTabs() },
+    { label: "Close", action: () => requestCloseTab(tabIdx) },
+    { label: "Close Tabs to the Left", disabled: tabIdx === 0, action: () => requestCloseTabsToLeft(tabIdx) },
+    { label: "Close Tabs to the Right", disabled: tabIdx >= tabs.length - 1, action: () => requestCloseTabsToRight(tabIdx) },
+    { label: "Close All", action: () => requestCloseAllTabs() },
     { separator: true },
     { label: "Copy Path", disabled: !tab.path, action: () => tab.path && navigator.clipboard.writeText(tab.path) },
     { label: "Show in Finder", disabled: !tab.path || !canShowInFinder, action: () => tab.path && showInFinder(tab.path) },

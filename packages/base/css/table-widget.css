@@ -44,7 +44,18 @@
   transition: background 0.15s;
 }
 .table-widget .tw-toolbar button:hover { background: #3373b3; color: #fff; }
+.table-widget .tw-toolbar button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.table-widget .tw-toolbar button:disabled:hover {
+  background: #2d2d3f;
+  color: #a0a0c0;
+}
 .table-widget .tw-toolbar .tw-spacer { flex: 1; }
 .table-widget .tw-toolbar .tw-hint {
-  font-size: 9px; color: #4a4a6a; margin-right: 4px;
+  font-size: 10px;
+  color: #8f95b7;
+  margin-right: 6px;
+  font-weight: 500;
 }

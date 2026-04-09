@@ -25,6 +25,8 @@ export const showOpenFileDialog   = () => api.showOpenFileDialog();
 export const showOpenFolderDialog = () => api.showOpenFolderDialog();
 export const showSaveDialog       = (name) => api.showSaveDialog(name);
 export const showInFinder         = (path) => api.showInFinder?.(path);
+export const confirmWindowClose  = () => api.confirmWindowClose?.();
+export const cancelWindowClose   = () => api.cancelWindowClose?.();
 
 // ── Window ─────────────────────────────────────────────────────────────────
 

@@ -3,8 +3,14 @@
 
 // ── CodeMirror instance ───────────────────────────────────────────────────────
 
+export const markdownMode = {
+  name: "markdown",
+  fencedCodeBlockHighlighting: true,
+  tokenTypeOverrides: { code: "code" },
+};
+
 export const cm = CodeMirror.fromTextArea(document.getElementById("editor-textarea"), {
-  mode: "markdown",
+  mode: markdownMode,
   lineNumbers: true,
   lineWrapping: true,
   tabSize: 2,
