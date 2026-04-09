@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.0] – 2026-04-09
+
+### Features
+- **Paste screenshots as assets** — You can now paste clipboard images directly into the editor. The image is written to an `assets/` folder next to the current Markdown file and a Markdown image link is inserted automatically.
+- **Image captions from Markdown labels** — Standalone Markdown images now render their label text as a caption below the image.
+
+### Fixes
+- **Workspace asset resolution** — Relative image assets now resolve correctly in web preview, Electron preview, and PDF export.
+- **Outline contrast** — Sidebar outline contrast was refined for better readability.
+
+---
+
 ## [1.3.0] – 2026-04-09
 
 ### Features
