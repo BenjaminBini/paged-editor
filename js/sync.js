@@ -97,21 +97,45 @@ let toEditor = false;
 let pvTimer = null;
 let edTimer = null;
 
+function getEditorScroller() {
+  return cm.getScrollerElement
+    ? cm.getScrollerElement()
+    : cm.getWrapperElement().querySelector(".CodeMirror-scroll");
+}
+
 // ── Editor → Preview ────────────────────────────────────────────────────────
 
 function syncEditorToPreview() {
   if (toEditor || anchorMap.length === 0) return;
 
+  const scroller = getEditorScroller();
   const info = cm.getScrollInfo();
-  if (info.height - info.clientHeight <= 0) return;
-  if (info.top + info.clientHeight >= info.height - 10) return;
+  const previewMax = previewContainer.scrollHeight - previewContainer.clientHeight;
+  const editorTop = scroller?.scrollTop ?? info.top;
+  const editorMax = scroller
+    ? Math.max(0, scroller.scrollHeight - scroller.clientHeight)
+    : Math.max(0, info.height - info.clientHeight);
+  if (editorMax <= 0) return;
 
   toPreview = true;
   clearTimeout(pvTimer);
   try {
-    const centerLine = cm.lineAtHeight(info.top + info.clientHeight / 2, "local");
-    const targetY = lineToY(centerLine);
-    previewContainer.scrollTop = Math.max(0, targetY - previewContainer.clientHeight / 2);
+    let targetScrollTop;
+
+    if (editorTop <= 10) {
+      targetScrollTop = 0;
+    } else if (editorTop >= editorMax - 10) {
+      targetScrollTop = Math.max(0, previewMax);
+    } else {
+      const centerLine = cm.lineAtHeight(editorTop + info.clientHeight / 2, "local");
+      const targetY = lineToY(centerLine);
+      targetScrollTop = Math.min(
+        Math.max(0, previewMax),
+        Math.max(0, targetY - previewContainer.clientHeight / 2),
+      );
+    }
+
+    previewContainer.scrollTop = targetScrollTop;
   } catch (e) { /* ignore */ }
   pvTimer = setTimeout(() => { toPreview = false; }, 80);
 }
@@ -122,16 +146,33 @@ function syncPreviewToEditor() {
   if (toPreview || anchorMap.length === 0) return;
 
   const previewMax = previewContainer.scrollHeight - previewContainer.clientHeight;
+  const scroller = getEditorScroller();
+  const info = cm.getScrollInfo();
+  const editorMax = scroller
+    ? Math.max(0, scroller.scrollHeight - scroller.clientHeight)
+    : Math.max(0, info.height - info.clientHeight);
   if (previewMax <= 0) return;
-  if (previewContainer.scrollTop + previewContainer.clientHeight >= previewContainer.scrollHeight - 10) return;
 
   toEditor = true;
   clearTimeout(edTimer);
   try {
-    const centerY = previewContainer.scrollTop + previewContainer.clientHeight / 2;
-    const line = yToLine(centerY);
-    const info = cm.getScrollInfo();
-    cm.scrollTo(null, cm.heightAtLine(line, "local") - info.clientHeight / 2);
+    let targetTop;
+
+    if (previewContainer.scrollTop <= 10) {
+      targetTop = 0;
+    } else if (previewContainer.scrollTop + previewContainer.clientHeight >= previewContainer.scrollHeight - 10) {
+      targetTop = Math.max(0, editorMax);
+    } else {
+      const centerY = previewContainer.scrollTop + previewContainer.clientHeight / 2;
+      const line = yToLine(centerY);
+      targetTop = Math.min(
+        Math.max(0, editorMax),
+        Math.max(0, cm.heightAtLine(line, "local") - info.clientHeight / 2),
+      );
+    }
+
+    cm.scrollTo(null, targetTop);
+    if (scroller) scroller.scrollTop = targetTop;
   } catch (e) { /* ignore */ }
   edTimer = setTimeout(() => { toEditor = false; }, 80);
 }
