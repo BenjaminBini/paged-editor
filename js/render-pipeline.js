@@ -17,6 +17,59 @@ import { buildHeaderText, wrapInDocument } from "./document.js";
 
 let _ctx = null;
 
+const PAGE_BREAK_TEXT_RE = /\n[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
+const PAGE_BREAK_RAW_RE = /\n\n?[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
+
+function stripTrailingPageBreakText(value = "") {
+  return value.replace(PAGE_BREAK_TEXT_RE, "");
+}
+
+function stripTrailingPageBreakRaw(value = "") {
+  return value.replace(PAGE_BREAK_RAW_RE, "");
+}
+
+function pruneEmptyTrailingTokens(tokens) {
+  while (tokens.length) {
+    const last = tokens[tokens.length - 1];
+    const emptyText = typeof last.text === "string" && last.text.length === 0;
+    const emptyRaw = typeof last.raw === "string" && last.raw.length === 0;
+    const emptyChildren = Array.isArray(last.tokens) && last.tokens.length === 0;
+    if (!emptyText && !emptyRaw && !emptyChildren) break;
+    tokens.pop();
+  }
+}
+
+function stripTrailingPageBreakFromToken(token) {
+  if (!token) return;
+  if (typeof token.raw === "string") token.raw = stripTrailingPageBreakRaw(token.raw);
+  if (typeof token.text === "string") token.text = stripTrailingPageBreakText(token.text);
+  if (Array.isArray(token.tokens) && token.tokens.length) {
+    stripTrailingPageBreakFromToken(token.tokens[token.tokens.length - 1]);
+    pruneEmptyTrailingTokens(token.tokens);
+  }
+}
+
+function extractTrailingListPageBreak(listToken) {
+  const lastItem = listToken.items?.[listToken.items.length - 1];
+  if (!lastItem || !PAGE_BREAK_TEXT_RE.test(lastItem.text || "")) return null;
+
+  let sourceLine = null;
+  if (typeof listToken._sourceLine === "number" && typeof listToken.raw === "string") {
+    const rawBeforeBreak = stripTrailingPageBreakRaw(listToken.raw);
+    sourceLine = listToken._sourceLine + (rawBeforeBreak.split("\n").length - 1);
+  }
+
+  lastItem.text = stripTrailingPageBreakText(lastItem.text);
+  if (typeof lastItem.raw === "string") lastItem.raw = stripTrailingPageBreakRaw(lastItem.raw);
+  if (Array.isArray(lastItem.tokens) && lastItem.tokens.length) {
+    stripTrailingPageBreakFromToken(lastItem.tokens[lastItem.tokens.length - 1]);
+    pruneEmptyTrailingTokens(lastItem.tokens);
+  }
+  if (typeof listToken.raw === "string") listToken.raw = stripTrailingPageBreakRaw(listToken.raw);
+
+  return sourceLine;
+}
+
 // ── Configure marked once at module load ───────────────────────────────────
 
 marked.use({
@@ -98,9 +151,16 @@ marked.use({
       const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
       const tag = token.ordered ? "ol" : "ul";
       const startAttr = token.ordered && token.start !== 1 ? ` start="${token.start}"` : "";
+      const trailingPageBreakLine = extractTrailingListPageBreak(token);
       let body = "";
       for (const item of token.items) body += this.listitem(item);
-      return `<${tag}${startAttr}${sl}>\n${body}</${tag}>\n`;
+      const pbSl = trailingPageBreakLine != null
+        ? ` data-source-line="${trailingPageBreakLine}"`
+        : "";
+      const pageBreakHtml = trailingPageBreakLine != null
+        ? `<div class="page-break"${pbSl}></div>\n`
+        : "";
+      return `<${tag}${startAttr}${sl}>\n${body}</${tag}>\n${pageBreakHtml}`;
     },
 
     table(token) {
