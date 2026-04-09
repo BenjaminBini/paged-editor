@@ -60,6 +60,7 @@
   flex-shrink: 0;
   margin: 0 auto;
   overflow: hidden;
+  position: relative; /* needed so absolute-positioned pending iframes are clipped here */
 }
 .section-wrapper {
   position: relative;

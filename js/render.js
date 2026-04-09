@@ -55,27 +55,27 @@ export async function triggerRender() {
   iframe.style.background = "transparent";
   iframe.dataset.gen = String(gen);
 
-  // Kill the previous frames immediately so only one Paged.js instance runs
-  // at a time. Having an old iframe alive during rendering causes Firefox
-  // to split CPU between Paged.js instances, turning a 200ms render into 2-4s.
+  // Kill only the pending frame immediately — it's still rendering and would
+  // compete for CPU with the new one (splitting Paged.js CPU, turning a 200ms
+  // render into 2-4s on Firefox). The current frame stays alive and visible so
+  // there is no blank flicker while the new frame loads.
   if (pendingFrame) {
     if (pendingFrame._blobUrl) URL.revokeObjectURL(pendingFrame._blobUrl);
     pendingFrame.remove();
     pendingFrame = null;
   }
-  if (currentFrame) {
-    currentFrame.remove();
-    if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-    currentFrame = null;
-    currentBlobUrl = null;
-  }
+
+  // Overlay the new frame invisibly; it will be swapped in on section-ready.
+  iframe.style.position = "absolute";
+  iframe.style.top = "0";
+  iframe.style.left = "0";
+  iframe.style.opacity = "0";
+  iframe.style.pointerEvents = "none";
 
   pendingFrame = iframe;
+  iframe._blobUrl = url;
   previewWrapper.appendChild(iframe);
   iframe.src = url;
-
-  // Store blob URL for cleanup
-  iframe._blobUrl = url;
 }
 
 // ── Section-ready handler ───────────────────────────────────────────────────
@@ -89,11 +89,27 @@ window.addEventListener("message", (e) => {
   const iframe = pendingFrame;
   if (!iframe) return;
 
+  const oldFrame = currentFrame;
+  const oldBlobUrl = currentBlobUrl;
+
+  // Swap: scale new frame while still invisible, then reveal + remove old.
+  // Both operations are synchronous so the browser paints them as one frame.
   currentFrame = iframe;
   currentBlobUrl = iframe._blobUrl;
   pendingFrame = null;
 
-  scalePreview();
+  scalePreview(); // sets transform + wrapper dimensions on the new frame
+
+  iframe.style.position = "";
+  iframe.style.top = "";
+  iframe.style.left = "";
+  iframe.style.opacity = "";
+  iframe.style.pointerEvents = "";
+
+  if (oldFrame) {
+    oldFrame.remove();
+    if (oldBlobUrl) URL.revokeObjectURL(oldBlobUrl);
+  }
 
   const elapsed = Math.round(performance.now() - renderStartTime);
   status.textContent = pages + " pages — " + elapsed + "ms";
