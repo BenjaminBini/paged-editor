@@ -20,15 +20,15 @@ Our approach follows a hybrid Agile/V-cycle methodology adapted for enterprise D
 
 ### Team Composition
 
-| Role | Name | Allocation |
-| --- | --- | --- |
-| Project Director | Marie Dupont | 20% |
-| Tech Lead | Thomas Martin | 100% |
-| Senior Developer | Julie Chen | 100% |
-| Senior Developer | Paul Bernard | 100% |
-| UX Designer | Sophie Leroy | 50% |
-| DevOps Engineer | Marc Weber | 50% |
-| QA Lead | Elise Moreau | 50% |
+| Role             | Name          | Allocation |
+| ---------------- | ------------- | ---------- |
+| Project Director | Marie Dupont  | 20%        |
+| Tech Lead        | Thomas Martin | 100%       |
+| Senior Developer | Julie Chen    | 100%       |
+| Senior Developer | Paul Bernard  | 100%       |
+| UX Designer      | Sophie Leroy  | 50%        |
+| DevOps Engineer  | Marc Weber    | 50%        |
+| QA Lead          | Elise Moreau  | 50%        |
 
 ### Communication Plan
 
@@ -49,10 +49,10 @@ Our QA process ensures reliability at every stage :
 
 ## Risk Management
 
-| Risk | Probability | Impact | Mitigation |
-| --- | --- | --- | --- |
-| SAP integration delays | Medium | High | Early prototype, fallback to CSV import |
-| Azure AD configuration | Low | High | Pre-project workshop with IT team |
-| Data migration complexity | Medium | Medium | Incremental migration with validation |
-| User adoption resistance | Medium | High | Change management program, champions network |
-| Scope creep | High | Medium | Strict change control process, backlog prioritization |
+| Risk                      | Probability | Impact | Mitigation                                            |
+| ------------------------- | ----------- | ------ | ----------------------------------------------------- |
+| SAP integration delays    | Medium      | High   | Early prototype, fallback to CSV import               |
+| Azure AD configuration    | Low         | High   | Pre-project workshop with IT team                     |
+| Data migration complexity | Medium      | Medium | Incremental migration with validation                 |
+| User adoption resistance  | Medium      | High   | Change management program, champions network          |
+| Scope creep               | High        | Medium | Strict change control process, backlog prioritization |
