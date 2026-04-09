@@ -5,11 +5,11 @@ ao_ref: "2025-042"
 acheteur: "Acme Corporation"
 ---
 
-# Partie 1 — Introduction
+# Introduction
 
-## 1.1 Executive Summary
+## Executive Summary
 
-This document presents BEORN's technical proposal for the implementation of a modern Digital Workplace platform for Acme Corporation. Our approach combines proven enterprise solutions with agile delivery methodology to ensure a successful deployment within the agreed timeline.
+This document presents BEORN's teffchnical proposal for the implementation of a modern Digital Workplace platform for Acme Corporation. Our approach combines proven enterprise solutions with agile delivery methodology to ensure a successful deployment within the agreed timeline.
 
 The proposed solution addresses all requirements outlined in the RFP, including :
 
@@ -18,18 +18,18 @@ The proposed solution addresses all requirements outlined in the RFP, including 
 - Employee self-service portal
 - Mobile-first design
 
-## 1.2 Company Overview
+## Company Overview
 
 BEORN Technologies is a Paris-based consulting firm specializing in Digital Workplace solutions. Founded in 2018, we have delivered over 50 enterprise-scale projects across France and Europe.
 
-| Metric | Value |
-| --- | --- |
-| Founded | 2018 |
-| Employees | 45+ |
-| Projects Delivered | 50+ |
-| Client Retention | 95% |
+| Metric             | Value |
+| ------------------ | ----- |
+| Founded            | 2018  |
+| Employees          | 45+   |
+| Projects Delivered | 50+   |
+| Client Retention   | 95%   |
 
-## 1.3 Understanding of Requirements
+## Understanding of Requirements
 
 Based on our analysis of the consultation documents (DCE), we have identified the following key themes :
 

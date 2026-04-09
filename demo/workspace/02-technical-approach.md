@@ -3,9 +3,9 @@ title: "Technical Approach"
 doctype: "Memoire technique"
 ---
 
-# Partie 2 — Technical Approach
+# Technical Approach
 
-## 2.1 Architecture Overview
+## Techitecture Overvie
 
 Our proposed architecture follows a cloud-native, microservices-based design that ensures high availability, scalability, and maintainability.
 
@@ -30,19 +30,19 @@ graph TD
 - **API-First** — All functionality exposed through versioned REST APIs
 - **Infrastructure as Code** — Terraform modules for reproducible deployments
 
-## 2.2 Technology Stack
+## Technology Stack
 
-| Layer | Technology | Rationale |
-| --- | --- | --- |
-| Frontend | React 19 + TypeScript | Modern, type-safe, large ecosystem |
-| Backend | Node.js + Express | Fast development, shared language with frontend |
-| Database | PostgreSQL 16 | Robust, JSONB support, full-text search |
-| Search | Elasticsearch 8 | Advanced search, faceting, autocomplete |
-| Cache | Redis 7 | Session store, real-time pub/sub |
-| Queue | RabbitMQ | Reliable async messaging |
-| Infrastructure | Kubernetes on GCP | Auto-scaling, self-healing |
+| Layer          | Technology            | Rationale                                       |
+| -------------- | --------------------- | ----------------------------------------------- |
+| Frontend       | React 19 + TypeScript | Modern, type-safe, large ecosystem              |
+| Backend        | Node.js + Express     | Fast development, shared language with frontend |
+| Database       | PostgreSQL 16         | Robust, JSONB support, full-text search         |
+| Search         | Elasticsearch 8       | Advanced search, faceting, autocomplete         |
+| Cache          | Redis 7               | Session store, real-time pub/sub                |
+| Queue          | RabbitMQ              | Reliable async messaging                        |
+| Infrastructure | Kubernetes on GCP     | Auto-scaling, self-healing                      |
 
-## 2.3 Security Architecture
+## Security Architecture
 
 Security is integrated at every layer of the architecture :
 
@@ -52,7 +52,7 @@ Security is integrated at every layer of the architecture :
 4. **Data** — AES-256 encryption at rest, TLS 1.3 in transit
 5. **Audit** — Comprehensive logging with tamper-proof storage
 
-## 2.4 Integration Strategy
+## Integration Strategy
 
 ### Office 365 Integration
 
@@ -73,12 +73,12 @@ Connection via SAP Cloud Connector with RFC/BAPI calls for :
 
 \newpage
 
-## 2.5 Performance Targets
+## Performance Targets
 
-| Metric | Target | Measurement |
-| --- | --- | --- |
-| Page Load Time | < 2s | 95th percentile |
+| Metric            | Target  | Measurement     |
+| ----------------- | ------- | --------------- |
+| Page Load Time    | < 2s    | 95th percentile |
 | API Response Time | < 200ms | 99th percentile |
-| Search Response | < 500ms | 95th percentile |
-| Uptime | 99.9% | Monthly SLA |
-| Concurrent Users | 5,000+ | Peak load |
+| Search Response   | < 500ms | 95th percentile |
+| Uptime            | 99.9%   | Monthly SLA     |
+| Concurrent Users  | 5,000+  | Peak load       |

@@ -3,9 +3,9 @@ title: "Methodology & Planning"
 doctype: "Memoire technique"
 ---
 
-# Partie 3 — Methodology & Planning
+# Methodology & Planning
 
-## 3.1 Delivery Methodology
+## Delivery Methodology
 
 Our approach follows a hybrid Agile/V-cycle methodology adapted for enterprise Digital Workplace projects. This combines the predictability required by procurement processes with the flexibility needed for user-centric design.
 
@@ -16,7 +16,7 @@ Our approach follows a hybrid Agile/V-cycle methodology adapted for enterprise D
 3. **Construction** (12 weeks) — Feature sprints (2-week cycles), continuous integration
 4. **Transition** (4 weeks) — UAT, data migration, training, go-live preparation
 
-## 3.2 Project Governance
+## Project Governance
 
 ### Team Composition
 
@@ -37,7 +37,7 @@ Our approach follows a hybrid Agile/V-cycle methodology adapted for enterprise D
 - **Monthly committee** — 2h, executive review
 - **Quarterly retrospective** — Half-day, full team
 
-## 3.3 Quality Assurance
+## Quality Assurance
 
 Our QA process ensures reliability at every stage :
 
@@ -47,7 +47,7 @@ Our QA process ensures reliability at every stage :
 - **Security Testing** — OWASP ZAP scans, dependency audit
 - **Accessibility** — WCAG 2.1 AA compliance checks
 
-## 3.4 Risk Management
+## Risk Management
 
 | Risk | Probability | Impact | Mitigation |
 | --- | --- | --- | --- |
