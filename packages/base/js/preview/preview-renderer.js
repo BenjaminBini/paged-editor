@@ -48,13 +48,7 @@ function buildPreviewStyles({ rootPageName = "" } = {}) {
       }
     }
 
-    .pdf-content > section.level2:first-of-type > h1:first-child {
-      break-before: auto !important;
-      page-break-before: auto !important;
-    }
-
-    .pdf-content > .beorn-cover + section.level2 > h1:first-child,
-    .pdf-content > .beorn-cover-sommaire + section.level2 > h1:first-child {
+    .pdf-content > section.level2 > h1:first-child {
       break-before: auto !important;
       page-break-before: auto !important;
     }

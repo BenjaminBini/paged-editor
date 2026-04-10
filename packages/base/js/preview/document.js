@@ -66,8 +66,7 @@ export function wrapInDocument(bodyHtml, opts) {
     ? `<div class="pdf-running-header">${headerText}</div>`
     : "";
   const sectionEntryCss = `<style>
-  .pdf-content > .beorn-cover + section.level2 > h1:first-child,
-  .pdf-content > .beorn-cover-sommaire + section.level2 > h1:first-child {
+  .pdf-content > section.level2 > h1:first-child {
     break-before: auto !important;
     page-break-before: auto !important;
   }
@@ -89,11 +88,6 @@ export function wrapInDocument(bodyHtml, opts) {
       font-size: 8pt;
       color: #718096;
     }
-  }
-
-  .pdf-content > section.level2:first-of-type > h1:first-child {
-    break-before: auto !important;
-    page-break-before: auto !important;
   }
   </style>`;
   const pdfContentAttrs = rootPageName
