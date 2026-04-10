@@ -192,14 +192,14 @@ If your backend isn't Express, you can implement these 7 endpoints in any langua
 
 The editor frontend was originally built for Electron, where all file I/O goes through `window.electronAPI` (defined in `preload.js` and handled by `main.js` via IPC).
 
-For web mode, `js/web-api.js` provides a drop-in replacement for `window.electronAPI` backed by REST `fetch()` calls. It loads as a regular `<script>` (not a module) so it executes before the ES module graph evaluates. The rest of the editor code is unchanged.
+For web mode, `js/workspace/web-api.js` provides a drop-in replacement for `window.electronAPI` backed by REST `fetch()` calls. It loads as a regular `<script>` (not a module) so it executes before the ES module graph evaluates. The rest of the editor code is unchanged.
 
 ```
 Electron mode:
-  app.js → window.electronAPI → IPC → main.js → Node fs
+  app/app.js → window.electronAPI → IPC → main.js → Node fs
 
 Web mode:
-  app.js → window.electronAPI (web-api.js shim) → fetch → Express server → Node fs
+  app/app.js → window.electronAPI (workspace/web-api.js shim) → fetch → Express server → Node fs
 ```
 
 ### Sub-Path Mounting
@@ -210,7 +210,7 @@ When mounted at a sub-path (e.g., `/editor`), the web-api shim auto-detects the 
 
 | File | Role |
 |------|------|
-| `js/web-api.js` | REST-backed `window.electronAPI` shim for web mode |
+| `js/workspace/web-api.js` | REST-backed `window.electronAPI` shim for web mode |
 | `server/router.js` | Express router factory (`createEditorRouter`) |
 | `server/index.js` | Standalone server entrypoint |
 | `packages/react/src/PagedEditor.tsx` | React component (iframe + postMessage) |

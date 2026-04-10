@@ -6,7 +6,7 @@ const { pathToFileURL } = require("url");
 const { WebSocketServer } = require("ws");
 const crypto = require("crypto");
 
-// Static assets live in the base package (index.html, js/, css/, assets/)
+// Static assets live in the base package (index.html, js/**, css/**, assets/)
 const BASE_ROOT = path.dirname(require.resolve("@benjaminbini/paged-editor-base/package.json"));
 
 // ── App state persistence ────────────────────────────────────────────────────

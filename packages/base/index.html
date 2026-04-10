@@ -11,17 +11,22 @@
 
     <!-- External libs (non-module, loaded as globals) -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+      window.PagedConfig = { auto: false };
+    </script>
+    <script src="assets/paged.polyfill.js"></script>
+    <script src="https://unpkg.com/dompurify@3.3.3/dist/purify.min.js"></script>
     <!-- Modular CSS -->
-    <link rel="stylesheet" href="css/reset.css" />
-    <link rel="stylesheet" href="css/layout.css" />
-    <link rel="stylesheet" href="css/toolbar.css" />
-    <link rel="stylesheet" href="css/sidebar.css" />
-    <link rel="stylesheet" href="css/editor.css" />
-    <link rel="stylesheet" href="css/table-widget.css" />
-    <link rel="stylesheet" href="css/preview.css" />
-    <link rel="stylesheet" href="css/modals.css" />
-    <link rel="stylesheet" href="css/ai-collab.css" />
-    <link rel="stylesheet" href="css/resize.css" />
+    <link rel="stylesheet" href="css/app/reset.css" />
+    <link rel="stylesheet" href="css/app/layout.css" />
+    <link rel="stylesheet" href="css/app/toolbar.css" />
+    <link rel="stylesheet" href="css/app/sidebar.css" />
+    <link rel="stylesheet" href="css/editor/editor.css" />
+    <link rel="stylesheet" href="css/editor/table-widget.css" />
+    <link rel="stylesheet" href="css/preview/preview.css" />
+    <link rel="stylesheet" href="css/app/modals.css" />
+    <link rel="stylesheet" href="css/collaboration/ai-collab.css" />
+    <link rel="stylesheet" href="css/app/resize.css" />
   </head>
   <body>
     <div class="toolbar">
@@ -484,7 +489,7 @@
         </div>
         <div id="preview-container">
           <div id="preview-wrapper">
-            <!-- Section iframes are created dynamically by render.js -->
+            <!-- Direct paged preview content is mounted dynamically by render.js -->
           </div>
         </div>
         <div id="pdf-viewer-panel" hidden>
@@ -564,8 +569,8 @@
     </div>
 
     <!-- Web mode: REST-backed API shim (runs before ES modules) -->
-    <script src="js/web-api.js"></script>
+    <script src="js/workspace/web-api.js"></script>
     <!-- Single entry point — all logic lives in ES modules -->
-    <script type="module" src="js/app.js"></script>
+    <script type="module" src="js/app/app.js"></script>
   </body>
 </html>

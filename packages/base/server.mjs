@@ -18,6 +18,6 @@ import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 /**
- * Absolute path to the package root — contains index.html, js/, css/, assets/.
+ * Absolute path to the package root — contains index.html, js/**, css/**, assets/.
  */
 export const editorRoot = dirname(fileURLToPath(import.meta.url));
