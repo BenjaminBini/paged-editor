@@ -63,6 +63,12 @@ function buildPreviewStyles({ rootPageName = "" } = {}) {
   ].filter(Boolean);
 }
 
+// Extend DOMPurify's default URI allowlist to include file: (Electron local
+// assets) and blob: (pre-fetched logo/font object URLs). Both are safe in
+// Electron's controlled renderer context.
+const PREVIEW_URI_REGEXP =
+  /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|file|blob):|[^a-z]|[a-z+\-.]+(?:[^a-z+\-.:]|$))/i;
+
 function sanitizePreviewHtml(html) {
   const purifier = window.DOMPurify;
   if (!purifier?.sanitize) return html;
@@ -70,6 +76,7 @@ function sanitizePreviewHtml(html) {
   return purifier.sanitize(html, {
     USE_PROFILES: { html: true, svg: true, svgFilters: true },
     ALLOW_DATA_ATTR: true,
+    ALLOWED_URI_REGEXP: PREVIEW_URI_REGEXP,
   });
 }
 
