@@ -41,6 +41,9 @@ node_modules/
 # Runtime data
 *.pid
 *.pid.lock
+.codex/
+.playwright-mcp/
+.superpowers/
 
 # Coverage
 coverage/
