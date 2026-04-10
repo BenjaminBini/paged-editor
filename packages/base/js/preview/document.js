@@ -94,8 +94,8 @@ export function wrapInDocument(bodyHtml, opts) {
     ? ` class="pdf-content" style="page: ${escapeHtml(rootPageName)};"`
     : ` class="pdf-content"`;
   const bodyAttrs = rootPageName
-    ? ` style="page: ${escapeHtml(rootPageName)};"`
-    : "";
+    ? ` class="pdf-preview-root" style="page: ${escapeHtml(rootPageName)};"`
+    : ` class="pdf-preview-root"`;
 
   return `<!doctype html>
 <html lang="${escapeHtml(language)}">

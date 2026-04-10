@@ -65,7 +65,10 @@
     content: none;
   }
 }
-* {
+.pdf-preview-root,
+.pdf-preview-root *,
+.pdf-preview-root *::before,
+.pdf-preview-root *::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -73,7 +76,7 @@
   print-color-adjust: exact !important;
   color-adjust: exact !important;
 }
-body {
+.pdf-preview-root {
   font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
   font-size: 10.5pt;
   line-height: 1.5;
@@ -497,8 +500,8 @@ h3 + h4 {
   color: color-mix(in srgb, var(--section-color, var(--blue)) 30%, white);
   top: 0.25em;
 }
-ul,
-ol {
+.pdf-preview-root ul,
+.pdf-preview-root ol {
   font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
 }
 ol {
