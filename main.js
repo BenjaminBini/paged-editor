@@ -69,7 +69,12 @@ function createWindow() {
 // ── IPC handlers ─────────────────────────────────────────────────────────────
 
 ipcMain.handle("read-file", async (_e, filePath) => {
-  return fs.readFile(filePath, "utf-8");
+  try {
+    return await fs.readFile(filePath, "utf-8");
+  } catch (err) {
+    if (err.code === "ENOENT") return null;
+    throw err;
+  }
 });
 
 ipcMain.handle("write-file", async (_e, filePath, content) => {

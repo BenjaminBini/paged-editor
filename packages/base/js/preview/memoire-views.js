@@ -89,7 +89,9 @@ export async function loadProjectJsonSource(folderPath = getFolderPath()) {
   if (!projectPath) return prettyJson(buildDefaultProjectData(folderPath));
 
   try {
-    return await readFile(projectPath);
+    const content = await readFile(projectPath);
+    if (content == null) return prettyJson(buildDefaultProjectData(folderPath));
+    return content;
   } catch {
     return prettyJson(buildDefaultProjectData(folderPath));
   }
