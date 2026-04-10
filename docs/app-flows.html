@@ -1,0 +1,1011 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Paged Editor — Application Flows</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #0f1117; color: #e2e8f0; min-height: 100vh; }
+
+    header {
+      background: linear-gradient(135deg, #1a1f35 0%, #0d1526 100%);
+      border-bottom: 1px solid #2d3748;
+      padding: 32px 48px;
+    }
+    header h1 { font-size: 1.8rem; font-weight: 700; color: #f7fafc; letter-spacing: -0.5px; }
+    header p { margin-top: 8px; color: #718096; font-size: 0.95rem; }
+
+    .tabs {
+      display: flex; gap: 0; padding: 0 48px;
+      background: #0d1526; border-bottom: 1px solid #2d3748;
+    }
+    .tab {
+      padding: 14px 24px; cursor: pointer; font-size: 0.875rem; font-weight: 500;
+      color: #718096; border-bottom: 2px solid transparent;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .tab:hover { color: #cbd5e0; }
+    .tab.active { color: #63b3ed; border-bottom-color: #63b3ed; }
+
+    .content { padding: 40px 48px; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Flow diagram containers ── */
+    .flow-grid {
+      display: grid; gap: 24px;
+    }
+    .flow-grid-2 { grid-template-columns: 1fr 1fr; }
+    .flow-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+
+    .card {
+      background: #1a202c; border: 1px solid #2d3748; border-radius: 12px;
+      padding: 24px; overflow: hidden;
+    }
+    .card h3 { font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #718096; margin-bottom: 16px; }
+
+    /* ── Steps / pipeline ── */
+    .pipeline { display: flex; flex-direction: column; gap: 2px; }
+    .step {
+      display: flex; align-items: flex-start; gap: 12px;
+      padding: 10px 12px; border-radius: 8px;
+      transition: background 0.1s;
+    }
+    .step:hover { background: #2d3748; }
+    .step-num {
+      flex-shrink: 0; width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 700; margin-top: 1px;
+    }
+    .step-body { flex: 1; min-width: 0; }
+    .step-title { font-size: 0.875rem; font-weight: 600; color: #e2e8f0; line-height: 1.3; }
+    .step-detail { font-size: 0.78rem; color: #718096; margin-top: 3px; line-height: 1.4; }
+    .step-code {
+      font-size: 0.72rem; font-family: monospace; color: #9f7aea;
+      background: #1a1f35; border-radius: 4px; padding: 2px 6px; margin-top: 4px; display: inline-block;
+    }
+
+    .arrow-down {
+      width: 2px; height: 12px; background: #4a5568; margin: 0 auto 0 22px;
+    }
+
+    /* ── Comparison table ── */
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+    th { padding: 10px 14px; text-align: left; background: #2d3748; color: #a0aec0;
+         font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
+    td { padding: 10px 14px; border-bottom: 1px solid #2d3748; color: #cbd5e0; vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: #1e2536; }
+    .mono { font-family: monospace; font-size: 0.78rem; color: #68d391; }
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 99px;
+      font-size: 0.72rem; font-weight: 600; white-space: nowrap;
+    }
+    .tag-blue { background: #1a3a5c; color: #63b3ed; }
+    .tag-green { background: #1a3a2a; color: #68d391; }
+    .tag-purple { background: #2d1f4a; color: #b794f4; }
+    .tag-orange { background: #3a2412; color: #f6ad55; }
+
+    /* ── SVG flow diagrams ── */
+    .diagram-wrap { overflow-x: auto; }
+    svg { display: block; }
+    .svg-label { font-family: system-ui; font-size: 11px; fill: #a0aec0; }
+    .svg-title { font-family: system-ui; font-size: 12px; font-weight: 600; fill: #e2e8f0; }
+    .svg-sub   { font-family: system-ui; font-size: 10px; fill: #718096; }
+    .svg-code  { font-family: monospace; font-size: 10px; fill: #9f7aea; }
+
+    /* ── Section headings ── */
+    .section-label {
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.08em; color: #4a5568; margin: 32px 0 16px;
+      padding-bottom: 8px; border-bottom: 1px solid #2d3748;
+    }
+    .section-label:first-child { margin-top: 0; }
+
+    /* ── Highlight pills for key facts ── */
+    .fact-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .fact {
+      padding: 8px 14px; border-radius: 8px; font-size: 0.8rem;
+      border: 1px solid; flex-shrink: 0;
+    }
+    .fact-blue { background: #0d2040; border-color: #1e4a7c; color: #90cdf4; }
+    .fact-green { background: #0d2418; border-color: #1e5232; color: #9ae6b4; }
+    .fact-purple { background: #1e1040; border-color: #44337a; color: #d6bcfa; }
+    .fact-orange { background: #2a1810; border-color: #7b3c0c; color: #fbd38d; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Paged Editor — Application Flows</h1>
+  <p>Load → Render pipeline for Electron & Web, Preview & PDF export</p>
+</header>
+
+<div class="tabs" id="tabs">
+  <div class="tab active" onclick="show('startup')">Startup / Load</div>
+  <div class="tab" onclick="show('preview')">Preview Render</div>
+  <div class="tab" onclick="show('pdf')">PDF Export</div>
+  <div class="tab" onclick="show('storage')">Storage Backends</div>
+  <div class="tab" onclick="show('overview')">Full Overview</div>
+</div>
+
+<div class="content">
+
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<!-- TAB 1: STARTUP                                                             -->
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<div id="panel-startup" class="panel active">
+
+  <p class="section-label">Both modes share the same JS modules — divergence is at the platform adapter layer</p>
+
+  <div class="flow-grid flow-grid-2">
+
+    <!-- Electron startup -->
+    <div class="card">
+      <h3>⚡ Electron path</h3>
+      <div class="pipeline">
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a5c;color:#63b3ed">1</div>
+          <div class="step-body">
+            <div class="step-title">main.js — createWindow()</div>
+            <div class="step-detail">Creates BrowserWindow, loads preload.js with contextIsolation=true</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a5c;color:#63b3ed">2</div>
+          <div class="step-body">
+            <div class="step-title">preload.js — contextBridge</div>
+            <div class="step-detail">Exposes IPC handlers as <span class="step-code">window.electronAPI</span></div>
+            <div class="step-detail" style="margin-top:4px">readFile, writeFile, readDir, showOpenDialog, previewPdf, getAppState…</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a5c;color:#63b3ed">3</div>
+          <div class="step-body">
+            <div class="step-title">index.html loads</div>
+            <div class="step-detail">ES modules via <span class="step-code">&lt;script type="module" src="js/app.js"&gt;</span></div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a5c;color:#63b3ed">4</div>
+          <div class="step-body">
+            <div class="step-title">assets.js — pagedReady</div>
+            <div class="step-detail">Promise.all() — 7 parallel fetches → module-scoped cache</div>
+            <div class="step-code">Paged.js (921KB) → stable blob URL</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a5c;color:#63b3ed">5</div>
+          <div class="step-body">
+            <div class="step-title">app.js — pagedReady.then()</div>
+            <div class="step-detail">platform.getAppState() → IPC → main.js reads app-state.json</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a5c;color:#63b3ed">6</div>
+          <div class="step-body">
+            <div class="step-title">Restore session</div>
+            <div class="step-detail">Open last folder + tabs → triggerRender()</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Web startup -->
+    <div class="card">
+      <h3>🌐 Web path</h3>
+      <div class="pipeline">
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a2a;color:#68d391">1</div>
+          <div class="step-body">
+            <div class="step-title">server/index.js — Express server</div>
+            <div class="step-detail">WORKSPACE env var sets root. createEditorRouter() serves static files + /api/*</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a2a;color:#68d391">2</div>
+          <div class="step-body">
+            <div class="step-title">index.html — web-api.js (sync script)</div>
+            <div class="step-detail">Loaded <em>before</em> ES modules — creates <span class="step-code">window.electronAPI</span> backed by REST fetch()</div>
+            <div class="step-detail" style="margin-top:4px">API_BASE auto-detected from pathname / hash param / explicit global</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a2a;color:#68d391">3</div>
+          <div class="step-body">
+            <div class="step-title">Same: index.html loads app.js module</div>
+            <div class="step-detail">All ES modules are identical — they call platform.js, which wraps window.electronAPI</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a2a;color:#68d391">4</div>
+          <div class="step-body">
+            <div class="step-title">Same: assets.js — pagedReady</div>
+            <div class="step-detail">Fetches from the Express static server instead of Electron's file protocol</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a2a;color:#68d391">5</div>
+          <div class="step-body">
+            <div class="step-title">platform.getAppState() → /api/config + localStorage</div>
+            <div class="step-detail">Server returns folder config; user preferences live in localStorage only</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a2a;color:#68d391">6</div>
+          <div class="step-body">
+            <div class="step-title">Auto-open first file → triggerRender()</div>
+            <div class="step-detail">No "last session" in web mode — opens first .md file in workspace</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /flow-grid -->
+
+  <p class="section-label" style="margin-top:32px">Assets preloaded in parallel (pagedReady promise)</p>
+  <div class="card">
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 900 160" width="900" height="160">
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
+          </marker>
+        </defs>
+
+        <!-- Trigger box -->
+        <rect x="10" y="55" width="130" height="44" rx="8" fill="#1a3a5c" stroke="#2c5282" stroke-width="1"/>
+        <text x="75" y="74" class="svg-title" text-anchor="middle">assets.js</text>
+        <text x="75" y="90" class="svg-sub" text-anchor="middle">Promise.all()</text>
+
+        <!-- Arrows to each asset -->
+        <line x1="140" y1="62" x2="188" y2="40" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="140" y1="68" x2="188" y2="72" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="140" y1="77" x2="188" y2="110" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- Asset boxes -->
+        <rect x="190" y="10" width="150" height="52" rx="8" fill="#2d1f4a" stroke="#553c9a" stroke-width="1"/>
+        <text x="265" y="32" class="svg-title" text-anchor="middle">Paged.js</text>
+        <text x="265" y="47" class="svg-sub" text-anchor="middle">921 KB → stable blob URL</text>
+        <text x="265" y="59" class="svg-code" text-anchor="middle">PAGED_JS_BLOB_URL</text>
+
+        <rect x="190" y="50" width="150" height="52" rx="8" fill="#1a3a2a" stroke="#276749" stroke-width="1"/>
+        <text x="265" y="72" class="svg-title" text-anchor="middle">PDF/Paged CSS</text>
+        <text x="265" y="87" class="svg-sub" text-anchor="middle">pdf.css + paged.css</text>
+        <text x="265" y="99" class="svg-code" text-anchor="middle">PDF_CSS, PAGED_CSS</text>
+
+        <rect x="190" y="90" width="150" height="52" rx="8" fill="#3a2412" stroke="#7b3c0c" stroke-width="1"/>
+        <text x="265" y="112" class="svg-title" text-anchor="middle">Logos + Fonts</text>
+        <text x="265" y="127" class="svg-sub" text-anchor="middle">PNG → blob + base64</text>
+        <text x="265" y="139" class="svg-code" text-anchor="middle">BEORN_LOGO_BLOB_URL</text>
+
+        <!-- Arrow to section-init -->
+        <line x1="340" y1="36" x2="388" y2="36" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <rect x="390" y="10" width="150" height="52" rx="8" fill="#2d1f4a" stroke="#553c9a" stroke-width="1"/>
+        <text x="465" y="32" class="svg-title" text-anchor="middle">section-init.js</text>
+        <text x="465" y="47" class="svg-sub" text-anchor="middle">30 lines → stable blob URL</text>
+        <text x="465" y="59" class="svg-code" text-anchor="middle">SECTION_INIT_BLOB_URL</text>
+
+        <!-- Why stable blob URLs note -->
+        <rect x="560" y="10" width="330" height="132" rx="8" fill="#1a202c" stroke="#2d3748" stroke-width="1"/>
+        <text x="725" y="32" class="svg-title" text-anchor="middle">Why stable blob URLs?</text>
+        <text x="575" y="52" class="svg-label">Each render creates a NEW html blob with different URL.</text>
+        <text x="575" y="68" class="svg-label">Inline scripts = new URL every time → Firefox recompiles</text>
+        <text x="575" y="84" class="svg-label">921 KB Paged.js from scratch on every render (1–4 s).</text>
+        <text x="575" y="106" class="svg-label">Stable blob URLs allow SpiderMonkey's JIT cache to</text>
+        <text x="575" y="122" class="svg-label">recognize the same script URL and skip recompilation.</text>
+        <text x="575" y="138" class="svg-label">Result: consistent 300–400 ms renders in Firefox.</text>
+      </svg>
+    </div>
+  </div>
+
+</div><!-- /panel-startup -->
+
+
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<!-- TAB 2: PREVIEW RENDER                                                       -->
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<div id="panel-preview" class="panel">
+
+  <p class="section-label">From user typing to Paged.js pagination — pure JS, no IPC</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 960 560" width="960" height="560">
+      <defs>
+        <marker id="arr2" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
+        </marker>
+        <marker id="arr2g" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#68d391"/>
+        </marker>
+      </defs>
+
+      <!-- ── Column 1: Trigger ── -->
+      <text x="90" y="18" class="svg-sub" text-anchor="middle">TRIGGERS</text>
+
+      <rect x="10" y="28" width="160" height="40" rx="6" fill="#1a3a5c" stroke="#2c5282" stroke-width="1"/>
+      <text x="90" y="44" class="svg-title" text-anchor="middle">User types</text>
+      <text x="90" y="58" class="svg-sub" text-anchor="middle">cm.change → debounce 800ms</text>
+
+      <rect x="10" y="80" width="160" height="40" rx="6" fill="#1a3a5c" stroke="#2c5282" stroke-width="1"/>
+      <text x="90" y="96" class="svg-title" text-anchor="middle">Tab switch</text>
+      <text x="90" y="110" class="svg-sub" text-anchor="middle">onTabSwitch → triggerRender()</text>
+
+      <rect x="10" y="132" width="160" height="40" rx="6" fill="#1a3a5c" stroke="#2c5282" stroke-width="1"/>
+      <text x="90" y="148" class="svg-title" text-anchor="middle">File open</text>
+      <text x="90" y="162" class="svg-sub" text-anchor="middle">file-ops.js → triggerRender()</text>
+
+      <!-- Arrow from triggers to generation counter -->
+      <line x1="170" y1="100" x2="218" y2="100" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- ── render.js ── -->
+      <rect x="220" y="28" width="180" height="160" rx="8" fill="#0f1a2e" stroke="#2c5282" stroke-width="1.5"/>
+      <text x="310" y="48" class="svg-title" text-anchor="middle">render.js</text>
+      <text x="310" y="66" class="svg-sub" text-anchor="middle">triggerRender()</text>
+      <line x1="230" y1="74" x2="390" y2="74" stroke="#2d3748" stroke-width="1"/>
+      <text x="235" y="90" class="svg-label">1. currentGen++</text>
+      <text x="235" y="106" class="svg-label">2. Kill currentFrame + pendingFrame</text>
+      <text x="235" y="120" class="svg-label">   (only 1 Paged.js at a time)</text>
+      <text x="235" y="136" class="svg-label">3. await renderMarkdown()</text>
+      <text x="235" y="152" class="svg-label">4. Create blob URL from HTML</text>
+      <text x="235" y="168" class="svg-label">5. new iframe → iframe.src = url</text>
+
+      <!-- Arrow to render-pipeline -->
+      <line x1="400" y1="100" x2="448" y2="100" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- ── render-pipeline.js ── -->
+      <rect x="450" y="28" width="200" height="296" rx="8" fill="#0f1a2e" stroke="#553c9a" stroke-width="1.5"/>
+      <text x="550" y="48" class="svg-title" text-anchor="middle">render-pipeline.js</text>
+      <text x="550" y="64" class="svg-sub" text-anchor="middle">renderMarkdown()</text>
+      <line x1="460" y1="72" x2="640" y2="72" stroke="#2d3748" stroke-width="1"/>
+      <text x="464" y="90" class="svg-label">parseFrontmatter()</text>
+      <text x="464" y="108" class="svg-label">marked.lexer(body)</text>
+      <text x="464" y="124" class="svg-label">+ _sourceLine per token</text>
+      <text x="464" y="142" class="svg-label">marked.parser(tokens)</text>
+      <line x1="464" y1="148" x2="636" y2="148" stroke="#2d3748" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <text x="464" y="164" class="svg-label">  heading() → color + numbering</text>
+      <text x="464" y="180" class="svg-label">  paragraph() → \newpage detection</text>
+      <text x="464" y="196" class="svg-label">  code() → mermaid queue push</text>
+      <text x="464" y="212" class="svg-label">  postprocess → French typography</text>
+      <line x1="464" y1="218" x2="636" y2="218" stroke="#2d3748" stroke-width="0.5" stroke-dasharray="3,3"/>
+      <text x="464" y="234" class="svg-label">await resolveMermaid()</text>
+      <text x="464" y="250" class="svg-label">wrapSection(html)</text>
+      <text x="464" y="266" class="svg-label">wrapInDocument()</text>
+      <text x="464" y="282" class="svg-label">  → &lt;script src="blob:pagedjs"&gt;</text>
+      <text x="464" y="298" class="svg-label">  → &lt;script src="blob:section-init"&gt;</text>
+      <text x="464" y="312" class="svg-label">  → window.__gen = N</text>
+
+      <!-- Arrow from pipeline to iframe -->
+      <line x1="550" y1="324" x2="550" y2="372" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr2)"/>
+
+      <!-- ── iframe / blob ── -->
+      <rect x="450" y="374" width="200" height="80" rx="8" fill="#1a3a2a" stroke="#276749" stroke-width="1.5"/>
+      <text x="550" y="394" class="svg-title" text-anchor="middle">HTML blob → iframe</text>
+      <text x="550" y="412" class="svg-sub" text-anchor="middle">new Blob([htmlStr])</text>
+      <text x="550" y="428" class="svg-sub" text-anchor="middle">URL.createObjectURL()</text>
+      <text x="550" y="444" class="svg-sub" text-anchor="middle">iframe.src = url</text>
+
+      <!-- Arrow to section-init -->
+      <line x1="550" y1="454" x2="550" y2="482" stroke="#68d391" stroke-width="1.5" marker-end="url(#arr2g)"/>
+
+      <!-- ── section-init.js inside iframe ── -->
+      <rect x="450" y="484" width="200" height="62" rx="8" fill="#2d1f4a" stroke="#553c9a" stroke-width="1.5"/>
+      <text x="550" y="502" class="svg-title" text-anchor="middle">section-init.js (iframe)</text>
+      <text x="550" y="518" class="svg-sub" text-anchor="middle">new Paged.Previewer()</text>
+      <text x="550" y="532" class="svg-sub" text-anchor="middle">await paged.preview()</text>
+      <text x="550" y="546" class="svg-sub" text-anchor="middle">postMessage → section-ready</text>
+
+      <!-- Arrow back to render.js handler -->
+      <path d="M650,515 Q820,515 820,100 L400,100" stroke="#68d391" stroke-width="1.5" fill="none" marker-end="url(#arr2g)" stroke-dasharray="5,3"/>
+      <text x="730" y="380" class="svg-label" text-anchor="middle">window.message</text>
+      <text x="730" y="396" class="svg-label" text-anchor="middle">section-ready</text>
+
+      <!-- ── After section-ready ── -->
+      <rect x="220" y="220" width="180" height="100" rx="8" fill="#0f1a2e" stroke="#276749" stroke-width="1"/>
+      <text x="310" y="240" class="svg-title" text-anchor="middle">After section-ready</text>
+      <line x1="230" y1="248" x2="390" y2="248" stroke="#2d3748" stroke-width="1"/>
+      <text x="235" y="264" class="svg-label">pendingFrame → currentFrame</text>
+      <text x="235" y="280" class="svg-label">scalePreview()</text>
+      <text x="235" y="296" class="svg-label">rebuildAnchorMap()</text>
+      <text x="235" y="312" class="svg-label">emit("section-ready")</text>
+
+      <!-- Arrow from section-ready signal to "After" box -->
+      <line x1="310" y1="190" x2="310" y2="218" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr2)"/>
+    </svg>
+  </div>
+
+  <div class="fact-row">
+    <div class="fact fact-purple">Mermaid diagrams are async — cached by definition string</div>
+    <div class="fact fact-blue">Generation counter (currentGen) aborts stale renders</div>
+    <div class="fact fact-orange">Old iframes killed at render start — only 1 Paged.js instance ever runs</div>
+    <div class="fact fact-green">renderMarkdown: ~10-60ms · Paged.js: ~300-600ms</div>
+  </div>
+
+</div><!-- /panel-preview -->
+
+
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<!-- TAB 3: PDF EXPORT                                                           -->
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<div id="panel-pdf" class="panel">
+
+  <p class="section-label">Two export modes: single document vs. full mémoire (all files)</p>
+
+  <div class="flow-grid flow-grid-2">
+
+    <!-- Single doc export -->
+    <div class="card">
+      <h3>📄 Single document</h3>
+      <div class="pipeline">
+
+        <div class="step">
+          <div class="step-num" style="background:#2d1f4a;color:#b794f4">1</div>
+          <div class="step-body">
+            <div class="step-title">previewPdf(defaultName)</div>
+            <div class="step-code">pdf-export.js</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#2d1f4a;color:#b794f4">2</div>
+          <div class="step-body">
+            <div class="step-title">renderMarkdown() → wrapInDocument()</div>
+            <div class="step-detail">Same pipeline as preview, gen=0 (no stale detection)</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#2d1f4a;color:#b794f4">3</div>
+          <div class="step-body">
+            <div class="step-title">platform.previewPdf(html, name)</div>
+            <div class="step-detail">Diverges here: Electron vs Web</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a5c;color:#63b3ed">E</div>
+          <div class="step-body">
+            <div class="step-title">Electron: IPC → main.js generatePdf()</div>
+            <div class="step-detail">Offscreen BrowserWindow → Paged.js renders → printToPDF() → pdf-lib adds bookmarks → temp file → showPdfPanel()</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+        <div class="step">
+          <div class="step-num" style="background:#1a3a2a;color:#68d391">W</div>
+          <div class="step-body">
+            <div class="step-title">Web: Blob URL → window.open()</div>
+            <div class="step-detail">No server-side PDF. User opens HTML in new tab → prints with Cmd+P</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Full mémoire export -->
+    <div class="card">
+      <h3>📚 Full mémoire (all files)</h3>
+      <div class="pipeline">
+
+        <div class="step">
+          <div class="step-num" style="background:#2d1f4a;color:#b794f4">1</div>
+          <div class="step-body">
+            <div class="step-title">downloadFullMemoire()</div>
+            <div class="step-code">app.js → pdf-export.js</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#2d1f4a;color:#b794f4">2</div>
+          <div class="step-body">
+            <div class="step-title">platform.readDir() → readFile() per section</div>
+            <div class="step-detail">Batch IPC or REST calls, all .md files in workspace</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#2d1f4a;color:#b794f4">3</div>
+          <div class="step-body">
+            <div class="step-title">buildFullMemoireHtml(sections)</div>
+            <div class="step-detail">For each section: renderMarkdown() with headingIdOffset (continuous IDs)</div>
+            <div class="step-code">headingIdOffset accumulates across files</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#2d1f4a;color:#b794f4">4</div>
+          <div class="step-body">
+            <div class="step-title">buildCoverHtml() + buildSommaireHtml(allHeadings)</div>
+            <div class="step-detail">Cover page from first file's frontmatter. TOC from accumulated headingCollector</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#2d1f4a;color:#b794f4">5</div>
+          <div class="step-body">
+            <div class="step-title">wrapInDocument(cover + sommaire + sections)</div>
+            <div class="step-detail">Single HTML document with all content. Uses data-URI logos (self-contained)</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#2d1f4a;color:#b794f4">6</div>
+          <div class="step-body">
+            <div class="step-title">→ same as single doc from step 3</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="section-label" style="margin-top:32px">Electron PDF generation — offscreen BrowserWindow pipeline</p>
+  <div class="card">
+    <div class="diagram-wrap">
+      <svg viewBox="0 0 900 100" width="900" height="100">
+        <defs>
+          <marker id="arr3" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
+          </marker>
+        </defs>
+
+        <rect x="10" y="20" width="120" height="56" rx="8" fill="#2d1f4a" stroke="#553c9a" stroke-width="1"/>
+        <text x="70" y="44" class="svg-title" text-anchor="middle">Offscreen</text>
+        <text x="70" y="60" class="svg-sub" text-anchor="middle">BrowserWindow</text>
+        <text x="70" y="74" class="svg-sub" text-anchor="middle">794×1123px</text>
+
+        <line x1="130" y1="48" x2="158" y2="48" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+        <rect x="160" y="20" width="120" height="56" rx="8" fill="#2d1f4a" stroke="#553c9a" stroke-width="1"/>
+        <text x="220" y="44" class="svg-title" text-anchor="middle">Load HTML</text>
+        <text x="220" y="60" class="svg-sub" text-anchor="middle">temp file</text>
+        <text x="220" y="74" class="svg-sub" text-anchor="middle">Paged.js runs</text>
+
+        <line x1="280" y1="48" x2="308" y2="48" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+        <rect x="310" y="20" width="140" height="56" rx="8" fill="#1a3a2a" stroke="#276749" stroke-width="1"/>
+        <text x="380" y="44" class="svg-title" text-anchor="middle">Poll for</text>
+        <text x="380" y="60" class="svg-sub" text-anchor="middle">.pagedjs_pages</text>
+        <text x="380" y="74" class="svg-sub" text-anchor="middle">→ await 500ms</text>
+
+        <line x1="450" y1="48" x2="478" y2="48" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+        <rect x="480" y="20" width="130" height="56" rx="8" fill="#1a3a5c" stroke="#2c5282" stroke-width="1"/>
+        <text x="545" y="44" class="svg-title" text-anchor="middle">printToPDF()</text>
+        <text x="545" y="60" class="svg-sub" text-anchor="middle">preferCSSPageSize</text>
+        <text x="545" y="74" class="svg-sub" text-anchor="middle">printBackground</text>
+
+        <line x1="610" y1="48" x2="638" y2="48" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+        <rect x="640" y="20" width="130" height="56" rx="8" fill="#3a2412" stroke="#7b3c0c" stroke-width="1"/>
+        <text x="705" y="44" class="svg-title" text-anchor="middle">pdf-lib bookmarks</text>
+        <text x="705" y="60" class="svg-sub" text-anchor="middle">H1/H2 → PDF outline</text>
+        <text x="705" y="74" class="svg-sub" text-anchor="middle">page numbers</text>
+
+        <line x1="770" y1="48" x2="798" y2="48" stroke="#4a5568" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+        <rect x="800" y="28" width="88" height="40" rx="8" fill="#1a3a2a" stroke="#276749" stroke-width="1"/>
+        <text x="844" y="48" class="svg-title" text-anchor="middle">showPdfPanel</text>
+        <text x="844" y="62" class="svg-sub" text-anchor="middle">viewer iframe</text>
+      </svg>
+    </div>
+  </div>
+
+  <p class="section-label" style="margin-top:24px">Differences: preview vs. PDF export</p>
+  <div class="card">
+    <table>
+      <tr>
+        <th>Aspect</th>
+        <th>Preview render</th>
+        <th>PDF export</th>
+      </tr>
+      <tr>
+        <td>Heading IDs</td>
+        <td class="mono">h-{gen}-{slug} (per-render offset)</td>
+        <td class="mono">h-{counter}-{slug} (continuous across files)</td>
+      </tr>
+      <tr>
+        <td>gen value</td>
+        <td><span class="tag tag-blue">currentGen (N)</span> — stale render detection</td>
+        <td><span class="tag tag-purple">0</span> — not used</td>
+      </tr>
+      <tr>
+        <td>Logo format</td>
+        <td>Blob URL (fast, smaller HTML)</td>
+        <td>Base64 data-URI (self-contained for PDF)</td>
+      </tr>
+      <tr>
+        <td>Coverage</td>
+        <td>Active tab only</td>
+        <td>All .md files in workspace</td>
+      </tr>
+      <tr>
+        <td>Headings collector</td>
+        <td>Not used</td>
+        <td>Accumulates across all sections → TOC</td>
+      </tr>
+      <tr>
+        <td>Web output</td>
+        <td>iframe in preview-wrapper</td>
+        <td>window.open() → user prints with Cmd+P</td>
+      </tr>
+      <tr>
+        <td>Electron output</td>
+        <td>iframe in preview-wrapper</td>
+        <td>Offscreen BrowserWindow → printToPDF → pdf-lib → viewer iframe</td>
+      </tr>
+    </table>
+  </div>
+
+</div><!-- /panel-pdf -->
+
+
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<!-- TAB 4: STORAGE BACKENDS                                                    -->
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<div id="panel-storage" class="panel">
+
+  <p class="section-label">platform.js abstracts over two backends — modules never call window.electronAPI directly</p>
+
+  <div class="flow-grid flow-grid-2">
+
+    <div class="card">
+      <h3>⚡ Electron — IPC bridge</h3>
+      <div class="pipeline">
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a5c;color:#63b3ed">1</div>
+          <div class="step-body">
+            <div class="step-title">platform.readFile(path)</div>
+            <div class="step-code">→ window.electronAPI.readFile(path)</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a5c;color:#63b3ed">2</div>
+          <div class="step-body">
+            <div class="step-title">preload.js contextBridge</div>
+            <div class="step-code">ipcRenderer.invoke("read-file", path)</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a5c;color:#63b3ed">3</div>
+          <div class="step-body">
+            <div class="step-title">main.js ipcMain.handle("read-file")</div>
+            <div class="step-code">fs.readFile(filePath, "utf-8")</div>
+            <div class="step-detail" style="margin-top:4px">Runs in main process — full Node.js access</div>
+          </div>
+        </div>
+
+        <div style="height:16px"></div>
+        <div style="border-top:1px solid #2d3748;margin-bottom:16px"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#3a2412;color:#f6ad55">S</div>
+          <div class="step-body">
+            <div class="step-title">App state → disk</div>
+            <div class="step-code">app-state.json in userData/</div>
+            <div class="step-detail" style="margin-top:4px">Persists: lastFile, openTabs, recentFiles</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🌐 Web — REST API</h3>
+      <div class="pipeline">
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a2a;color:#68d391">1</div>
+          <div class="step-body">
+            <div class="step-title">platform.readFile(path)</div>
+            <div class="step-code">→ window.electronAPI.readFile(path)</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a2a;color:#68d391">2</div>
+          <div class="step-body">
+            <div class="step-title">web-api.js REST shim</div>
+            <div class="step-code">fetch(API_BASE + "/api/files/" + name, GET)</div>
+          </div>
+        </div>
+        <div class="arrow-down"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#1a3a2a;color:#68d391">3</div>
+          <div class="step-body">
+            <div class="step-title">server/router.js Express handler</div>
+            <div class="step-code">GET /api/files/:name</div>
+            <div class="step-detail" style="margin-top:4px">Reads from WORKSPACE dir, sanitizes filename, returns JSON</div>
+          </div>
+        </div>
+
+        <div style="height:16px"></div>
+        <div style="border-top:1px solid #2d3748;margin-bottom:16px"></div>
+
+        <div class="step">
+          <div class="step-num" style="background:#3a2412;color:#f6ad55">S</div>
+          <div class="step-body">
+            <div class="step-title">App state → localStorage only</div>
+            <div class="step-detail">No server-side state. Tab session survives page refresh but not different devices.</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <p class="section-label" style="margin-top:32px">Operations and routing</p>
+  <div class="card">
+    <table>
+      <tr>
+        <th>Operation</th>
+        <th>Electron IPC</th>
+        <th>Web REST</th>
+      </tr>
+      <tr>
+        <td>Read file</td>
+        <td class="mono">invoke("read-file", path)</td>
+        <td class="mono">GET /api/files/:name</td>
+      </tr>
+      <tr>
+        <td>Write file</td>
+        <td class="mono">invoke("write-file", path, content)</td>
+        <td class="mono">PUT /api/files/:name {content}</td>
+      </tr>
+      <tr>
+        <td>Delete file</td>
+        <td class="mono">invoke("delete-file", path)</td>
+        <td class="mono">DELETE /api/files/:name</td>
+      </tr>
+      <tr>
+        <td>List files</td>
+        <td class="mono">invoke("read-dir", path)</td>
+        <td class="mono">GET /api/files</td>
+      </tr>
+      <tr>
+        <td>File mod time</td>
+        <td class="mono">invoke("get-file-mod-time", path)</td>
+        <td class="mono">GET /api/files/:name/meta</td>
+      </tr>
+      <tr>
+        <td>App state read</td>
+        <td class="mono">invoke("get-app-state") → app-state.json</td>
+        <td class="mono">GET /api/config + localStorage</td>
+      </tr>
+      <tr>
+        <td>App state write</td>
+        <td class="mono">invoke("set-app-state", partial)</td>
+        <td class="mono">localStorage.setItem() only</td>
+      </tr>
+      <tr>
+        <td>Open dialog</td>
+        <td class="mono">invoke("show-open-file-dialog")</td>
+        <td><span class="tag tag-orange">Not available</span></td>
+      </tr>
+      <tr>
+        <td>PDF export</td>
+        <td class="mono">invoke("preview-pdf", html) → BrowserWindow</td>
+        <td class="mono">window.open(blobUrl) → user prints</td>
+      </tr>
+    </table>
+  </div>
+
+</div><!-- /panel-storage -->
+
+
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<!-- TAB 5: FULL OVERVIEW                                                        -->
+<!-- ────────────────────────────────────────────────────────────────────────── -->
+<div id="panel-overview" class="panel">
+
+  <p class="section-label">End-to-end — all flows on one canvas</p>
+
+  <div class="diagram-wrap">
+    <svg viewBox="0 0 960 700" width="960" height="700">
+      <defs>
+        <marker id="a4" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#4a5568"/>
+        </marker>
+        <marker id="a4b" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#63b3ed"/>
+        </marker>
+        <marker id="a4g" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#68d391"/>
+        </marker>
+        <marker id="a4p" markerWidth="8" markerHeight="8" refX="7" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L8,3 z" fill="#b794f4"/>
+        </marker>
+      </defs>
+
+      <!-- ── Layer labels ── -->
+      <text x="0" y="16" class="svg-sub">USER</text>
+      <text x="0" y="96" class="svg-sub">PLATFORM ADAPTER</text>
+      <text x="0" y="256" class="svg-sub">RENDER PIPELINE</text>
+      <text x="0" y="476" class="svg-sub">IFRAME / PDF</text>
+      <text x="0" y="616" class="svg-sub">STORAGE</text>
+
+      <!-- Horizontal separators -->
+      <line x1="0" y1="24" x2="960" y2="24" stroke="#1a2035" stroke-width="1"/>
+      <line x1="0" y1="104" x2="960" y2="104" stroke="#1a2035" stroke-width="1"/>
+      <line x1="0" y1="264" x2="960" y2="264" stroke="#1a2035" stroke-width="1"/>
+      <line x1="0" y1="484" x2="960" y2="484" stroke="#1a2035" stroke-width="1"/>
+      <line x1="0" y1="624" x2="960" y2="624" stroke="#1a2035" stroke-width="1"/>
+
+      <!-- ── USER layer ── -->
+      <rect x="60" y="30" width="100" height="36" rx="6" fill="#1a3a5c" stroke="#2c5282"/>
+      <text x="110" y="50" class="svg-title" text-anchor="middle">Type / Edit</text>
+      <text x="110" y="64" class="svg-sub" text-anchor="middle">CodeMirror</text>
+
+      <rect x="220" y="30" width="100" height="36" rx="6" fill="#1a3a5c" stroke="#2c5282"/>
+      <text x="270" y="50" class="svg-title" text-anchor="middle">Switch Tab</text>
+      <text x="270" y="64" class="svg-sub" text-anchor="middle">tab-bar.js</text>
+
+      <rect x="380" y="30" width="100" height="36" rx="6" fill="#1a3a5c" stroke="#2c5282"/>
+      <text x="430" y="50" class="svg-title" text-anchor="middle">Open File</text>
+      <text x="430" y="64" class="svg-sub" text-anchor="middle">file-manager.js</text>
+
+      <rect x="560" y="30" width="100" height="36" rx="6" fill="#2d1f4a" stroke="#553c9a"/>
+      <text x="610" y="50" class="svg-title" text-anchor="middle">Export PDF</text>
+      <text x="610" y="64" class="svg-sub" text-anchor="middle">toolbar</text>
+
+      <!-- ── PLATFORM ADAPTER layer ── -->
+      <rect x="60" y="110" width="540" height="130" rx="10" fill="#0d1526" stroke="#2d3748"/>
+      <text x="330" y="130" class="svg-title" text-anchor="middle">platform.js — abstraction layer</text>
+
+      <!-- Electron box -->
+      <rect x="75" y="140" width="240" height="86" rx="7" fill="#1a3a5c" stroke="#2c5282" stroke-width="0.8"/>
+      <text x="195" y="158" class="svg-sub" text-anchor="middle">⚡ Electron</text>
+      <text x="80" y="175" class="svg-label">preload.js → ipcRenderer.invoke()</text>
+      <text x="80" y="191" class="svg-label">main.js ipcMain.handle()</text>
+      <text x="80" y="207" class="svg-label">Node.js fs + dialog + BrowserWindow</text>
+      <text x="80" y="220" class="svg-label">app-state.json on userData/</text>
+
+      <!-- Web box -->
+      <rect x="335" y="140" width="255" height="86" rx="7" fill="#1a3a2a" stroke="#276749" stroke-width="0.8"/>
+      <text x="462" y="158" class="svg-sub" text-anchor="middle">🌐 Web</text>
+      <text x="342" y="175" class="svg-label">web-api.js → fetch(API_BASE + "/api/*")</text>
+      <text x="342" y="191" class="svg-label">server/router.js Express endpoints</text>
+      <text x="342" y="207" class="svg-label">WORKSPACE env var → disk files</text>
+      <text x="342" y="220" class="svg-label">App state → localStorage only</text>
+
+      <!-- ── RENDER PIPELINE layer ── -->
+      <rect x="60" y="270" width="360" height="190" rx="10" fill="#0d1526" stroke="#553c9a"/>
+      <text x="240" y="290" class="svg-title" text-anchor="middle">render-pipeline.js + render.js</text>
+
+      <text x="70" y="310" class="svg-label">triggerRender() — currentGen++ — kill old iframes</text>
+      <text x="70" y="328" class="svg-label">renderMarkdown(): parseFrontmatter → lexer</text>
+      <text x="70" y="344" class="svg-label">  → marked renderer (headings, colors, typography)</text>
+      <text x="70" y="360" class="svg-label">  → mermaid queue → resolveMermaid() async</text>
+      <text x="70" y="376" class="svg-label">  → wrapSection() → wrapInDocument()</text>
+      <text x="70" y="396" class="svg-label">document.js: &lt;script src="blob:paged.js"&gt;</text>
+      <text x="70" y="412" class="svg-label">  stable URL → Firefox JIT bytecode reuse</text>
+      <text x="70" y="432" class="svg-label">new Blob([html]) → URL.createObjectURL()</text>
+      <text x="70" y="450" class="svg-label">new iframe → iframe.src = blobUrl</text>
+
+      <!-- PDF pipeline box -->
+      <rect x="450" y="270" width="320" height="190" rx="10" fill="#0d1526" stroke="#7b3c0c"/>
+      <text x="610" y="290" class="svg-title" text-anchor="middle">pdf-export.js</text>
+
+      <text x="460" y="310" class="svg-label">previewPdf() / previewFullMemoire()</text>
+      <text x="460" y="328" class="svg-label">Collect all files → renderMarkdown() each</text>
+      <text x="460" y="344" class="svg-label">headingIdOffset: continuous H-IDs across files</text>
+      <text x="460" y="360" class="svg-label">buildCoverHtml() + buildSommaireHtml()</text>
+      <text x="460" y="376" class="svg-label">wrapInDocument(cover + sommaire + sections)</text>
+      <text x="460" y="396" class="svg-label">[Electron] IPC → generatePdf() in main.js:</text>
+      <text x="460" y="412" class="svg-label">  offscreen window → printToPDF() → pdf-lib</text>
+      <text x="460" y="432" class="svg-label">[Web] new Blob → window.open() → Cmd+P</text>
+      <text x="460" y="450" class="svg-label">showPdfPanel(tempPath) → viewer iframe</text>
+
+      <!-- ── IFRAME / PDF layer ── -->
+      <rect x="60" y="490" width="360" height="116" rx="10" fill="#0d1526" stroke="#276749"/>
+      <text x="240" y="510" class="svg-title" text-anchor="middle">section-init.js (inside iframe)</text>
+      <text x="70" y="530" class="svg-label">new Paged.Previewer()</text>
+      <text x="70" y="548" class="svg-label">await paged.preview()  ← layout + pagination</text>
+      <text x="70" y="564" class="svg-label">window.parent.postMessage({ type: "section-ready", gen, pages })</text>
+      <text x="70" y="582" class="svg-label">render.js: pendingFrame → currentFrame → scalePreview()</text>
+      <text x="70" y="598" class="svg-label">  emit("section-ready") → rebuildAnchorMap, sync, tableWidgets</text>
+
+      <rect x="450" y="490" width="320" height="116" rx="10" fill="#0d1526" stroke="#7b3c0c"/>
+      <text x="610" y="510" class="svg-title" text-anchor="middle">PDF output</text>
+      <text x="460" y="530" class="svg-label">[Electron] Offscreen BrowserWindow + Paged.js</text>
+      <text x="460" y="548" class="svg-label">poll .pagedjs_pages → extract outline (H1/H2)</text>
+      <text x="460" y="564" class="svg-label">webContents.printToPDF({ printBackground: true })</text>
+      <text x="460" y="582" class="svg-label">pdf-lib → embed PDF bookmarks + page numbers</text>
+      <text x="460" y="598" class="svg-label">[Web] Blob URL opened in new tab → user prints</text>
+
+      <!-- ── STORAGE layer ── -->
+      <rect x="60" y="630" width="200" height="58" rx="8" fill="#1a3a5c" stroke="#2c5282"/>
+      <text x="160" y="652" class="svg-title" text-anchor="middle">Node.js fs (Electron)</text>
+      <text x="160" y="668" class="svg-sub" text-anchor="middle">.md files + app-state.json</text>
+      <text x="160" y="682" class="svg-sub" text-anchor="middle">Electron userData dir</text>
+
+      <rect x="280" y="630" width="200" height="58" rx="8" fill="#1a3a2a" stroke="#276749"/>
+      <text x="380" y="652" class="svg-title" text-anchor="middle">Express + fs (Web)</text>
+      <text x="380" y="668" class="svg-sub" text-anchor="middle">WORKSPACE .md files</text>
+      <text x="380" y="682" class="svg-sub" text-anchor="middle">REST /api/* endpoints</text>
+
+      <rect x="500" y="630" width="160" height="58" rx="8" fill="#2d1f4a" stroke="#553c9a"/>
+      <text x="580" y="652" class="svg-title" text-anchor="middle">localStorage</text>
+      <text x="580" y="668" class="svg-sub" text-anchor="middle">Tab session</text>
+      <text x="580" y="682" class="svg-sub" text-anchor="middle">Both modes</text>
+
+      <!-- ── Flow arrows ── -->
+      <!-- User → platform -->
+      <line x1="110" y1="66" x2="110" y2="108" stroke="#63b3ed" stroke-width="1.5" marker-end="url(#a4b)"/>
+      <line x1="270" y1="66" x2="270" y2="108" stroke="#63b3ed" stroke-width="1.5" marker-end="url(#a4b)"/>
+      <line x1="430" y1="66" x2="430" y2="108" stroke="#63b3ed" stroke-width="1.5" marker-end="url(#a4b)"/>
+      <line x1="610" y1="66" x2="610" y2="108" stroke="#b794f4" stroke-width="1.5" marker-end="url(#a4p)"/>
+
+      <!-- Platform → render pipeline -->
+      <line x1="240" y1="240" x2="240" y2="268" stroke="#4a5568" stroke-width="1.5" marker-end="url(#a4)"/>
+      <!-- Platform → PDF pipeline -->
+      <line x1="600" y1="240" x2="600" y2="268" stroke="#b794f4" stroke-width="1.5" marker-end="url(#a4p)"/>
+
+      <!-- Render pipeline → iframe -->
+      <line x1="240" y1="460" x2="240" y2="488" stroke="#68d391" stroke-width="1.5" marker-end="url(#a4g)"/>
+      <!-- PDF pipeline → PDF output -->
+      <line x1="610" y1="460" x2="610" y2="488" stroke="#b794f4" stroke-width="1.5" marker-end="url(#a4p)"/>
+
+      <!-- Platform → storage -->
+      <line x1="195" y1="240" x2="160" y2="628" stroke="#63b3ed" stroke-width="1" marker-end="url(#a4b)" stroke-dasharray="4,3"/>
+      <line x1="415" y1="240" x2="380" y2="628" stroke="#68d391" stroke-width="1" marker-end="url(#a4g)" stroke-dasharray="4,3"/>
+    </svg>
+  </div>
+
+</div><!-- /panel-overview -->
+
+</div><!-- /content -->
+
+<script>
+function show(id) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

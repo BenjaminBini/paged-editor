@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Rendering Pipeline</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { padding: 40px; background: #0f0f1a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #c9d1d9; }
+  .pipeline { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 22px; color: #fff; text-align: center; margin: 0 0 6px; font-weight: 700; }
+  .subtitle { text-align: center; color: #4a5568; font-size: 12px; margin: 0 0 36px; }
+
+  .stage { display: flex; align-items: flex-start; gap: 16px; position: relative; }
+  .stage-num {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff; position: relative; z-index: 1;
+  }
+  .stage-line { position: absolute; left: 13px; top: 28px; bottom: 0; width: 2px; z-index: 0; opacity: 0.4; }
+  .stage-content { flex: 1; padding: 0 0 24px; }
+  .stage-title { font-size: 13px; font-weight: 700; margin: 4px 0 6px; }
+  .stage-desc { font-size: 11.5px; color: #7c8a9a; line-height: 1.6; }
+  .stage-desc code { background: #1a1a2e; padding: 1px 5px; border-radius: 3px; font-size: 10.5px; color: #7eb8e0; font-family: "JetBrains Mono", monospace; }
+  .stage-desc strong { color: #b8c8d8; font-weight: 600; }
+
+  .flow { display: flex; align-items: center; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .box {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1a1a2e; border: 1px solid #2a2a40; border-radius: 6px;
+    padding: 4px 10px; font-size: 10.5px; color: #8899aa; margin: 2px 0;
+  }
+  .box.hi { border-color: #3373b3; color: #7eb8e0; }
+  .box.cover { border-color: #493a8b; color: #9b8fd4; }
+  .arr { color: #3a4555; font-size: 14px; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .col { background: #13131f; border: 1px solid #1e1e30; border-radius: 6px; padding: 8px 10px; }
+  .col h4 { font-size: 9px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px; }
+  .col p { font-size: 10.5px; color: #6a7a8a; line-height: 1.5; }
+
+  .files { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .file { font-size: 10px; color: #4a5a6a; background: #111120; border: 1px solid #1a1a2e; border-radius: 4px; padding: 2px 8px; }
+  .file.main { color: #7eb8e0; border-color: #1e2e40; }
+</style>
+</head>
+<body>
+<div class="pipeline">
+  <h1>Rendering Pipeline</h1>
+  <p class="subtitle">From Markdown source to paginated A4 preview</p>
+
+  <!-- Stage 1 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#3373b3">1</div>
+    <div class="stage-line" style="background:#3373b3"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#5a9ec7">Trigger</div>
+      <div class="stage-desc">
+        User types in CodeMirror &rarr; <code>cm.on("change")</code> fires &rarr; debounce <strong>800ms</strong> &rarr; <code>triggerRender()</code>
+      </div>
+      <div class="files"><span class="file main">app.js</span> <span class="file">editor.js</span></div>
+    </div>
+  </div>
+
+  <!-- Stage 2 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#0096ae">2</div>
+    <div class="stage-line" style="background:#0096ae"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#0096ae">Split &amp; Hash</div>
+      <div class="stage-desc">
+        Markdown is split into <strong>sections</strong> at each <code># H1</code> heading.<br>
+        Each section gets a content hash. If hash unchanged &rarr; <strong>skip</strong> (incremental rendering).
+      </div>
+      <div class="flow">
+        <span class="box cover">Sec 0: Cover + Sommaire</span>
+        <span class="box hi">Sec 1: # Intro</span>
+        <span class="box">Sec 2: # Approach</span>
+        <span class="box">Sec N: ...</span>
+      </div>
+      <div class="files"><span class="file main">render.js</span> <span class="file">splitMarkdownSections()</span></div>
+    </div>
+  </div>
+
+  <!-- Stage 3 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#493a8b">3</div>
+    <div class="stage-line" style="background:#493a8b"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#7b6db5">Markdown &rarr; HTML</div>
+      <div class="stage-desc">
+        Each changed section is parsed by <code>marked</code> with custom renderers.
+        Frontmatter is extracted first. Custom extensions handle heading numbering, underlines, section colors, and mermaid diagrams.
+      </div>
+      <div class="flow">
+        <span class="box">Raw MD</span>
+        <span class="arr">&rarr;</span>
+        <span class="box">Frontmatter</span>
+        <span class="arr">&rarr;</span>
+        <span class="box hi">marked parse</span>
+        <span class="arr">&rarr;</span>
+        <span class="box">French typo</span>
+        <span class="arr">&rarr;</span>
+        <span class="box">Heading nums</span>
+        <span class="arr">&rarr;</span>
+        <span class="box hi">HTML</span>
+      </div>
+      <div class="files"><span class="file main">render.js</span> <span class="file">parseSectionMarkdownSync()</span> <span class="file">marked extensions</span></div>
+    </div>
+  </div>
+
+  <!-- Stage 4 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#b82775">4</div>
+    <div class="stage-line" style="background:#b82775"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#d84a8a">Iframe Injection (Double-buffered)</div>
+      <div class="stage-desc">
+        Section HTML is wrapped in a full document (CSS + fonts + Paged.js + section-init.js) and loaded into a dedicated <code>&lt;iframe&gt;</code> via <strong>blob URL</strong>.<br>
+        New iframe renders <strong>offscreen</strong>, then swaps with the old one &mdash; no flicker.
+      </div>
+      <div class="cols">
+        <div class="col">
+          <h4>Each iframe contains</h4>
+          <p>Complete HTML doc &bull; pdf.css + paged.css &bull; Google Fonts &bull; Paged.js polyfill &bull; section-init.js &bull; Section content</p>
+        </div>
+        <div class="col">
+          <h4>Section 0 (Cover)</h4>
+          <p>Hero page from frontmatter (title, doctype, acheteur, ref) &bull; Auto-generated sommaire from all H1 headings</p>
+        </div>
+      </div>
+      <div class="files"><span class="file main">render.js</span> <span class="file">wrapInDocument()</span> <span class="file">buildCoverContentHtml()</span></div>
+    </div>
+  </div>
+
+  <!-- Stage 5 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#eb9126">5</div>
+    <div class="stage-line" style="background:#eb9126"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#eb9126">Paged.js Pagination</div>
+      <div class="stage-desc">
+        Inside each iframe, <code>section-init.js</code> runs:<br>
+        &bull; Replace <code>\newpage</code> with page breaks<br>
+        &bull; Wrap headings with next sibling to prevent orphans<br>
+        &bull; Run <strong>Paged.js</strong> &rarr; breaks HTML into A4 pages with margins, headers, footers<br>
+        &bull; <code>postMessage("section-ready")</code> to parent with page count
+      </div>
+      <div class="files"><span class="file main">section-init.js</span> <span class="file">paged.polyfill.js</span></div>
+    </div>
+  </div>
+
+  <!-- Stage 6 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#2d8659">6</div>
+    <div class="stage-line" style="background:#2d8659"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#2d8659">Swap &amp; Scale</div>
+      <div class="stage-desc">
+        On <code>section-ready</code> message: pending iframe replaces old one. Frame is <strong>scaled</strong> (<code>transform: scale()</code>) to fit preview pane width. <strong>Page numbers</strong> are corrected cumulatively across all sections.
+      </div>
+      <div class="files"><span class="file main">render.js</span> <span class="file">scaleSection()</span> <span class="file">updatePageNumbers()</span></div>
+    </div>
+  </div>
+
+  <!-- Stage 7 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#3373b3">7</div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#5a9ec7">Post-render Sync</div>
+      <div class="stage-desc">
+        Anchor map rebuilt (editor line numbers &harr; preview Y positions). Bidirectional scroll sync and click-to-navigate re-attached. Table widgets refreshed.
+      </div>
+      <div class="flow">
+        <span class="box"><code>rebuildAnchorMap()</code></span>
+        <span class="box"><code>setupScrollSync()</code></span>
+        <span class="box"><code>setupPreviewClick()</code></span>
+        <span class="box"><code>refreshTableWidgets()</code></span>
+      </div>
+      <div class="files"><span class="file main">sync.js</span> <span class="file">app.js</span> <span class="file">table-widget.js</span></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
