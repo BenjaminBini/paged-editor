@@ -65,10 +65,7 @@
     content: none;
   }
 }
-.pdf-preview-root,
-.pdf-preview-root *,
-.pdf-preview-root *::before,
-.pdf-preview-root *::after {
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
