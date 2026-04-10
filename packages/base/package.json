@@ -12,11 +12,13 @@
   },
   "exports": {
     "./server": {
+      "require": "./server.cjs",
       "import": "./server.mjs",
       "types": "./server.d.ts"
     }
   },
   "files": [
+    "server.cjs",
     "server.mjs",
     "server.d.ts",
     "index.html",

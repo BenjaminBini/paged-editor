@@ -5,9 +5,9 @@ const os = require("os");
 const { pathToFileURL } = require("url");
 const { WebSocketServer } = require("ws");
 const crypto = require("crypto");
+const { editorRoot: BASE_ROOT } = require("@benjaminbini/paged-editor-base/server");
 
 // Static assets live in the base package (index.html, js/**, css/**, assets/)
-const BASE_ROOT = path.dirname(require.resolve("@benjaminbini/paged-editor-base/package.json"));
 
 // ── App state persistence ────────────────────────────────────────────────────
 const STATE_FILE = path.join(app.getPath("userData"), "app-state.json");
