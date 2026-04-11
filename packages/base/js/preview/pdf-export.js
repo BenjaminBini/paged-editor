@@ -112,7 +112,7 @@ export async function buildFullMemoireHtml(sections) {
 
   const coverHtml = buildCoverHtml(project);
   const sommaireHtml =
-    allHeadings.length > 0 ? buildSommaireHtml(allHeadings) : "";
+    allHeadings.length > 0 ? buildSommaireHtml(allHeadings, project) : "";
   const bodyHtml =
     coverHtml + "\n" + sommaireHtml + "\n" + sectionHtmlParts.join("\n");
 

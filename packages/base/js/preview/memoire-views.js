@@ -14,6 +14,26 @@ function prettyJson(value) {
   return JSON.stringify(value, null, 2) + "\n";
 }
 
+const LOGO_DEFAULTS = {
+  candidat:  { file: "assets/beorn-logo.png",      showInCover: true  },
+  partenaire: { file: "assets/liferay-logo.svg",   showInCover: true  },
+};
+
+function normalizeLogoEntry(entry = {}, key = "") {
+  const defaults = LOGO_DEFAULTS[key] || {};
+  return {
+    file: entry.file || defaults.file || "",
+    showInCover: entry.showInCover ?? (defaults.showInCover ?? false),
+    coverWidth: entry.coverWidth ?? 180,
+    coverX: entry.coverX ?? 0,
+    coverY: entry.coverY ?? 0,
+    showInFooter: entry.showInFooter ?? false,
+    footerWidth: entry.footerWidth ?? 80,
+    footerX: entry.footerX ?? 0,
+    footerY: entry.footerY ?? 0,
+  };
+}
+
 function normalizeProjectData(project = {}) {
   return {
     ...project,
@@ -25,6 +45,11 @@ function normalizeProjectData(project = {}) {
     acheteur: project.acheteur || project.client || "",
     candidat: project.candidat || "BEORN Technologies",
     confidential: project.confidential ?? true,
+    logos: {
+      candidat: normalizeLogoEntry(project.logos?.candidat, "candidat"),
+      partenaire: normalizeLogoEntry(project.logos?.partenaire, "partenaire"),
+      acheteur: normalizeLogoEntry(project.logos?.acheteur, "acheteur"),
+    },
   };
 }
 
@@ -180,7 +205,7 @@ export async function buildTocRenderResult({ assetBaseHref = "", folderPath = ge
     headingIdOffset = result.headingIdCounter;
   }
 
-  let sectionHtml = buildSommaireHtml(headings);
+  let sectionHtml = buildSommaireHtml(headings, project);
   if (headings.length === 0) {
     sectionHtml = buildPreviewErrorHtml("TOC", "No headings found in the current memoire.");
   }

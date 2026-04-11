@@ -23,14 +23,9 @@ function buildPreviewStyles({ rootPageName = "" } = {}) {
     PDF_CSS,
     PAGED_CSS,
     FONTS_CSS,
-    BEORN_LOGO_BLOB_URL,
-    BEORN_LOGO_DATA_URI,
   } = getAssets();
 
-  const logoUrl = BEORN_LOGO_BLOB_URL || BEORN_LOGO_DATA_URI;
-  const logoCss = logoUrl
-    ? `.pagedjs_page::after { background-image: url("${logoUrl}"); }`
-    : "";
+  const logoCss = `.pagedjs_page::after { background-image: url("assets/beorn-logo.png"); }`;
   const firstPageCss = rootPageName ? "" : `
     @page :first {
       margin: 20mm 18mm 25mm 18mm;
@@ -64,7 +59,7 @@ function buildPreviewStyles({ rootPageName = "" } = {}) {
 }
 
 // Extend DOMPurify's default URI allowlist to include file: (Electron local
-// assets) and blob: (pre-fetched logo/font object URLs). Both are safe in
+// assets) and blob: (Paged.js is injected via a blob URL). Both are safe in
 // Electron's controlled renderer context.
 const PREVIEW_URI_REGEXP =
   /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|file|blob):|[^a-z]|[a-z+\-.]+(?:[^a-z+\-.:]|$))/i;
@@ -131,17 +126,32 @@ export class PreviewRenderer {
       window.requestAnimationFrame(() => resolve());
     });
 
-    this.lineMap = buildLineMap(
-      renderResult.sourceBlocks || [],
-      renderResult.lineStarts || [0],
-      renderResult.lineNumberOffset || 0,
-      this.previewFrame,
-      this.previewPages,
-    );
+    // Store render result data for deferred line map build — the line map must
+    // be built AFTER scaleSurface() so getBoundingClientRect() reflects the
+    // scaled layout.  render.js calls rebuildLineMap() at the right moment.
+    this.pendingLineMapData = {
+      sourceBlocks: renderResult.sourceBlocks || [],
+      lineStarts: renderResult.lineStarts || [0],
+      lineNumberOffset: renderResult.lineNumberOffset || 0,
+    };
+    this.lineMap = [];
 
     return {
       elapsed: Math.round(performance.now() - startedAt),
       totalPages: this.previewPages.querySelectorAll(".pagedjs_page").length || flow.total || 0,
     };
+  }
+
+  rebuildLineMap() {
+    const data = this.pendingLineMapData;
+    if (!data) return;
+    this.pendingLineMapData = null;
+    this.lineMap = buildLineMap(
+      data.sourceBlocks,
+      data.lineStarts,
+      data.lineNumberOffset,
+      this.previewFrame,
+      this.previewPages,
+    );
   }
 }
