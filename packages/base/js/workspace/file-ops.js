@@ -18,6 +18,7 @@ import * as platform from "../core/platform.js";
 import { emit } from "../core/event-bus.js";
 import { setActiveFileContext } from "./parse-context.js";
 import { isCoverTab, isReadOnlyTab } from "../preview/memoire-views.js";
+import { isCoverFormVisible, syncCoverFormToEditor } from "../editor/cover-form.js";
 
 // ── Late-bound callbacks (set once at init to avoid circular deps) ─────────
 
@@ -81,6 +82,9 @@ export async function doSave() {
   if (isReadOnlyTab(tab)) return false;
 
   if (!isCoverTab(tab)) applyPrettify();
+  if (isCoverTab(tab) && isCoverFormVisible()) {
+    syncCoverFormToEditor();
+  }
   let content = cm.getValue();
   if (isCoverTab(tab)) {
     try {

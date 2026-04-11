@@ -1,0 +1,319 @@
+/* ── Cover Form ── */
+/* Dark-themed form overlay for editing project.json cover data */
+
+.cover-form-container {
+  position: absolute;
+  inset: 0;
+  z-index: 15;
+  overflow-y: auto;
+  background: #1e1e2e;
+  display: none;
+}
+.cover-form-container.visible {
+  display: block;
+}
+
+.cover-form-inner {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+}
+.cover-form-inner > h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #cdd6f4;
+  margin: 0 0 20px;
+  letter-spacing: 0.01em;
+}
+
+/* ── Sections ── */
+.cover-form-section {
+  margin-bottom: 24px;
+}
+.cover-form-section > h3 {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6c7086;
+  margin: 0 0 14px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #2d2d3f;
+}
+
+/* ── Fields ── */
+.cover-form-field {
+  margin-bottom: 14px;
+}
+.cover-form-field > label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a6adc8;
+  margin-bottom: 5px;
+}
+
+.cover-form-field input[type="text"],
+.cover-form-field textarea {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 8px 10px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  font-family: "JetBrains Mono", "SF Mono", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  transition: border-color 0.15s ease;
+  resize: vertical;
+}
+.cover-form-field input[type="text"]:focus,
+.cover-form-field textarea:focus {
+  outline: none;
+  border-color: #3373b3;
+  box-shadow: 0 0 0 2px rgba(51, 115, 179, 0.2);
+}
+
+/* ── Two-column row ── */
+.cover-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.cover-form-row .cover-form-field {
+  margin-bottom: 0;
+}
+
+/* ── Checkbox ── */
+.cover-form-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  cursor: pointer;
+}
+.cover-form-checkbox input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  background: #0f172a;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.12s, border-color 0.12s;
+}
+.cover-form-checkbox input[type="checkbox"]:checked {
+  background: #3373b3;
+  border-color: #3373b3;
+}
+.cover-form-checkbox input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.cover-form-checkbox span {
+  font-size: 12px;
+  font-weight: 500;
+  color: #cdd6f4;
+}
+
+/* ── Logo cards ── */
+.cover-form-logo-card {
+  background: #181825;
+  border: 1px solid #2d2d3f;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.cover-form-logo-card > h4 {
+  font-size: 13px;
+  font-weight: 600;
+  color: #cdd6f4;
+  margin: 0 0 12px;
+}
+
+.cover-form-logo-preview-area {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.cover-form-logo-preview-area img {
+  width: 80px;
+  height: 60px;
+  object-fit: contain;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.cover-form-logo-placeholder {
+  width: 80px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0f172a;
+  border: 1px dashed #334155;
+  border-radius: 6px;
+  color: #4a4a6a;
+  font-size: 10px;
+  flex-shrink: 0;
+}
+.cover-form-logo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cover-form-logo-actions button {
+  padding: 5px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 5px;
+  border: 1px solid #334155;
+  background: #1b1b29;
+  color: #cdd6f4;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.cover-form-logo-actions button:hover {
+  background: #313154;
+  border-color: #4c5f87;
+}
+.cover-form-logo-actions button.remove-btn {
+  color: #f38ba8;
+  border-color: rgba(243, 139, 168, 0.25);
+}
+.cover-form-logo-actions button.remove-btn:hover {
+  background: rgba(243, 139, 168, 0.1);
+  border-color: rgba(243, 139, 168, 0.4);
+}
+.cover-form-logo-actions button.logo-source-btn {
+  opacity: 0.6;
+}
+.cover-form-logo-actions button.logo-source-btn.active {
+  opacity: 1;
+  border-color: #3373b3;
+  background: rgba(51, 115, 179, 0.15);
+  color: #7eb8e0;
+}
+
+/* ── Logo options (checkboxes + sliders) ── */
+.cover-form-logo-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cover-form-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.cover-form-checkbox-row input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  background: #0f172a;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.12s, border-color 0.12s;
+}
+.cover-form-checkbox-row input[type="checkbox"]:checked {
+  background: #3373b3;
+  border-color: #3373b3;
+}
+.cover-form-checkbox-row input[type="checkbox"]:checked::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 5px;
+  height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.cover-form-checkbox-row span {
+  font-size: 12px;
+  font-weight: 500;
+  color: #a6adc8;
+}
+
+/* ── Sliders ── */
+.cover-form-sliders {
+  display: none;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 0 4px 24px;
+}
+.cover-form-sliders.visible {
+  display: flex;
+}
+
+.cover-form-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cover-form-slider-row label {
+  font-size: 11px;
+  color: #6c7086;
+  min-width: 56px;
+  flex-shrink: 0;
+}
+.cover-form-slider-row input[type="range"] {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #334155;
+  border-radius: 2px;
+  outline: none;
+}
+.cover-form-slider-row input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3373b3;
+  border: 2px solid #1e1e2e;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.cover-form-slider-row input[type="range"]::-webkit-slider-thumb:hover {
+  background: #4a8fd4;
+}
+.cover-form-slider-row input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #3373b3;
+  border: 2px solid #1e1e2e;
+  cursor: pointer;
+}
+.cover-form-slider-row .slider-value {
+  font-size: 11px;
+  font-family: "JetBrains Mono", monospace;
+  color: #a6adc8;
+  min-width: 36px;
+  text-align: right;
+}

@@ -1,7 +1,7 @@
 // tab-wiring.js — Connects tab-bar events to the rest of the app.
 // Handles tab switch reactions, sidebar↔tab wiring, dirty tracking, persistence.
 
-import { status, showLoading, hideLoading, setEditorPaneMode } from "../editor/editor.js";
+import { cm, status, showLoading, hideLoading, setEditorPaneMode } from "../editor/editor.js";
 import { setActiveFileContext } from "../workspace/parse-context.js";
 import { triggerRender } from "../preview/render.js";
 import { refreshTableWidgets, setTableRangesDirty } from "../editor/table-widget.js";
@@ -13,8 +13,10 @@ import {
   getTocVirtualPath,
   loadProjectJsonSource,
   isMarkdownTab,
+  isCoverTab,
   isTocTab,
 } from "../preview/memoire-views.js";
+import { showCoverForm, hideCoverForm, populateCoverForm, setOnRender, setOnDirty } from "../editor/cover-form.js";
 import {
   renderFileList, readFile, getFileModTime, updateTitle, getFolderPath,
   setOnFileClick, setOnFileRefresh, setGetActiveFilePath, setIsFileDirty,
@@ -26,6 +28,11 @@ import {
   onTabRefreshRequest, onBeforeDocSwap, getSessionState, findTabByPath,
 } from "../workspace/tab-bar.js";
 import * as platform from "../core/platform.js";
+
+// ── Cover form render/dirty wiring ────────────────────────────────────────
+
+setOnRender(() => triggerRender());
+setOnDirty(() => { markActiveTabDirty(); renderFileList(); });
 
 // ── Persist tab state (debounced) ──────────────────────────────────────────
 
@@ -75,10 +82,22 @@ export function wireTabCallbacks({
     updateTitle(tab.name, tab.dirty);
     renderFileList();
     setActiveFileContext(tab.name, tab.path);
-    if (isTocTab(tab)) {
-      setEditorPaneMode("disabled", "TOC is generated from the current memoire and cannot be edited directly.");
-    } else {
+    if (isCoverTab(tab)) {
       setEditorPaneMode("default");
+      showCoverForm();
+      populateCoverForm(cm.getValue());
+      const formatBar = document.getElementById("editorFormatBar");
+      if (formatBar) formatBar.style.display = "none";
+    } else if (isTocTab(tab)) {
+      hideCoverForm();
+      setEditorPaneMode("disabled", "TOC is generated from the current memoire and cannot be edited directly.");
+      const formatBar = document.getElementById("editorFormatBar");
+      if (formatBar) formatBar.style.display = "";
+    } else {
+      hideCoverForm();
+      setEditorPaneMode("default");
+      const formatBar = document.getElementById("editorFormatBar");
+      if (formatBar) formatBar.style.display = "";
     }
     triggerRender();
     setTimeout(buildOutline, 50);
@@ -94,10 +113,13 @@ export function wireTabCallbacks({
 
   onAllTabsClosed(() => {
     hideLoading();
+    hideCoverForm();
     reattachCmListeners();
     updateTitle(null, false);
     setActiveFileContext("", "");
     setEditorPaneMode("default");
+    const formatBar = document.getElementById("editorFormatBar");
+    if (formatBar) formatBar.style.display = "";
     if (getFolderPath()) {
       renderFileList();
     } else {
