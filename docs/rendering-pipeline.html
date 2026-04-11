@@ -46,7 +46,7 @@
 <body>
 <div class="pipeline">
   <h1>Rendering Pipeline</h1>
-  <p class="subtitle">From Markdown source to paginated A4 preview</p>
+  <p class="subtitle">From Markdown source to paginated A4 preview — in-DOM Paged.js mode</p>
 
   <!-- Stage 1 -->
   <div class="stage">
@@ -55,9 +55,18 @@
     <div class="stage-content">
       <div class="stage-title" style="color:#5a9ec7">Trigger</div>
       <div class="stage-desc">
-        User types in CodeMirror &rarr; <code>cm.on("change")</code> fires &rarr; debounce <strong>800ms</strong> &rarr; <code>triggerRender()</code>
+        User types in CodeMirror &rarr; <code>editor.on("input")</code> fires &rarr;
+        <code>scheduleRender(800)</code> debounce &rarr; <code>triggerRender()</code>.<br>
+        Render requests are <strong>queued</strong>: a generation counter is incremented on each
+        new request. Stale in-flight renders are discarded when a newer generation overtakes them.
+        Only one render runs at a time (<code>isRendering</code> gate).
       </div>
-      <div class="files"><span class="file main">app.js</span> <span class="file">editor.js</span></div>
+      <div class="files">
+        <span class="file main">render.js</span>
+        <span class="file">scheduleRender()</span>
+        <span class="file">triggerRender()</span>
+        <span class="file">flushRenderQueue()</span>
+      </div>
     </div>
   </div>
 
@@ -66,18 +75,37 @@
     <div class="stage-num" style="background:#0096ae">2</div>
     <div class="stage-line" style="background:#0096ae"></div>
     <div class="stage-content">
-      <div class="stage-title" style="color:#0096ae">Split &amp; Hash</div>
+      <div class="stage-title" style="color:#0096ae">Tab Dispatch</div>
       <div class="stage-desc">
-        Markdown is split into <strong>sections</strong> at each <code># H1</code> heading.<br>
-        Each section gets a content hash. If hash unchanged &rarr; <strong>skip</strong> (incremental rendering).
+        The active tab kind determines which HTML builder is called:
       </div>
       <div class="flow">
-        <span class="box cover">Sec 0: Cover + Sommaire</span>
-        <span class="box hi">Sec 1: # Intro</span>
-        <span class="box">Sec 2: # Approach</span>
-        <span class="box">Sec N: ...</span>
+        <span class="box cover">Cover tab</span>
+        <span class="arr">&rarr;</span>
+        <span class="box cover">buildCoverRenderResult()</span>
       </div>
-      <div class="files"><span class="file main">render.js</span> <span class="file">splitMarkdownSections()</span></div>
+      <div class="flow">
+        <span class="box cover">TOC tab</span>
+        <span class="arr">&rarr;</span>
+        <span class="box cover">buildTocRenderResult()</span>
+      </div>
+      <div class="flow">
+        <span class="box hi">Markdown tab</span>
+        <span class="arr">&rarr;</span>
+        <span class="box hi">renderMarkdown()</span>
+      </div>
+      <div class="stage-desc" style="margin-top:8px;">
+        All three return a <strong>RenderResult</strong> object:
+        <code>{ sectionHtml, headerText, rootPageName, sourceBlocks, lineStarts, lineNumberOffset }</code>
+      </div>
+      <div class="files">
+        <span class="file main">render.js</span>
+        <span class="file main">memoire-views.js</span>
+        <span class="file">buildCoverRenderResult()</span>
+        <span class="file">buildTocRenderResult()</span>
+        <span class="file main">render-pipeline.js</span>
+        <span class="file">renderMarkdown()</span>
+      </div>
     </div>
   </div>
 
@@ -86,10 +114,12 @@
     <div class="stage-num" style="background:#493a8b">3</div>
     <div class="stage-line" style="background:#493a8b"></div>
     <div class="stage-content">
-      <div class="stage-title" style="color:#7b6db5">Markdown &rarr; HTML</div>
+      <div class="stage-title" style="color:#7b6db5">Markdown &rarr; HTML (markdown tabs)</div>
       <div class="stage-desc">
-        Each changed section is parsed by <code>marked</code> with custom renderers.
-        Frontmatter is extracted first. Custom extensions handle heading numbering, underlines, section colors, and mermaid diagrams.
+        Markdown is parsed by <code>marked</code> with custom renderers and extensions.
+        Frontmatter is extracted first. Extensions handle heading numbering, French typography,
+        section colors, underlines, and Mermaid diagrams.
+        Source-line tracking metadata (<code>sourceBlocks</code>) is collected for the line map.
       </div>
       <div class="flow">
         <span class="box">Raw MD</span>
@@ -102,9 +132,13 @@
         <span class="arr">&rarr;</span>
         <span class="box">Heading nums</span>
         <span class="arr">&rarr;</span>
-        <span class="box hi">HTML</span>
+        <span class="box hi">sectionHtml</span>
       </div>
-      <div class="files"><span class="file main">render.js</span> <span class="file">parseSectionMarkdownSync()</span> <span class="file">marked extensions</span></div>
+      <div class="files">
+        <span class="file main">render-pipeline.js</span>
+        <span class="file">renderMarkdown()</span>
+        <span class="file">marked extensions</span>
+      </div>
     </div>
   </div>
 
@@ -113,22 +147,30 @@
     <div class="stage-num" style="background:#b82775">4</div>
     <div class="stage-line" style="background:#b82775"></div>
     <div class="stage-content">
-      <div class="stage-title" style="color:#d84a8a">Iframe Injection (Double-buffered)</div>
+      <div class="stage-title" style="color:#d84a8a">Preview Document Assembly</div>
       <div class="stage-desc">
-        Section HTML is wrapped in a full document (CSS + fonts + Paged.js + section-init.js) and loaded into a dedicated <code>&lt;iframe&gt;</code> via <strong>blob URL</strong>.<br>
-        New iframe renders <strong>offscreen</strong>, then swaps with the old one &mdash; no flicker.
+        <code>buildPreviewDocument()</code> wraps <code>sectionHtml</code> in a
+        <code>.pdf-preview-root</code> div (not a full HTML document — Paged.js receives raw HTML
+        markup). Running header and gradient elements are injected here if not a special page type.
+        The resulting HTML is sanitized by <strong>DOMPurify</strong> (allows <code>blob:</code>
+        and <code>file:</code> URIs for Electron compatibility).
       </div>
       <div class="cols">
         <div class="col">
-          <h4>Each iframe contains</h4>
-          <p>Complete HTML doc &bull; pdf.css + paged.css &bull; Google Fonts &bull; Paged.js polyfill &bull; section-init.js &bull; Section content</p>
+          <h4>Normal section</h4>
+          <p>Includes <code>.pdf-page-gradient</code> and <code>.pdf-running-header</code> running elements consumed by Paged.js <code>@top</code> margin rules.</p>
         </div>
         <div class="col">
-          <h4>Section 0 (Cover)</h4>
-          <p>Hero page from frontmatter (title, doctype, acheteur, ref) &bull; Auto-generated sommaire from all H1 headings</p>
+          <h4>Cover / TOC pages</h4>
+          <p>Use a <code>rootPageName</code> (e.g. <code>"sommaire"</code>) which applies a named <code>@page</code> rule. Running elements and <code>@page :first</code> overrides are suppressed.</p>
         </div>
       </div>
-      <div class="files"><span class="file main">render.js</span> <span class="file">wrapInDocument()</span> <span class="file">buildCoverContentHtml()</span></div>
+      <div class="files">
+        <span class="file main">preview-renderer.js</span>
+        <span class="file">buildPreviewDocument()</span>
+        <span class="file">sanitizePreviewHtml()</span>
+        <span class="file">DOMPurify</span>
+      </div>
     </div>
   </div>
 
@@ -137,15 +179,31 @@
     <div class="stage-num" style="background:#eb9126">5</div>
     <div class="stage-line" style="background:#eb9126"></div>
     <div class="stage-content">
-      <div class="stage-title" style="color:#eb9126">Paged.js Pagination</div>
+      <div class="stage-title" style="color:#eb9126">In-DOM Paged.js Pagination</div>
       <div class="stage-desc">
-        Inside each iframe, <code>section-init.js</code> runs:<br>
-        &bull; Replace <code>\newpage</code> with page breaks<br>
-        &bull; Wrap headings with next sibling to prevent orphans<br>
-        &bull; Run <strong>Paged.js</strong> &rarr; breaks HTML into A4 pages with margins, headers, footers<br>
-        &bull; <code>postMessage("section-ready")</code> to parent with page count
+        The previous Paged.js instance is <strong>destroyed</strong> (<code>dispose()</code> tears
+        down chunker + polisher). <code>previewPages.replaceChildren()</code> clears the DOM.
+        Then <code>previewer.preview(html, styles, container)</code> runs Paged.js
+        <strong>directly in the live DOM</strong> — no iframe, no blob URL, no postMessage.<br>
+        Styles (pdf.css, paged.css, fonts, logo CSS) are passed as an array of named
+        <code>{ "name.css": cssText }</code> objects so Paged.js can reference them by name
+        in <code>@import</code> rules.
       </div>
-      <div class="files"><span class="file main">section-init.js</span> <span class="file">paged.polyfill.js</span></div>
+      <div class="flow">
+        <span class="box">dispose()</span>
+        <span class="arr">&rarr;</span>
+        <span class="box">replaceChildren()</span>
+        <span class="arr">&rarr;</span>
+        <span class="box hi">previewer.preview(html, styles, previewPages)</span>
+        <span class="arr">&rarr;</span>
+        <span class="box hi">.pagedjs_page nodes in DOM</span>
+      </div>
+      <div class="files">
+        <span class="file main">preview-renderer.js</span>
+        <span class="file">PreviewRenderer.render()</span>
+        <span class="file">buildPreviewStyles()</span>
+        <span class="file">paged.polyfill.js</span>
+      </div>
     </div>
   </div>
 
@@ -154,11 +212,18 @@
     <div class="stage-num" style="background:#2d8659">6</div>
     <div class="stage-line" style="background:#2d8659"></div>
     <div class="stage-content">
-      <div class="stage-title" style="color:#2d8659">Swap &amp; Scale</div>
+      <div class="stage-title" style="color:#2d8659">Scale</div>
       <div class="stage-desc">
-        On <code>section-ready</code> message: pending iframe replaces old one. Frame is <strong>scaled</strong> (<code>transform: scale()</code>) to fit preview pane width. <strong>Page numbers</strong> are corrected cumulatively across all sections.
+        After <code>previewer.preview()</code> resolves, <code>scaleSurface()</code> measures the
+        rendered <code>.pagedjs_page</code> width and applies <code>transform: scale()</code> to
+        fit the preview pane, factoring in the user zoom level. The wrapper div is resized to
+        match the scaled content so the scrollbar reflects true document height.
       </div>
-      <div class="files"><span class="file main">render.js</span> <span class="file">scaleSection()</span> <span class="file">updatePageNumbers()</span></div>
+      <div class="files">
+        <span class="file main">render.js</span>
+        <span class="file">scaleSurface()</span>
+        <span class="file">measurePreviewSurface()</span>
+      </div>
     </div>
   </div>
 
@@ -166,17 +231,26 @@
   <div class="stage">
     <div class="stage-num" style="background:#3373b3">7</div>
     <div class="stage-content">
-      <div class="stage-title" style="color:#5a9ec7">Post-render Sync</div>
+      <div class="stage-title" style="color:#5a9ec7">Line Map &amp; Scroll Sync</div>
       <div class="stage-desc">
-        Anchor map rebuilt (editor line numbers &harr; preview Y positions). Bidirectional scroll sync and click-to-navigate re-attached. Table widgets refreshed.
+        <code>rebuildLineMap()</code> is called <strong>after</strong> <code>scaleSurface()</code>
+        so <code>getBoundingClientRect()</code> reflects the final scaled layout.
+        It maps editor source line numbers to preview Y positions by reading
+        <code>data-source-line</code> attributes injected during Markdown parsing.
+        Bidirectional scroll sync and click-to-navigate use this map.
       </div>
       <div class="flow">
-        <span class="box"><code>rebuildAnchorMap()</code></span>
-        <span class="box"><code>setupScrollSync()</code></span>
-        <span class="box"><code>setupPreviewClick()</code></span>
-        <span class="box"><code>refreshTableWidgets()</code></span>
+        <span class="box"><code>rebuildLineMap()</code></span>
+        <span class="box"><code>sourceBlocks → Y positions</code></span>
+        <span class="box"><code>emit("section-ready")</code></span>
       </div>
-      <div class="files"><span class="file main">sync.js</span> <span class="file">app.js</span> <span class="file">table-widget.js</span></div>
+      <div class="files">
+        <span class="file main">preview-renderer.js</span>
+        <span class="file">rebuildLineMap()</span>
+        <span class="file main">line-map.js</span>
+        <span class="file">buildLineMap()</span>
+        <span class="file main">sync.js</span>
+      </div>
     </div>
   </div>
 </div>

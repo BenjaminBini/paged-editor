@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Logo Resolution</title>
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  body { padding: 40px; background: #0f0f1a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #c9d1d9; }
+  .pipeline { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 22px; color: #fff; text-align: center; margin: 0 0 6px; font-weight: 700; }
+  .subtitle { text-align: center; color: #4a5568; font-size: 12px; margin: 0 0 36px; }
+
+  .stage { display: flex; align-items: flex-start; gap: 16px; position: relative; }
+  .stage-num {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; color: #fff; position: relative; z-index: 1;
+  }
+  .stage-line { position: absolute; left: 13px; top: 28px; bottom: 0; width: 2px; z-index: 0; opacity: 0.4; }
+  .stage-content { flex: 1; padding: 0 0 24px; }
+  .stage-title { font-size: 13px; font-weight: 700; margin: 4px 0 6px; }
+  .stage-desc { font-size: 11.5px; color: #7c8a9a; line-height: 1.6; }
+  .stage-desc code { background: #1a1a2e; padding: 1px 5px; border-radius: 3px; font-size: 10.5px; color: #7eb8e0; font-family: "JetBrains Mono", monospace; }
+  .stage-desc strong { color: #b8c8d8; font-weight: 600; }
+
+  .flow { display: flex; align-items: center; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .box {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #1a1a2e; border: 1px solid #2a2a40; border-radius: 6px;
+    padding: 4px 10px; font-size: 10.5px; color: #8899aa; margin: 2px 0;
+  }
+  .box.hi { border-color: #3373b3; color: #7eb8e0; }
+  .box.lib { border-color: #493a8b; color: #9b8fd4; }
+  .box.ok { border-color: #2d8659; color: #6ab88e; }
+  .box.warn { border-color: #b82775; color: #e07aaa; }
+  .arr { color: #3a4555; font-size: 14px; }
+
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+  .col { background: #13131f; border: 1px solid #1e1e30; border-radius: 6px; padding: 8px 10px; }
+  .col h4 { font-size: 9px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px; }
+  .col p { font-size: 10.5px; color: #6a7a8a; line-height: 1.5; }
+
+  .files { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 4px; }
+  .file { font-size: 10px; color: #4a5a6a; background: #111120; border: 1px solid #1a1a2e; border-radius: 4px; padding: 2px 8px; }
+  .file.main { color: #7eb8e0; border-color: #1e2e40; }
+
+  .schema { margin-top: 10px; background: #13131f; border: 1px solid #1e1e30; border-radius: 6px; padding: 8px 12px; }
+  .schema pre { font-family: "JetBrains Mono", monospace; font-size: 10px; color: #6a8aaa; line-height: 1.7; }
+  .schema pre .k { color: #7eb8e0; }
+  .schema pre .s { color: #9b8fd4; }
+  .schema pre .c { color: #374555; }
+
+  .badge { display: inline-block; font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; padding: 1px 6px; border-radius: 3px; vertical-align: middle; margin-left: 4px; }
+  .badge.preset { background: rgba(51,115,179,0.2); color: #7eb8e0; border: 1px solid rgba(51,115,179,0.4); }
+  .badge.upload { background: rgba(155,143,212,0.15); color: #9b8fd4; border: 1px solid rgba(155,143,212,0.3); }
+</style>
+</head>
+<body>
+<div class="pipeline">
+  <h1>Logo Resolution</h1>
+  <p class="subtitle">From <code>project.json</code> logo entry to URL embedded in cover and preview HTML</p>
+
+  <!-- Stage 1 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#3373b3">1</div>
+    <div class="stage-line" style="background:#3373b3"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#5a9ec7">Project Data Normalization</div>
+      <div class="stage-desc">
+        When <code>project.json</code> is loaded (or created for the first time),
+        <code>normalizeProjectData()</code> in <code>memoire-views.js</code> applies defaults
+        to each logo entry via <code>normalizeLogoEntry(entry, key)</code>.<br><br>
+        Defaults are driven by the <code>LOGO_DEFAULTS</code> map:
+        <strong>candidat</strong> defaults to the built-in BEORN logo;
+        <strong>partenaire</strong> defaults to the built-in Liferay logo (both with <code>showInCover: true</code>).
+        <strong>acheteur</strong> has no default file.
+      </div>
+      <div class="schema">
+        <pre><span class="c">// LOGO_DEFAULTS in memoire-views.js</span>
+{
+  <span class="k">candidat</span>:   { <span class="k">file</span>: <span class="s">"assets/beorn-logo.png"</span>,    <span class="k">showInCover</span>: <span class="s">true</span>  },
+  <span class="k">partenaire</span>: { <span class="k">file</span>: <span class="s">"assets/liferay-logo.svg"</span>,  <span class="k">showInCover</span>: <span class="s">true</span>  },
+}
+
+<span class="c">// Resulting entry when project.json has no logos.candidat:</span>
+{
+  <span class="k">file</span>:         <span class="s">"assets/beorn-logo.png"</span>,
+  <span class="k">showInCover</span>:  <span class="s">true</span>,
+  <span class="k">coverWidth</span>:   <span class="s">180</span>,
+  <span class="k">showInFooter</span>: <span class="s">false</span>,
+  ...
+}</pre>
+      </div>
+      <div class="files">
+        <span class="file main">memoire-views.js</span>
+        <span class="file">normalizeLogoEntry()</span>
+        <span class="file">LOGO_DEFAULTS</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 2 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#493a8b">2</div>
+    <div class="stage-line" style="background:#493a8b"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#9b8fd4">Built-in Logo Assets</div>
+      <div class="stage-desc">
+        All built-in logos are static files inside <code>packages/base/assets/</code>.
+        They are served at a stable relative path — <code>assets/&lt;name&gt;</code> — by both runtimes:
+      </div>
+      <div class="cols">
+        <div class="col">
+          <h4>Electron</h4>
+          <p>The <code>&lt;base href&gt;</code> points at the editor package root. <code>assets/beorn-logo.png</code> resolves to <code>file:///…/packages/base/assets/beorn-logo.png</code>.</p>
+        </div>
+        <div class="col">
+          <h4>Web (Express)</h4>
+          <p><code>express.static("packages/base")</code> serves the editor root. <code>GET /assets/beorn-logo.png</code> is served from disk.</p>
+        </div>
+      </div>
+      <div class="stage-desc" style="margin-top:8px;">
+        No preloading, no blob URLs, no data URIs. The <code>file</code> field in <code>project.json</code>
+        is used verbatim as an <code>&lt;img src&gt;</code> or CSS <code>url()</code> value.
+        To add a new built-in logo, drop the file in <code>assets/</code> and add an entry to
+        <code>CARD_PRESETS</code> (cover form) and <code>LOGO_DEFAULTS</code> (memoire-views).
+      </div>
+      <div class="files">
+        <span class="file main">assets/beorn-logo.png</span>
+        <span class="file main">assets/liferay-logo.svg</span>
+        <span class="file main">assets/lumapps-logo.svg</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 3 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#0096ae">3</div>
+    <div class="stage-line" style="background:#0096ae"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#4ab8cc">Cover Form — Preset Toggle &amp; Upload</div>
+      <div class="stage-desc">
+        The Cover form builds a logo card for each key (<code>candidat</code>, <code>partenaire</code>, <code>acheteur</code>).
+        Cards for keys that have entries in <code>CARD_PRESETS</code> render a toggle row of preset buttons
+        plus an <strong>Upload...</strong> button. <code>acheteur</code> has no presets and gets a plain
+        Choose&nbsp;/&nbsp;Remove UI instead.
+      </div>
+      <div class="schema">
+        <pre><span class="c">// CARD_PRESETS in cover-form.js</span>
+{
+  <span class="k">candidat</span>:   [ { <span class="k">label</span>: <span class="s">"BEORN"</span>,   <span class="k">file</span>: <span class="s">"assets/beorn-logo.png"</span>   } ],
+  <span class="k">partenaire</span>: [
+    { <span class="k">label</span>: <span class="s">"Liferay"</span>, <span class="k">file</span>: <span class="s">"assets/liferay-logo.svg"</span> },
+    { <span class="k">label</span>: <span class="s">"LumApps"</span>, <span class="k">file</span>: <span class="s">"assets/lumapps-logo.svg"</span> },
+  ],
+}</pre>
+      </div>
+      <div class="flow">
+        <span class="box hi">Preset btn click</span>
+        <span class="arr">&rarr;</span>
+        <span class="box ok">r.file = preset.file <br>r._dataUrl = null</span>
+        <span class="arr">&rarr;</span>
+        <span class="box">syncSourceToggle() + updateLogoPreview()</span>
+      </div>
+      <div class="flow">
+        <span class="box lib">Upload... click</span>
+        <span class="arr">&rarr;</span>
+        <span class="box hi">fileInput.click()</span>
+        <span class="arr">&rarr;</span>
+        <span class="box ok">FileReader → writeBinaryFile → r.file = destPath</span>
+      </div>
+      <div class="stage-desc" style="margin-top:8px;">
+        <code>syncSourceToggle(key)</code> iterates the card's <code>.logo-source-btn</code> elements
+        and applies the <code>active</code> class to whichever button's <code>data-preset-file</code>
+        matches <code>r.file</code> (when no upload is pending). The Upload button activates
+        when <code>r._dataUrl</code> is set or the file doesn't match any preset.
+      </div>
+      <div class="files">
+        <span class="file main">cover-form.js</span>
+        <span class="file">CARD_PRESETS</span>
+        <span class="file">buildLogoCard()</span>
+        <span class="file">syncSourceToggle()</span>
+        <span class="file">updateLogoPreview()</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 4 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#b82775">4</div>
+    <div class="stage-line" style="background:#b82775"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#d84a8a">User File Upload</div>
+      <div class="stage-desc">
+        When the user picks a file via <strong>Upload...</strong>:<br>
+        &bull; The destination path is prefixed with the logo key to avoid collisions:
+        <code>"assets/" + key + "-" + file.name</code> (e.g. <code>assets/partenaire-acme.png</code>)<br>
+        &bull; <code>FileReader.readAsDataURL(file)</code> encodes the file as base64<br>
+        &bull; <code>writeBinaryFile(destPath, base64)</code> writes it to the workspace <code>assets/</code> folder<br>
+        &bull; <code>r.file</code> is set to <code>destPath</code>; <code>r._dataUrl</code> holds the data URL for the in-form thumbnail
+      </div>
+      <div class="flow">
+        <span class="box">Pick file</span>
+        <span class="arr">&rarr;</span>
+        <span class="box hi">FileReader → base64</span>
+        <span class="arr">&rarr;</span>
+        <span class="box ok">writeBinaryFile → workspace assets/</span>
+      </div>
+      <div class="flow">
+        <span class="arr" style="opacity:0">&rarr;</span>
+        <span class="arr">&rarr;</span>
+        <span class="box lib">r._dataUrl → thumbnail preview</span>
+        <span class="arr">+</span>
+        <span class="box hi">r.file = "assets/key-name.ext"</span>
+      </div>
+      <div class="stage-desc" style="margin-top:8px;">
+        Upload happens at <strong>file-selection time</strong>, before the project is saved.
+        This ensures the file is on disk when the JSON is written and the preview renders.
+        The key prefix (<code>candidat-</code>, <code>partenaire-</code>) prevents two fields from
+        overwriting each other when they upload files with the same name.
+      </div>
+      <div class="files">
+        <span class="file main">cover-form.js</span>
+        <span class="file">fileInput change handler</span>
+        <span class="file main">platform.js</span>
+        <span class="file">writeBinaryFile() → /api/assets (web) or IPC (Electron)</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 5 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#2d8659">5</div>
+    <div class="stage-line" style="background:#2d8659"></div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#6ab88e">Cover Form Thumbnail</div>
+      <div class="stage-desc">
+        <code>updateLogoPreview(key)</code> resolves the URL to display in the form's logo thumbnail:
+      </div>
+      <div class="flow">
+        <span class="box hi">r._dataUrl set</span>
+        <span class="arr">&rarr;</span>
+        <span class="box ok">use data URL directly (freshly uploaded file)</span>
+      </div>
+      <div class="flow">
+        <span class="box warn">r._dataUrl null</span>
+        <span class="arr">&rarr;</span>
+        <span class="box">use r.file as-is</span>
+        <span class="arr">&rarr;</span>
+        <span class="box lib">relative URL → browser resolves via &lt;base href&gt;</span>
+      </div>
+      <div class="stage-desc" style="margin-top:8px;">
+        Because built-in assets are served at the same relative path as workspace files,
+        <code>r.file = "assets/beorn-logo.png"</code> resolves correctly in both cases with no
+        special handling. The thumbnail appears immediately on form load.
+      </div>
+      <div class="files">
+        <span class="file main">cover-form.js</span>
+        <span class="file">updateLogoPreview()</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stage 6 -->
+  <div class="stage">
+    <div class="stage-num" style="background:#eb9126">6</div>
+    <div class="stage-content">
+      <div class="stage-title" style="color:#eb9126">Cover &amp; TOC HTML Rendering</div>
+      <div class="stage-desc">
+        <code>buildCoverHtml(fm)</code> and <code>buildSommaireHtml(headings, fm)</code> in
+        <code>document.js</code> read <code>fm.logos.candidat</code> and <code>fm.logos.partenaire</code>.
+        When <code>showInCover</code> is true and a <code>file</code> path is set, the path is embedded
+        directly as the <code>src</code> of an <code>&lt;img&gt;</code> element — no transformation.
+      </div>
+      <div class="cols">
+        <div class="col">
+          <h4>Live preview &amp; PDF export</h4>
+          <p>Both use the same HTML. The preview renderer and the export wrapper both have <code>&lt;base href&gt;</code> pointing at the editor root, so <code>assets/beorn-logo.png</code> resolves correctly. PDF export is not self-contained — it requires network/file access at print time.</p>
+        </div>
+        <div class="col">
+          <h4>Adding a new built-in logo</h4>
+          <p>Drop the file in <code>packages/base/assets/</code>. Add an entry to <code>CARD_PRESETS</code> in <code>cover-form.js</code> and optionally to <code>LOGO_DEFAULTS</code> in <code>memoire-views.js</code>. No fetch, no preload, no blob URL needed.</p>
+        </div>
+      </div>
+      <div class="flow">
+        <span class="box hi">fm.logos.candidat.file</span>
+        <span class="arr">&rarr;</span>
+        <span class="box ok">&lt;img src="assets/beorn-logo.png"&gt;</span>
+        <span class="arr">&rarr;</span>
+        <span class="box">resolved by &lt;base href&gt;</span>
+      </div>
+      <div class="files">
+        <span class="file main">document.js</span>
+        <span class="file">buildCoverHtml()</span>
+        <span class="file">buildSommaireHtml()</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
