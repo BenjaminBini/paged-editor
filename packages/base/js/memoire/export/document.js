@@ -1,6 +1,5 @@
 // document.js — Export document wrapper and cover/sommaire builders.
 
-import { getAssets } from "../../core/assets.js";
 import { escapeHtml } from "../../core/utils.js";
 
 // ── Header text ─────────────────────────────────────────────────────────────
@@ -13,14 +12,8 @@ export function buildHeaderText(fm) {
   return escapeHtml(projectName) + " \u2014 " + escapeHtml(doctype);
 }
 
-const GOOGLE_FONTS_FALLBACK_TAG =
+const GOOGLE_FONTS_TAG =
   '<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Montserrat:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&display=swap" rel="stylesheet" />';
-
-function buildPagedJsTag({ PAGED_JS_BLOB_URL, PAGED_JS_TEXT }) {
-  if (PAGED_JS_BLOB_URL) return `<script src="${PAGED_JS_BLOB_URL}"><\/script>`;
-  if (PAGED_JS_TEXT) return `<script>${PAGED_JS_TEXT}<\/script>`;
-  throw new Error("Paged.js assets are not loaded yet.");
-}
 
 function buildExportBootstrapScript() {
   return `<script>
@@ -32,7 +25,7 @@ function buildExportBootstrapScript() {
     console.error("Paged export bootstrap failed:", error);
   }
 })();
-<\/script>`;
+</script>`;
 }
 
 export function wrapInDocument(bodyHtml, opts) {
@@ -43,15 +36,6 @@ export function wrapInDocument(bodyHtml, opts) {
     hasCoverPage = false,
     rootPageName = "",
   } = opts;
-  const {
-    PDF_CSS,
-    PAGED_CSS,
-    FONTS_CSS,
-    PAGED_JS_BLOB_URL,
-    PAGED_JS_TEXT,
-  } = getAssets();
-
-  const fontsTag = FONTS_CSS ? `<style>${FONTS_CSS}</style>` : GOOGLE_FONTS_FALLBACK_TAG;
   const baseTag = assetBaseHref ? `<base href="${escapeHtml(assetBaseHref)}" />` : "";
   const logoStyle = `<style>.pagedjs_page::after { background-image: url("assets/beorn-logo.png"); }</style>`;
   const includeRunningElements = !rootPageName;
@@ -96,9 +80,9 @@ export function wrapInDocument(bodyHtml, opts) {
 <head>
   <meta charset="UTF-8" />
   ${baseTag}
-  ${fontsTag}
-  <style>${PDF_CSS}</style>
-  <style>${PAGED_CSS}</style>
+  ${GOOGLE_FONTS_TAG}
+  <link rel="stylesheet" href="css/preview/pdf.css" />
+  <link rel="stylesheet" href="css/preview/paged.css" />
   ${sectionEntryCss}
   ${firstPageCss}
   ${logoStyle}
@@ -108,7 +92,7 @@ export function wrapInDocument(bodyHtml, opts) {
   ${includeRunningElements ? '<div class="pdf-page-gradient"></div>' : ""}
   ${runningHeader}
   <div${pdfContentAttrs}>${bodyHtml}</div>
-  ${buildPagedJsTag({ PAGED_JS_BLOB_URL, PAGED_JS_TEXT })}
+  <script src="assets/paged.polyfill.js"></script>
   ${buildExportBootstrapScript()}
 </body>
 </html>`;

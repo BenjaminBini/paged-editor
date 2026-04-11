@@ -7,7 +7,7 @@ import {
   hideLoading,
 } from "../editor/editor.js";
 import { on as busOn } from "../core/event-bus.js";
-import { pagedReady } from "../core/assets.js";
+import { pagedReady } from "../memoire/renderer/preview-renderer.js";
 import {
   openPreviewTab,
   previewPdf,

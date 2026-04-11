@@ -1,5 +1,31 @@
-import { getAssets } from "../../core/assets.js";
 import { buildLineMap } from "./line-map.js";
+
+// ── Asset loading ─────────────────────────────────────────────────────────────
+// Paged.js, CSS, and fonts are loaded once at startup. Consumers destructure
+// from `assets` after awaiting `pagedReady`.
+
+// ── CSS for Paged.js preview() API ───────────────────────────────────────────
+// Paged.js's programmatic preview(html, styles, container) API requires CSS as
+// JS objects — plain <link> tags are not supported. These are fetched once at
+// startup and used only by the live renderer. Export HTML uses <link>/<script>
+// references directly (see document.js).
+
+export const previewCss = { PDF_CSS: "", PAGED_CSS: "", FONTS_CSS: "" };
+
+const GOOGLE_FONTS_URL =
+  "https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700" +
+  "&family=Montserrat:wght@400;500;600;700;800" +
+  "&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500" +
+  "&display=swap";
+
+export const pagedReady = Promise.all([
+  fetch("css/preview/pdf.css").then((r) => r.text()).then((t) => { previewCss.PDF_CSS = t; }),
+  fetch("css/preview/paged.css").then((r) => r.text()).then((t) => { previewCss.PAGED_CSS = t; }),
+  fetch(GOOGLE_FONTS_URL)
+    .then((r) => (r.ok ? r.text() : ""))
+    .then((t) => { previewCss.FONTS_CSS = t; })
+    .catch(() => {}),
+]);
 
 function buildPreviewDocument({ bodyHtml, headerText, rootPageName = "" }) {
   const rootAttrs = rootPageName
@@ -19,11 +45,7 @@ function buildPreviewDocument({ bodyHtml, headerText, rootPageName = "" }) {
 }
 
 function buildPreviewStyles({ rootPageName = "" } = {}) {
-  const {
-    PDF_CSS,
-    PAGED_CSS,
-    FONTS_CSS,
-  } = getAssets();
+  const { PDF_CSS, PAGED_CSS, FONTS_CSS } = previewCss;
 
   const logoCss = `.pagedjs_page::after { background-image: url("assets/beorn-logo.png"); }`;
   const firstPageCss = rootPageName ? "" : `
