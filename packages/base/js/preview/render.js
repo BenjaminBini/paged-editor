@@ -124,6 +124,7 @@ async function renderRequest(request) {
   if (generation !== renderGeneration) return false;
 
   scaleSurface();
+  previewRenderer.rebuildLineMap();
   restorePreviewScrollState(previewScrollState);
   const elapsed = Math.round(performance.now() - renderStartTime);
   lastRenderStats.elapsed = elapsed;
