@@ -1,0 +1,43 @@
+{
+  "title": "ss\ns",
+  "doctype": "Mémoire technique",
+  "ref": "Marché 2025-042",
+  "acheteur": "Bruxelles Formation",
+  "candidat": "BEORN Technologies",
+  "confidential": true,
+  "logos": {
+    "candidat": {
+      "file": "",
+      "showInCover": false,
+      "coverWidth": 180,
+      "coverX": 0,
+      "coverY": 0,
+      "showInFooter": false,
+      "footerWidth": 80,
+      "footerX": 0,
+      "footerY": 0
+    },
+    "partenaire": {
+      "file": "",
+      "showInCover": false,
+      "coverWidth": 180,
+      "coverX": 0,
+      "coverY": 0,
+      "showInFooter": false,
+      "footerWidth": 80,
+      "footerX": 0,
+      "footerY": 0
+    },
+    "acheteur": {
+      "file": "",
+      "showInCover": false,
+      "coverWidth": 180,
+      "coverX": 0,
+      "coverY": 0,
+      "showInFooter": false,
+      "footerWidth": 80,
+      "footerX": 0,
+      "footerY": 0
+    }
+  }
+}
