@@ -19,12 +19,6 @@
 @page {
   size: A4;
   margin: 20mm 18mm 25mm 18mm;
-  @top {
-    content: element(pdf-page-gradient);
-  }
-  @top-center {
-    content: element(pdf-running-header);
-  }
   @bottom {
     content: counter(page);
     font-family: "Hanken Grotesk", sans-serif;
@@ -55,13 +49,7 @@
 }
 @page :first {
   margin: 0;
-  @top {
-    content: none;
-  }
   @top-center {
-    content: none;
-  }
-  @bottom {
     content: none;
   }
 }
@@ -98,26 +86,50 @@
   background: #fff;
 }
 .beorn-cover-body {
-  padding: 4rem 3.5rem 3rem;
+  padding: 3.5rem 3.5rem 3rem;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  min-height: 100vh;
+  height: var(--pagedjs-height-right);
+  /* Purple→blue→teal gradient background */
+  background: linear-gradient(145deg, #2a1f5a 0%, #3373b3 45%, #0096ae 100%);
+  position: relative;
+}
+/* Full-palette top band: magenta→purple→blue→teal (matches running header stripe) */
+.beorn-cover-body::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  background: linear-gradient(90deg, #b82775, #493a8b, #3373b3, #0096ae);
 }
 .beorn-cover-logos {
   display: flex;
   align-items: flex-end;
   gap: 1.5rem;
-  margin-bottom: 3rem;
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 .beorn-cover-logo {
   height: auto !important;
   max-width: 180px;
+  /* White logo on dark gradient background */
+  filter: brightness(0) invert(1);
 }
 .beorn-cover-logo-partner {
   height: 117px !important;
   width: auto;
   transform: translateY(20px);
+  filter: brightness(0) invert(1);
+}
+/* Flex spacers to position title in upper-middle third */
+.beorn-cover-spacer-top {
+  flex: 1;
+}
+.beorn-cover-spacer-bottom {
+  flex: 2;
 }
 .beorn-cover-doctype {
   font-family: "Montserrat", sans-serif;
@@ -125,14 +137,14 @@
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  color: var(--blue);
+  color: rgba(255, 255, 255, 0.7);
   margin-bottom: 1rem;
 }
 .beorn-cover-title {
   font-family: "Montserrat", sans-serif;
   font-size: 26pt;
   font-weight: 800;
-  color: var(--navy);
+  color: #fff;
   line-height: 1.15;
   letter-spacing: -0.02em;
   margin-bottom: 1.5rem;
@@ -142,52 +154,57 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
+  width: 90%;
 }
 .beorn-cover-underline .solid {
-  width: 80px;
+  flex: 1;
   height: 4px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--blue), var(--teal));
+  border-radius: 2px 0 0 2px;
+  background: linear-gradient(
+    90deg,
+    #ce93d8,
+    #90caf9,
+    rgba(255, 255, 255, 0.4)
+  );
 }
 .beorn-cover-underline .chunk {
   height: 4px;
   border-radius: 2px;
-  background: var(--teal);
+  background: rgba(255, 255, 255, 0.35);
 }
 .beorn-cover-ref {
   font-size: 11pt;
-  color: var(--text-light);
+  color: rgba(255, 255, 255, 0.6);
   margin-bottom: 0.3rem;
 }
 .beorn-cover-bottom-section {
-  margin-top: auto;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
 }
 .beorn-cover-confidential {
   font-size: 7.5pt;
-  color: var(--text-light);
+  color: rgba(255, 255, 255, 0.3);
   font-style: italic;
   text-align: center;
-  margin-top: 3rem;
+  margin-top: 2rem;
 }
 .beorn-cover-info-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2.5rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid var(--border);
 }
 .beorn-cover-info-label {
   font-size: 7pt;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: var(--text-light);
+  color: rgba(255, 255, 255, 0.45);
   margin-bottom: 0.3rem;
 }
 .beorn-cover-info-value {
   font-size: 9.5pt;
-  color: var(--navy);
+  color: #fff;
   line-height: 1.5;
 }
 .beorn-cover-info-value strong {
