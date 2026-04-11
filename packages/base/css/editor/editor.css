@@ -233,9 +233,10 @@
 .tw-hidden-gutter { visibility: hidden !important; }
 /* ── Tab bar ── */
 .tab-bar-tabs {
-  display: flex; align-items: stretch; overflow: hidden; gap: 0;
-  min-width: 0; flex: 1;
+  display: flex; align-items: stretch; overflow-x: auto; overflow-y: hidden; gap: 0;
+  min-width: 0; flex: 1; scrollbar-width: none;
 }
+.tab-bar-tabs::-webkit-scrollbar { display: none; }
 /* ── Editor statusbar (bottom) ── */
 .editor-statusbar {
   height: 26px; background: #2d2d3f; border-top: 1px solid #2d2d3f;
@@ -245,10 +246,10 @@
 .tab {
   display: flex; align-items: center; gap: 6px;
   padding: 0 12px; cursor: pointer; font-size: 11px;
-  color: #8e91a4; white-space: nowrap; min-width: 0;
+  color: #8e91a4; white-space: nowrap; min-width: 80px;
   border-top: 2px solid transparent;
   transition: color 0.1s;
-  flex-shrink: 1;
+  flex-shrink: 0;
   text-transform: none; font-weight: 400; letter-spacing: 0;
 }
 .tab:hover { color: #a0a0c0; }
