@@ -1,4 +1,4 @@
-import { getAssets } from "../core/assets.js";
+import { getAssets } from "../../core/assets.js";
 import { buildLineMap } from "./line-map.js";
 
 function buildPreviewDocument({ bodyHtml, headerText, rootPageName = "" }) {

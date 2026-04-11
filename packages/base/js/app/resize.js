@@ -1,5 +1,5 @@
 import { cm } from '../editor/editor.js';
-import { scalePreview, getPreviewFrame } from '../preview/render.js';
+import { scalePreview, getPreviewFrame } from '../memoire/render.js';
 
 // ── Resize handle ────────────────────────────────────────────────────
 const handle = document.getElementById("resizeHandle");

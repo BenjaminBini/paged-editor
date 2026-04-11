@@ -2,12 +2,11 @@
 // Configures marked once at load time; sets per-render context before each parse.
 // Used by both render.js (preview) and pdf-export.js (export).
 
-import { parseFrontmatter } from "../core/utils.js";
+import { parseFrontmatter, escapeHtml } from "../../core/utils.js";
 import {
   COLOR_PAIRS, detectPartieNum, getColorIndex, wrapSection,
   stripLeadingNumber, slugify, decodeEntities, buildUnderline,
-} from "../editor/markdown-helpers.js";
-import { escapeHtml } from "../core/utils.js";
+} from "../../editor/markdown-helpers.js";
 import { resetMermaidQueue, pushToMermaidQueue, getMermaidQueue, resolveMermaid } from "./mermaid-render.js";
 // ── Per-render context (set before each parse, read by renderer) ───────────
 // This is module-scoped, not global — only render-pipeline.js reads/writes it.

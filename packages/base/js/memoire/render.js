@@ -4,11 +4,11 @@ import { editor, previewContainer, status } from "../editor/editor.js";
 import { getActiveFileName, getActiveFilePath } from "../workspace/parse-context.js";
 import { getActiveTab } from "../workspace/tab-bar.js";
 import { getFolderPath } from "../workspace/file-manager.js";
-import { renderMarkdown } from "./render-pipeline.js";
-import { PreviewRenderer } from "./preview-renderer.js";
+import { renderMarkdown } from "./pipeline/render-pipeline.js";
+import { PreviewRenderer } from "./renderer/preview-renderer.js";
 import { emit } from "../core/event-bus.js";
 import { getAssetBaseHref } from "../workspace/workspace-assets.js";
-import { buildHeaderText } from "./document.js";
+import { buildHeaderText } from "./export/document.js";
 import {
   buildCoverErrorRenderResult,
   buildCoverRenderResult,
@@ -16,7 +16,7 @@ import {
   getProjectMetadata,
   isCoverTab,
   isTocTab,
-} from "./memoire-views.js";
+} from "./model/memoire-views.js";
 
 const A4_WIDTH_PX = 794;
 const previewWrapper = document.getElementById("preview-wrapper");

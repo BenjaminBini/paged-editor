@@ -2,7 +2,7 @@
 // The CM5 line-widget table editor is disabled during the CM6 transition.
 
 import { cm, status } from "./editor.js";
-import { triggerRender, clearRenderTimeout } from "../preview/render.js";
+import { triggerRender, clearRenderTimeout } from "../memoire/render.js";
 
 export function isTableLine(line) { return /^\s*\|/.test(line || ""); }
 

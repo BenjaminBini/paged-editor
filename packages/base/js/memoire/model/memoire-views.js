@@ -1,10 +1,10 @@
-import { escapeHtml } from "../core/utils.js";
-import { getFileEntries, getFolderPath, readFile } from "../workspace/file-manager.js";
-import { getActiveTab, getTabs } from "../workspace/tab-bar.js";
-import { cm } from "../editor/editor.js";
-import * as platform from "../core/platform.js";
-import { buildCoverHtml, buildHeaderText, buildSommaireHtml } from "./document.js";
-import { renderMarkdown } from "./render-pipeline.js";
+import { escapeHtml } from "../../core/utils.js";
+import { getFileEntries, getFolderPath, readFile } from "../../workspace/file-manager.js";
+import { getActiveTab, getTabs } from "../../workspace/tab-bar.js";
+import { cm } from "../../editor/editor.js";
+import * as platform from "../../core/platform.js";
+import { buildCoverHtml, buildHeaderText, buildSommaireHtml } from "../export/document.js";
+import { renderMarkdown } from "../pipeline/render-pipeline.js";
 
 export const COVER_TAB_KIND = "cover";
 export const TOC_TAB_KIND = "toc";

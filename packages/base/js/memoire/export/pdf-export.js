@@ -1,13 +1,13 @@
 // pdf-export.js — PDF export, full mémoire assembly, and in-app PDF viewer.
 
-import { editor, status } from "../editor/editor.js";
-import { getActiveFileName, getActiveFilePath } from "../workspace/parse-context.js";
-import { getActiveTab } from "../workspace/tab-bar.js";
-import { renderMarkdown } from "./render-pipeline.js";
+import { editor, status } from "../../editor/editor.js";
+import { getActiveFileName, getActiveFilePath } from "../../workspace/parse-context.js";
+import { getActiveTab } from "../../workspace/tab-bar.js";
+import { renderMarkdown } from "../pipeline/render-pipeline.js";
 import { buildHeaderText, buildCoverHtml, buildSommaireHtml, wrapInDocument } from "./document.js";
-import * as platform from "../core/platform.js";
-import { getFolderPath } from "../workspace/file-manager.js";
-import { getAssetBaseHref } from "../workspace/workspace-assets.js";
+import * as platform from "../../core/platform.js";
+import { getFolderPath } from "../../workspace/file-manager.js";
+import { getAssetBaseHref } from "../../workspace/workspace-assets.js";
 import {
   buildCoverRenderResult,
   buildTocRenderResult,
@@ -16,7 +16,7 @@ import {
   isTocTab,
   loadProjectJsonSource,
   parseProjectJsonSource,
-} from "./memoire-views.js";
+} from "../model/memoire-views.js";
 
 async function resolveAssetBaseHref() {
   const activeTab = getActiveTab();

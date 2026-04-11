@@ -10,7 +10,7 @@ import {
   getProjectJsonPath,
   getTocVirtualPath,
   loadProjectJsonSource,
-} from "../preview/memoire-views.js";
+} from "../memoire/model/memoire-views.js";
 
 // ── Session restore ────────────────────────────────────────────────────────
 

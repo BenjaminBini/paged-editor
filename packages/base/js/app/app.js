@@ -14,7 +14,7 @@ import {
   previewFullMemoire,
   closePdfPanel,
   savePdfAs,
-} from "../preview/pdf-export.js";
+} from "../memoire/export/pdf-export.js";
 import {
   triggerRender,
   scalePreview,
@@ -22,12 +22,12 @@ import {
   clearRenderTimeout,
   scheduleRender,
   zoomIn, zoomOut, zoomReset,
-} from "../preview/render.js";
+} from "../memoire/render.js";
 import {
   setupPreviewClick,
   setupScrollSync,
   rebuildAnchorMap,
-} from "../preview/sync.js";
+} from "../memoire/sync/sync.js";
 import {
   refreshTableWidgets,
   insertTable,
@@ -99,7 +99,7 @@ import {
 } from "../editor/editor-decorations.js";
 import "./resize.js";
 import * as platform from "../core/platform.js";
-import { isMarkdownTab } from "../preview/memoire-views.js";
+import { isMarkdownTab } from "../memoire/model/memoire-views.js";
 
 // ── Initialize file operations module ──────────────────────────────────────
 // (deferred: initFileOps called after all local functions are defined)

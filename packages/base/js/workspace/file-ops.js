@@ -11,13 +11,13 @@ import {
   openTab, closeTab, getActiveTab, getActiveTabIdx, getTabs, markActiveTabClean,
   switchToTab, updateActiveTabPath, findTabByPath,
 } from "./tab-bar.js";
-import { triggerRender } from "../preview/render.js";
+import { triggerRender } from "../memoire/render.js";
 import { hideWelcome } from "../app/menu-state.js";
 import { updateGutterMarkers } from "../editor/editor-decorations.js";
 import * as platform from "../core/platform.js";
 import { emit } from "../core/event-bus.js";
 import { setActiveFileContext } from "./parse-context.js";
-import { isCoverTab, isReadOnlyTab } from "../preview/memoire-views.js";
+import { isCoverTab, isReadOnlyTab } from "../memoire/model/memoire-views.js";
 import { isCoverFormVisible, syncCoverFormToEditor } from "../editor/cover-form.js";
 
 // ── Late-bound callbacks (set once at init to avoid circular deps) ─────────

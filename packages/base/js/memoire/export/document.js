@@ -1,7 +1,7 @@
 // document.js — Export document wrapper and cover/sommaire builders.
 
-import { getAssets } from "../core/assets.js";
-import { escapeHtml } from "../core/utils.js";
+import { getAssets } from "../../core/assets.js";
+import { escapeHtml } from "../../core/utils.js";
 
 // ── Header text ─────────────────────────────────────────────────────────────
 

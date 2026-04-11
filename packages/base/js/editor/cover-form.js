@@ -2,7 +2,7 @@
 // Replaces raw JSON editing with a structured form UI.
 
 import { cm } from "./editor.js";
-import { isCoverTab } from "../preview/memoire-views.js";
+import { isCoverTab } from "../memoire/model/memoire-views.js";
 import { writeBinaryFile } from "../core/platform.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────

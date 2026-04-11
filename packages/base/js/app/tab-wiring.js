@@ -3,7 +3,7 @@
 
 import { cm, status, showLoading, hideLoading, setEditorPaneMode } from "../editor/editor.js";
 import { setActiveFileContext } from "../workspace/parse-context.js";
-import { triggerRender } from "../preview/render.js";
+import { triggerRender } from "../memoire/render.js";
 import { refreshTableWidgets, setTableRangesDirty } from "../editor/table-widget.js";
 import {
   COVER_TAB_KIND,
@@ -15,7 +15,7 @@ import {
   isMarkdownTab,
   isCoverTab,
   isTocTab,
-} from "../preview/memoire-views.js";
+} from "../memoire/model/memoire-views.js";
 import { showCoverForm, hideCoverForm, populateCoverForm, setOnRender, setOnDirty } from "../editor/cover-form.js";
 import {
   renderFileList, readFile, getFileModTime, updateTitle, getFolderPath,

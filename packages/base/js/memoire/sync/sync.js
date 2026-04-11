@@ -1,7 +1,7 @@
 // sync.js — Scroll and click synchronization for direct in-DOM paged preview.
 
-import { cm, previewContainer } from "../editor/editor.js";
-import { getLineMap, handlePreviewLayoutChange } from "./render.js";
+import { cm, previewContainer } from "../../editor/editor.js";
+import { getLineMap, handlePreviewLayoutChange } from "../render.js";
 import { ScrollSyncController } from "./scroll-sync-controller.js";
 
 let controller = null;
