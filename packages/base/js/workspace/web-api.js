@@ -119,6 +119,12 @@
   window.electronAPI = {
     // Read a file by path (path = filename in web mode)
     async readFile(filePath) {
+      if (filePath === "project.json") {
+        const resp = await api("/api/project");
+        if (!resp.ok) throw new Error("Failed to read project.json");
+        const data = await resp.json();
+        return data.content;
+      }
       const resp = await api("/api/files/" + encName(filePath));
       if (!resp.ok) throw new Error("Failed to read file: " + filePath);
       const data = await resp.json();
@@ -127,6 +133,15 @@
 
     // Write a file
     async writeFile(filePath, content) {
+      if (filePath === "project.json") {
+        const resp = await api("/api/project", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ content }),
+        });
+        if (!resp.ok) throw new Error("Failed to write project.json");
+        return;
+      }
       const resp = await api("/api/files/" + encName(filePath), {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -162,6 +177,12 @@
 
     // Get file modification time
     async getFileModTime(filePath) {
+      if (filePath === "project.json") {
+        const resp = await api("/api/project/meta");
+        if (!resp.ok) return 0;
+        const data = await resp.json();
+        return data.modifiedAt;
+      }
       const resp = await api("/api/files/" + encName(filePath) + "/meta");
       if (!resp.ok) return 0;
       const data = await resp.json();

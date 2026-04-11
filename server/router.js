@@ -171,11 +171,67 @@ export function createEditorRouter(options) {
     }
   });
 
+  // ── Project metadata (project.json) ─────────────────────────────────────
+
+  router.get("/api/project", async (_req, res) => {
+    await ensureResolved();
+    const projectPath = join(workDir, "project.json");
+    try {
+      const [content, s] = await Promise.all([readFile(projectPath, "utf-8"), stat(projectPath)]);
+      res.json({ content, modifiedAt: s.mtimeMs });
+    } catch (e) {
+      if (e.code === "ENOENT") return res.json({ content: null, modifiedAt: 0 });
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  router.put("/api/project", async (req, res) => {
+    await ensureResolved();
+    const { content } = req.body;
+    if (typeof content !== "string") {
+      return res.status(400).json({ error: "Missing content field" });
+    }
+    try {
+      JSON.parse(content);
+    } catch {
+      return res.status(400).json({ error: "Invalid JSON" });
+    }
+    try {
+      const projectPath = join(workDir, "project.json");
+      await writeFile(projectPath, content, "utf-8");
+      const s = await stat(projectPath);
+      res.json({ ok: true, modifiedAt: s.mtimeMs });
+    } catch (e) {
+      res.status(500).json({ error: e.message });
+    }
+  });
+
+  router.get("/api/project/meta", async (_req, res) => {
+    await ensureResolved();
+    try {
+      const s = await stat(join(workDir, "project.json"));
+      res.json({ modifiedAt: s.mtimeMs });
+    } catch (e) {
+      if (e.code === "ENOENT") return res.json({ modifiedAt: 0 });
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   router.put("/api/files/:name", async (req, res) => {
     await ensureResolved();
     const name = sanitizeName(req.params.name);
     if (!name) return res.status(400).json({ error: "Invalid filename" });
-    if (!name.endsWith(".md")) return res.status(400).json({ error: "Only .md files allowed" });
+    if (name !== "project.json" && !name.endsWith(".md")) return res.status(400).json({ error: "Only .md files allowed" });
+    if (name === "project.json") {
+      const { content } = req.body;
+      if (typeof content !== "string") return res.status(400).json({ error: "Missing content field" });
+      try { JSON.parse(content); } catch { return res.status(400).json({ error: "Invalid JSON" }); }
+      try {
+        await writeFile(join(workDir, "project.json"), content, "utf-8");
+        const s = await stat(join(workDir, "project.json"));
+        return res.json({ ok: true, modifiedAt: s.mtimeMs });
+      } catch (e) { return res.status(500).json({ error: e.message }); }
+    }
 
     const { content } = req.body;
     if (typeof content !== "string") {
