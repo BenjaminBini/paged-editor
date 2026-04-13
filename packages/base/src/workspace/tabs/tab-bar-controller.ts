@@ -3,11 +3,12 @@
 import { captureEditorSnapshot, cm, restoreEditorSnapshot, setEditorReadOnly } from "../../editor/codemirror-editor.js";
 import { showContextMenu } from "../../shell/ui/context-menu.js";
 import { canShowInFinder, showInFinder } from "../../infrastructure/platform-adapter.js";
+import { signal, effect, batch } from "../../infrastructure/signal.js";
 
 type Tab = { path: string; name: string; dirty?: boolean; kind?: string; readOnly?: boolean; editorDisabled?: boolean; savedContent?: string; editorState?: any; localFileModTime?: number; [key: string]: any };
 
-const tabs: Tab[] = []; // [{ path, name, editorState, savedContent, localFileModTime, dirty, kind, readOnly, editorDisabled }]
-let activeTabIdx: number = -1;
+const tabs = signal<Tab[]>([]);
+const activeTabIdx = signal<number>(-1);
 
 const tabBarTabs: HTMLElement | null = document.getElementById("tabBarTabs");
 
@@ -40,12 +41,12 @@ function blankEditorState(): { content: string; selection: { anchor: { line: num
 }
 
 function storeActiveEditorState(): void {
-  if (activeTabIdx < 0 || activeTabIdx >= tabs.length) return;
-  tabs[activeTabIdx].editorState = captureEditorSnapshot();
+  if (activeTabIdx.value < 0 || activeTabIdx.value >= tabs.value.length) return;
+  tabs.value[activeTabIdx.value].editorState = captureEditorSnapshot();
 }
 
 export function openTab(path: string, name: string, content: string | undefined, modTime: number | undefined, options: { kind?: string; readOnly?: boolean; editorDisabled?: boolean } = {}): number {
-  const existing = tabs.findIndex((t) => t.path && t.path === path);
+  const existing = tabs.value.findIndex((t) => t.path && t.path === path);
   if (existing >= 0) {
     switchToTab(existing);
     return existing;
@@ -67,95 +68,98 @@ export function openTab(path: string, name: string, content: string | undefined,
     editorDisabled: !!options.editorDisabled,
   };
 
-  tabs.push(tab);
-  const idx = tabs.length - 1;
+  tabs.value = [...tabs.value, tab];
+  const idx = tabs.value.length - 1;
   switchToTab(idx);
   return idx;
 }
 
 export function closeTab(idx: number): void {
-  if (idx < 0 || idx >= tabs.length) return;
-  if (idx === activeTabIdx) storeActiveEditorState();
+  if (idx < 0 || idx >= tabs.value.length) return;
+  if (idx === activeTabIdx.value) storeActiveEditorState();
 
-  tabs.splice(idx, 1);
+  tabs.value = tabs.value.filter((_, i) => i !== idx);
 
-  if (tabs.length === 0) {
-    activeTabIdx = -1;
+  if (tabs.value.length === 0) {
+    activeTabIdx.value = -1;
     if (_onBeforeSwap) _onBeforeSwap();
     setEditorReadOnly(false);
     restoreEditorSnapshot(blankEditorState());
-    renderTabBar();
     if (_onAllClosed) _onAllClosed();
     return;
   }
 
-  if (idx <= activeTabIdx) activeTabIdx = Math.max(0, activeTabIdx - 1);
-  switchToTab(activeTabIdx);
+  if (idx <= activeTabIdx.value) activeTabIdx.value = Math.max(0, activeTabIdx.value - 1);
+  switchToTab(activeTabIdx.value);
 }
 
 export function closeActiveTab(): void {
-  if (activeTabIdx >= 0) closeTab(activeTabIdx);
+  if (activeTabIdx.value >= 0) closeTab(activeTabIdx.value);
 }
 
 export function closeTabsToRight(idx: number): void {
-  if (idx < 0 || idx >= tabs.length - 1) return;
-  if (activeTabIdx > idx) storeActiveEditorState();
-  tabs.splice(idx + 1);
-  if (activeTabIdx > idx) activeTabIdx = idx;
-  switchToTab(Math.min(activeTabIdx, tabs.length - 1));
+  if (idx < 0 || idx >= tabs.value.length - 1) return;
+  if (activeTabIdx.value > idx) storeActiveEditorState();
+  batch(() => {
+    tabs.value = tabs.value.slice(0, idx + 1);
+    if (activeTabIdx.value > idx) activeTabIdx.value = idx;
+  });
+  switchToTab(Math.min(activeTabIdx.value, tabs.value.length - 1));
 }
 
 export function closeTabsToLeft(idx: number): void {
-  if (idx <= 0 || idx >= tabs.length) return;
-  if (activeTabIdx < idx) storeActiveEditorState();
-  tabs.splice(0, idx);
-  const newActive = activeTabIdx < idx ? 0 : activeTabIdx - idx;
-  activeTabIdx = 0;
-  switchToTab(Math.max(0, newActive));
+  if (idx <= 0 || idx >= tabs.value.length) return;
+  if (activeTabIdx.value < idx) storeActiveEditorState();
+  const prevActive = activeTabIdx.value;
+  batch(() => {
+    tabs.value = tabs.value.slice(idx);
+    activeTabIdx.value = prevActive < idx ? 0 : prevActive - idx;
+  });
+  switchToTab(Math.max(0, activeTabIdx.value));
 }
 
 export function closeAllTabs(): void {
-  tabs.splice(0);
-  activeTabIdx = -1;
+  batch(() => {
+    tabs.value = [];
+    activeTabIdx.value = -1;
+  });
   if (_onBeforeSwap) _onBeforeSwap();
   setEditorReadOnly(false);
   restoreEditorSnapshot(blankEditorState());
-  renderTabBar();
   if (_onAllClosed) _onAllClosed();
 }
 
 export function switchToTab(idx: number): void {
-  if (idx < 0 || idx >= tabs.length) return;
+  if (idx < 0 || idx >= tabs.value.length) return;
 
-  if (activeTabIdx >= 0 && activeTabIdx < tabs.length) {
+  if (activeTabIdx.value >= 0 && activeTabIdx.value < tabs.value.length) {
     storeActiveEditorState();
   }
 
-  activeTabIdx = idx;
-  const tab = tabs[idx];
+  activeTabIdx.value = idx;
+  const tab = tabs.value[idx];
   if (_onBeforeSwap) _onBeforeSwap();
   setEditorReadOnly(!!tab.readOnly);
   restoreEditorSnapshot(tab.editorState || blankEditorState());
   cm.refresh();
 
-  renderTabBar();
   if (_onSwitch) _onSwitch(tab);
 }
 
 export function getActiveTab(): Tab | null {
-  if (activeTabIdx < 0 || activeTabIdx >= tabs.length) return null;
-  return tabs[activeTabIdx];
+  if (activeTabIdx.value < 0 || activeTabIdx.value >= tabs.value.length) return null;
+  return tabs.value[activeTabIdx.value];
 }
 
-export function getActiveTabIdx(): number { return activeTabIdx; }
-export function getTabs(): Tab[] { return [...tabs]; }
-export function getTabCount(): number { return tabs.length; }
+export function getActiveTabIdx(): number { return activeTabIdx.value; }
+export function getTabs(): Tab[] { return [...tabs.value]; }
+export function getTabCount(): number { return tabs.value.length; }
 
 export function markActiveTabDirty(): void {
   const tab = getActiveTab();
   if (!tab || tab.dirty) return;
   tab.dirty = true;
-  renderTabBar();
+  tabs.value = [...tabs.value]; // trigger re-render
 }
 
 export function markActiveTabClean(newSavedContent: string, modTime: number | undefined): void {
@@ -165,7 +169,7 @@ export function markActiveTabClean(newSavedContent: string, modTime: number | un
   tab.savedContent = newSavedContent;
   tab.editorState = captureEditorSnapshot();
   if (modTime !== undefined) tab.localFileModTime = modTime;
-  renderTabBar();
+  tabs.value = [...tabs.value]; // trigger re-render
 }
 
 export function updateActiveTabPath(path: string, name: string): void {
@@ -173,7 +177,7 @@ export function updateActiveTabPath(path: string, name: string): void {
   if (!tab) return;
   tab.path = path;
   tab.name = name;
-  renderTabBar();
+  tabs.value = [...tabs.value]; // trigger re-render
 }
 
 export function isActiveTabDirty(): boolean {
@@ -182,11 +186,11 @@ export function isActiveTabDirty(): boolean {
 }
 
 export function hasOpenTabs(): boolean {
-  return tabs.length > 0;
+  return tabs.value.length > 0;
 }
 
 export function findTabByPath(path: string): number {
-  return tabs.findIndex((t) => t.path === path);
+  return tabs.value.findIndex((t) => t.path === path);
 }
 
 function requestCloseTab(idx: number): void {
@@ -209,13 +213,13 @@ function requestCloseAllTabs(): void {
   return closeAllTabs();
 }
 
-export function renderTabBar(): void {
+function renderTabBar(tabList: Tab[], activeIdx: number): void {
   if (!tabBarTabs) return;
   tabBarTabs.innerHTML = "";
 
-  tabs.forEach((tab, i) => {
+  tabList.forEach((tab, i) => {
     const el = document.createElement("div");
-    el.className = "tab" + (i === activeTabIdx ? " active" : "");
+    el.className = "tab" + (i === activeIdx ? " active" : "");
     el.onclick = (e) => {
       if ((e.target as HTMLElement).classList.contains("tab-close")) return;
       switchToTab(i);
@@ -260,15 +264,19 @@ export function renderTabBar(): void {
   });
 }
 
+effect(() => {
+  renderTabBar(tabs.value, activeTabIdx.value);
+});
+
 function showTabContextMenu(x: number, y: number, tabIdx: number): void {
-  const tab = tabs[tabIdx];
+  const tab = tabs.value[tabIdx];
   showContextMenu(x, y, [
     { label: "Save", disabled: !tab.dirty, action: () => { if (_onSave) { switchToTab(tabIdx); _onSave(); } } },
     { label: "Refresh from Disk", disabled: !tab.path, action: () => { if (_onRefresh) { switchToTab(tabIdx); _onRefresh(tab); } } },
     { separator: true },
     { label: "Close", action: () => requestCloseTab(tabIdx) },
     { label: "Close Tabs to the Left", disabled: tabIdx === 0, action: () => requestCloseTabsToLeft(tabIdx) },
-    { label: "Close Tabs to the Right", disabled: tabIdx >= tabs.length - 1, action: () => requestCloseTabsToRight(tabIdx) },
+    { label: "Close Tabs to the Right", disabled: tabIdx >= tabs.value.length - 1, action: () => requestCloseTabsToRight(tabIdx) },
     { label: "Close All", action: () => requestCloseAllTabs() },
     { separator: true },
     { label: "Copy Path", disabled: !tab.path, action: () => tab.path && navigator.clipboard.writeText(tab.path) },
@@ -278,18 +286,18 @@ function showTabContextMenu(x: number, y: number, tabIdx: number): void {
 
 export function getSessionState(): { openTabs: Array<{ path: string; name: string; kind: string | undefined; readOnly: boolean | undefined; editorDisabled: boolean | undefined }>; activeTab: { path: string | null; name: string | null; kind: string | null } | null } {
   return {
-    openTabs: tabs.map((t) => ({
+    openTabs: tabs.value.map((t) => ({
       path: t.path,
       name: t.name,
       kind: t.kind,
       readOnly: t.readOnly,
       editorDisabled: t.editorDisabled,
     })),
-    activeTab: activeTabIdx >= 0
+    activeTab: activeTabIdx.value >= 0
       ? {
-        path: tabs[activeTabIdx]?.path || null,
-        name: tabs[activeTabIdx]?.name || null,
-        kind: tabs[activeTabIdx]?.kind || null,
+        path: tabs.value[activeTabIdx.value]?.path || null,
+        name: tabs.value[activeTabIdx.value]?.name || null,
+        kind: tabs.value[activeTabIdx.value]?.kind || null,
       }
       : null,
   };
