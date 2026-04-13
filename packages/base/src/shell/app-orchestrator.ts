@@ -63,7 +63,7 @@ import { closeDiffModal, resolveConflict } from "../workspace/files/diff-merge-s
 import {
   init as initAiCollab, addAgent,
   getConnectedAgents, sendRequest, sendAnswer,
-  onConversationUpdate, getConversation, onAgentClick, onAgentsChanged,
+  getConversation,
 } from "../collaboration/agent-connection-manager.js";
 import {
   show as showChat, hide as hideChat, setAgents as setChatAgents,
@@ -205,25 +205,31 @@ function onChangeDecorations(): void {
   }, 200);
 }
 
+let _cursorRafPending = false;
 function onCursorDecorations(): void {
-  if (!isEditableMarkdownContext()) {
-    if (btnFormatTable) btnFormatTable.style.display = "none";
-    return;
-  }
-  // Page breaks: re-apply when cursor moves to/from a \newpage line
-  applyPageBreakMarks();
-  // Heading badges: re-apply when cursor line changes
-  const cur = cm.getCursor("head").line;
-  if (cur !== getCursorLine()) {
-    setCursorLine(cur);
-    applyHeadingMarks();
-  }
-  // Outline highlight
-  updateOutlineHighlight();
-  // Table format button
-  if (btnFormatTable) {
-    btnFormatTable.style.display = getTableRangeAt(cm.getCursor("head").line) ? "" : "none";
-  }
+  if (_cursorRafPending) return;
+  _cursorRafPending = true;
+  requestAnimationFrame(() => {
+    _cursorRafPending = false;
+    if (!isEditableMarkdownContext()) {
+      if (btnFormatTable) btnFormatTable.style.display = "none";
+      return;
+    }
+    // Page breaks: re-apply when cursor moves to/from a \newpage line
+    applyPageBreakMarks();
+    // Heading badges: re-apply when cursor line changes
+    const cur = cm.getCursor("head").line;
+    if (cur !== getCursorLine()) {
+      setCursorLine(cur);
+      applyHeadingMarks();
+    }
+    // Outline highlight
+    updateOutlineHighlight();
+    // Table format button
+    if (btnFormatTable) {
+      btnFormatTable.style.display = getTableRangeAt(cm.getCursor("head").line) ? "" : "none";
+    }
+  });
 }
 
 cm.on("change", onChangeDecorations);
@@ -523,16 +529,16 @@ pagedReady
       sendAnswer(agentKey, questionId, value);
     });
 
-    onConversationUpdate(() => {
+    busOn("conversation-updated", () => {
       refreshChat();
     });
 
-    onAgentClick((key: string) => {
+    busOn("agent-click", (key) => {
       showChat();
       focusForAgent(key);
     });
 
-    onAgentsChanged((connectedAgents: any[]) => {
+    busOn("agents-changed", (connectedAgents) => {
       setChatAgents(connectedAgents);
       if (connectedAgents.length > 0) showChat();
       else hideChat();

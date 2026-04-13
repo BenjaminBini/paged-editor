@@ -3,6 +3,7 @@
 import { computeDiff, renderDiffHtml } from '../workspace/files/diff-merge-service.js';
 import { escapeHtml } from '../infrastructure/text-utils.js';
 import * as platform from '../infrastructure/platform-adapter.js';
+import { emit } from '../infrastructure/event-bus.js';
 
 // ── State ───────────────────────────────────────────────────────────────────
 
@@ -23,18 +24,9 @@ let _getFilePath: (() => string | null) | null = null;
 
 // ── Conversation hooks ──────────────────────────────────────────────────────
 
-let _onConversationUpdate: ((key: string) => void) | null = null;
-export function onConversationUpdate(fn: (key: string) => void): void { _onConversationUpdate = fn; }
-
 function notifyConversationUpdate(key: string): void {
-  if (_onConversationUpdate) _onConversationUpdate(key);
+  emit("conversation-updated", key);
 }
-
-let _onAgentsChanged: ((agents: Array<{ key: string; name: string }>) => void) | null = null;
-export function onAgentsChanged(fn: (agents: Array<{ key: string; name: string }>) => void): void { _onAgentsChanged = fn; }
-
-let _onAgentClick: ((key: string) => void) | null = null;
-export function onAgentClick(fn: (key: string) => void): void { _onAgentClick = fn; }
 
 export function getConversation(key: string): Array<{ type: string; [key: string]: any }> {
   return conversations.get(key) || [];
@@ -52,7 +44,7 @@ export function init(cm: any, getFilePath: () => string | null): void {
     pendingKeys.delete(key);
     conversations.set(key, conversations.get(key) || []);
     renderAgentList();
-    if (_onAgentsChanged) _onAgentsChanged(getConnectedAgents());
+    emit("agents-changed", getConnectedAgents());
     // If the modal is open waiting for this agent, show success animation
     if (currentModalKey === key) {
       showAgentModalConnected();
@@ -65,7 +57,7 @@ export function init(cm: any, getFilePath: () => string | null): void {
       agent.connected = false;
       renderAgentList();
     }
-    if (_onAgentsChanged) _onAgentsChanged(getConnectedAgents());
+    emit("agents-changed", getConnectedAgents());
     // Close the agent prompt modal if it was waiting for this agent
     if (currentModalKey === key) {
       closeAgentModal();
@@ -355,7 +347,7 @@ function renderAgentList(): void {
     el.className = "agent-item connected";
     el.innerHTML = `<span class="agent-dot"></span><span class="agent-name">${escapeHtml(name)}</span><button class="agent-disconnect" title="Disconnect agent">&times;</button>`;
     (el.querySelector(".agent-name") as HTMLElement).onclick = () => {
-      if (_onAgentClick) _onAgentClick(key);
+      emit("agent-click", key);
     };
     (el.querySelector(".agent-disconnect") as HTMLElement).onclick = (e) => {
       e.stopPropagation();

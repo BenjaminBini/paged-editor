@@ -5,6 +5,9 @@ export interface EventMap {
   "content-loaded": [];
   "section-ready": [];
   "file-saved": [payload: { file: string; name: string }];
+  "agents-changed": [agents: Array<{ key: string; name: string }>];
+  "conversation-updated": [agentKey: string];
+  "agent-click": [agentKey: string];
 }
 
 type Listener<K extends keyof EventMap> = (...args: EventMap[K]) => void;
