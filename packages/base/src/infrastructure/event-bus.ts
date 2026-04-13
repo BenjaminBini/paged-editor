@@ -1,22 +1,30 @@
 // event-bus.js — Lightweight publish/subscribe for cross-module communication.
 // Replaces the inconsistent register*/on*/set* callback patterns.
 
-const listeners: Map<string, ((...args: any[]) => void)[]> = new Map();
-
-export function on(event: string, fn: (...args: any[]) => void): void {
-  if (!listeners.has(event)) listeners.set(event, []);
-  listeners.get(event)!.push(fn);
+export interface EventMap {
+  "content-loaded": [];
+  "section-ready": [];
+  "file-saved": [payload: { file: string; name: string }];
 }
 
-export function off(event: string, fn: (...args: any[]) => void): void {
+type Listener<K extends keyof EventMap> = (...args: EventMap[K]) => void;
+
+const listeners: Map<string, Listener<keyof EventMap>[]> = new Map();
+
+export function on<K extends keyof EventMap>(event: K, fn: Listener<K>): void {
+  if (!listeners.has(event)) listeners.set(event, []);
+  listeners.get(event)!.push(fn as Listener<keyof EventMap>);
+}
+
+export function off<K extends keyof EventMap>(event: K, fn: Listener<K>): void {
   const fns = listeners.get(event);
   if (!fns) return;
-  const idx = fns.indexOf(fn);
+  const idx = fns.indexOf(fn as Listener<keyof EventMap>);
   if (idx >= 0) fns.splice(idx, 1);
 }
 
-export function emit(event: string, ...args: any[]): void {
+export function emit<K extends keyof EventMap>(event: K, ...args: EventMap[K]): void {
   const fns = listeners.get(event);
   if (!fns) return;
-  for (const fn of fns) fn(...args);
+  for (const fn of fns) (fn as (...a: EventMap[K]) => void)(...args);
 }
