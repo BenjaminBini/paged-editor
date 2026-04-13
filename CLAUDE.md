@@ -13,38 +13,92 @@ Runs in three modes:
 
 ## Development
 
-**No build step for the editor frontend.** Vanilla JavaScript (ES6 modules) served as static files.
+**TypeScript source in `packages/base/src/`, compiled to `dist/js/` as ES modules.**
 
+- Build: `cd packages/base && npm run build` (runs tsc)
+- Type check: `cd packages/base && npm run build:check`
 - Electron: `npm install && npm start`
 - Web server: `cd server && npm install && WORKSPACE=/path/to/folder node index.js`
 - React component: `cd packages/react && npm install && npm run build`
-- No linting, testing, or TypeScript in the editor frontend — just raw JS modules
+- tsconfig uses `strict: false` — types are being tightened progressively
 
 ## Architecture
 
 ### Module System
 
-Pure ES6 modules loaded from `js/app.js` (the single entry point via `<script type="module">`). Modules communicate through:
+TypeScript source in `src/`, compiled to `dist/js/` as ES modules. Entry point: `dist/js/shell/app-orchestrator.js` (loaded via `<script type="module">`). Modules communicate through:
 
-- **Hook registration**: `registerOnSetValue()`, `registerOnPagedReady()`, `registerOnSwap()`, `registerRefreshTableWidgets()` — callbacks for cross-module events
-- **Setter injection**: `setOpenFile()`, `setDoSave()`, `setStorageMode()` — dependency injection between modules
-- **Global function exposure**: `app.js` assigns functions to `window.*` for HTML `onclick` handlers
+- **Event bus**: `infrastructure/event-bus.js` — lightweight pub/sub for cross-module events
+- **Setter injection**: `setOpenFile()`, `setDoSave()` — dependency injection to break circular deps
+- **Global function exposure**: `app-orchestrator.js` assigns functions to `window.*` for HTML `onclick` handlers
 
-### Key Modules (js/)
+### Folder Structure (js/)
 
-| Module | Responsibility |
-|--------|---------------|
-| `app.js` | Orchestrator: wires modules together, manages auto-render (800ms debounce), state restoration, drag-drop |
-| `render.js` | Markdown→HTML pipeline (marked + frontmatter + French typography fixes), double-buffered iframe rendering with Paged.js |
-| `file-manager.js` | File I/O, folder management, conflict-aware save. Uses `window.electronAPI` (Electron IPC or web-api.js REST shim) |
-| `web-api.js` | Web mode: drop-in `window.electronAPI` replacement backed by REST `fetch()`. Loaded as regular script before ES modules |
-| `google-drive.js` | OAuth2 flow, Drive API v3, conflict detection via `modifiedTime` |
-| `diff-merge.js` | Myers-like LCS diff, three-way merge (base/local/remote), conflict resolution modal |
-| `table-widget.js` | Live WYSIWYG table editor overlaid on CodeMirror, lazy-loaded within viewport |
-| `sync.js` | Bidirectional scroll sync between editor and preview, click-to-navigate, cursor line highlight |
-| `editor.js` | CodeMirror 5 wrapper and DOM references |
-| `resize.js` | Drag handle for pane resizing |
-| `pdf-styles.js` | CSS constants for the BEORN PDF template (cover, TOC, headers, branding) |
+Organized by **layers** (bottom→top dependency direction) and **topics** within each layer:
+
+```
+src/                        (TypeScript source → compiled to dist/js/)
+├── types/                  ← Type declarations for external libs
+├── infrastructure/         ← Foundation: no app deps
+│   ├── event-bus.js              Lightweight pub/sub
+│   ├── platform-adapter.js       Platform abstraction (Electron/web)
+│   └── text-utils.js             Frontmatter parsing, HTML escaping
+│
+├── editor/                 ← CodeMirror editor layer
+│   ├── codemirror-editor.js      CM6 editor initialization & compat API
+│   ├── cover-form-editor.js      Form-based editor for project.json
+│   ├── editor-decorations.js     Gutter markers, heading badges
+│   ├── formatting-toolbar.js     Bold/italic/table/image toolbar
+│   ├── markdown-helpers.js       HTML rendering utilities
+│   ├── outline-manager.js        Document outline panel
+│   └── table-widget.js           WYSIWYG table editor overlay
+│
+├── document/               ← Document model, rendering & export
+│   ├── pdf-constants.js          CSS/URL constants
+│   ├── render-scheduler.js       Schedules renders, picks pipeline, pushes to renderer
+│   ├── model/
+│   │   └── memoire-views.js      Project metadata & view types
+│   ├── rendering/
+│   │   ├── section-pipeline.js   Markdown→HTML pipeline (marked config)
+│   │   ├── cover-pipeline.js     Cover tab render pipeline
+│   │   ├── toc-pipeline.js       TOC tab render pipeline
+│   │   ├── mermaid-renderer.js   Lazy Mermaid loading & SVG cache
+│   │   ├── preview-renderer.js   HTML→iframe renderer
+│   │   └── line-map-builder.js   Editor↔preview line mapping
+│   ├── sync/
+│   │   ├── preview-sync-setup.js   Scroll/click sync setup
+│   │   └── scroll-sync-controller.js  Bidirectional smooth scroll
+│   └── export/
+│       ├── pdf-export-service.js   PDF export & full mémoire assembly
+│       ├── cover-page-builder.js   BEORN-branded hero cover HTML
+│       ├── sommaire-builder.js     Table of contents HTML
+│       └── html-document-wrapper.js  Full HTML document wrapper
+│
+├── workspace/              ← File & tab management
+│   ├── web-api-shim.js           REST-backed window.electronAPI (web mode)
+│   ├── files/
+│   │   ├── file-manager.js       Folder state, file I/O, conflict detection
+│   │   ├── file-operations.js    Open/save/reload logic
+│   │   ├── asset-manager.js      Pasted image asset management
+│   │   ├── diff-merge-service.js LCS diff & three-way merge
+│   │   └── active-file-context.js  Active file name/path tracker
+│   └── tabs/
+│       └── tab-bar-controller.js Multi-tab state & UI
+│
+├── collaboration/          ← AI agent features
+│   ├── agent-connection-manager.js  WebSocket agent pool & conversations
+│   └── chat-sidebar-controller.js   Chat sidebar UI
+│
+└── shell/                  ← App orchestration & chrome
+    ├── app-orchestrator.js       Main entry: wires everything together
+    ├── session-restore.js        Session persistence & recent items
+    ├── tab-integration.js        Tab↔editor↔preview integration
+    └── ui/
+        ├── context-menu.js       Shared context menu renderer
+        ├── keyboard-shortcuts.js Global keyboard bindings
+        ├── menu-state-manager.js Menu bar & welcome screen state
+        └── resize-handle.js      Editor/preview pane resize
+```
 
 ### Rendering Pipeline
 
@@ -55,16 +109,15 @@ Pure ES6 modules loaded from `js/app.js` (the single entry point via `<script ty
 
 ### Storage & Conflict Handling
 
-Three storage backends, all sharing the same `window.electronAPI` interface:
+Two storage backends, both sharing the same `window.electronAPI` interface:
 - **Electron** — Node fs via IPC (`preload.js` → `main.js`)
-- **Web** — REST API via `fetch()` (`js/web-api.js` → `server/router.js`)
-- **Google Drive** — OAuth2 + Drive API v3
+- **Web** — REST API via `fetch()` (`dist/js/workspace/web-api-shim.js` → `server/router.js`)
 
 All backends detect external modifications on save and present a three-way merge UI when conflicts arise.
 
 ### Web Mode Architecture
 
-`js/web-api.js` is loaded as a regular `<script>` before ES modules. It creates `window.electronAPI` backed by REST calls to the server. This means all existing modules (`file-manager.js`, `app.js`, `tab-bar.js`) work unchanged — they call the same API, just routed differently.
+`dist/js/workspace/web-api-shim.js` is loaded as a regular `<script>` before ES modules. It creates `window.electronAPI` backed by REST calls to the server. This means all existing modules (`file-manager.js`, `app-orchestrator.js`, `tab-bar-controller.js`) work unchanged — they call the same API, just routed differently.
 
 `server/router.js` exports `createEditorRouter({ workspace })` — an Express router that serves the editor frontend + file CRUD API. Can be used standalone (`server/index.js`) or mounted in an existing Express app at any path.
 

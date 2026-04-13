@@ -42,28 +42,35 @@ body {
     #b82775 100%
   );
 }
+/* Cover pages have their own top band — hide the bleed gradient */
+.pagedjs_named_page .pagedjs_bleed-top {
+  background: none;
+}
+/* Cover: gradient on the page sheet, transparent content area */
+.pagedjs_cover_page .pagedjs_sheet {
+  background: linear-gradient(145deg, #2a1f5a 0%, #3373b3 45%, #0096ae 100%);
+}
+.pagedjs_cover_page .pagedjs_page_content,
+.pagedjs_cover_page .pagedjs_page_content * {
+  background: transparent;
+}
+.pagedjs_cover_page .pagedjs_sheet::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  z-index: 10;
+  background: linear-gradient(90deg, #b82775, #493a8b, #3373b3, #0096ae);
+}
+.pagedjs_cover_page .pagedjs_pagebox {
+  position: relative;
+}
 .pagedjs_margin-bottom-center > .pagedjs_margin-content::after {
   font-family: "Hanken Grotesk", sans-serif;
   font-size: 8pt;
   color: #718096;
-}
-/* Hide watermark on cover pages (named page "cover") */
-.pagedjs_named_page::after {
-  display: none;
-}
-/* Beorn logo watermark bottom-left on every page */
-.pagedjs_page::after {
-  content: "";
-  position: absolute;
-  bottom: 8mm;
-  left: 18mm;
-  width: 107px;
-  height: 40px;
-  z-index: 50;
-  opacity: 0.6;
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: left center;
 }
 /* Editor focus highlight */
 .paged-highlight {

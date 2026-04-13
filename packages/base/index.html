@@ -570,8 +570,8 @@
     </div>
 
     <!-- Web mode: REST-backed API shim (runs before ES modules) -->
-    <script src="js/workspace/web-api.js"></script>
+    <script src="dist/js/workspace/web-api-shim.js"></script>
     <!-- Single entry point — all logic lives in ES modules -->
-    <script type="module" src="js/app/app.js"></script>
+    <script type="module" src="dist/js/shell/app-orchestrator.js"></script>
   </body>
 </html>

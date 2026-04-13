@@ -21,6 +21,12 @@ if [ ! -d "$PROJECT_ROOT/server/node_modules" ]; then
   cd "$PROJECT_ROOT/server" && npm install
 fi
 
+# Build TypeScript sources if needed
+if [ ! -d "$PROJECT_ROOT/packages/base/dist/js" ]; then
+  echo "Building TypeScript sources..."
+  cd "$PROJECT_ROOT/packages/base" && npm run build
+fi
+
 echo ""
 echo "  Paged Editor — Demo Mode"
 echo "  ========================"

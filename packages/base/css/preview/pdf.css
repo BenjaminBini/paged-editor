@@ -19,23 +19,33 @@
 @page {
   size: A4;
   margin: 20mm 18mm 25mm 18mm;
+  @top-center {
+    content: element(pdf-running-header);
+  }
   @bottom {
     content: counter(page);
     font-family: "Hanken Grotesk", sans-serif;
     font-size: 8pt;
     color: #718096;
   }
+  @bottom-left {
+    content: element(pdf-footer-logo);
+  }
+  @bottom-center {
+    content: element(pdf-footer-confidential);
+  }
 }
 @page cover {
-  margin: 0;
-  @top {
-    content: none;
-  }
+  margin: 0 3.5rem 25mm 3.5rem;
   @top-center {
     content: none;
   }
-  @bottom {
+  @bottom-left {
     content: none;
+  }
+  @bottom-center {
+    content: element(cover-bottom);
+    width: 100%;
   }
 }
 @page sommaire {
@@ -46,11 +56,11 @@
     font-size: 8pt;
     color: #718096;
   }
-}
-@page :first {
-  margin: 0;
-  @top-center {
-    content: none;
+  @bottom-left {
+    content: element(pdf-footer-logo);
+  }
+  @bottom-center {
+    content: element(pdf-footer-confidential);
   }
 }
 * {
@@ -78,32 +88,13 @@
   color: var(--text);
 }
 
-/* ── Cover (2 pages: hero+info, sommaire) ── */
+/* ── Cover ── */
 .beorn-cover {
+  page: cover;
   width: 100%;
-  break-after: page;
-  page-break-after: always;
-  background: #fff;
 }
 .beorn-cover-body {
-  padding: 3.5rem 3.5rem 3rem;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  height: var(--pagedjs-height-right);
-  /* Purple→blue→teal gradient background */
-  background: linear-gradient(145deg, #2a1f5a 0%, #3373b3 45%, #0096ae 100%);
-  position: relative;
-}
-/* Full-palette top band: magenta→purple→blue→teal (matches running header stripe) */
-.beorn-cover-body::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: linear-gradient(90deg, #b82775, #493a8b, #3373b3, #0096ae);
+  padding: 3.5rem 3.5rem 0;
 }
 .beorn-cover-logos {
   display: flex;
@@ -119,17 +110,14 @@
   filter: brightness(0) invert(1);
 }
 .beorn-cover-logo-partner {
-  height: 117px !important;
-  width: auto;
-  transform: translateY(20px);
+  height: auto !important;
+  max-width: 180px;
   filter: brightness(0) invert(1);
 }
-/* Flex spacers to position title in upper-middle third */
-.beorn-cover-spacer-top {
-  flex: 1;
-}
-.beorn-cover-spacer-bottom {
-  flex: 2;
+.beorn-cover-logo-acheteur {
+  height: auto !important;
+  max-width: 180px;
+  filter: brightness(0) invert(1);
 }
 .beorn-cover-doctype {
   font-family: "Montserrat", sans-serif;
@@ -179,15 +167,22 @@
   margin-bottom: 0.3rem;
 }
 .beorn-cover-bottom-section {
+  position: running(cover-bottom);
+  width: 100%;
   padding-top: 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.15);
+}
+/* Running element gets display:none from Paged.js — restore it inside margin box */
+.pagedjs_margin-content .beorn-cover-bottom-section {
+  display: block !important;
+  position: static !important;
 }
 .beorn-cover-confidential {
   font-size: 7.5pt;
   color: rgba(255, 255, 255, 0.3);
   font-style: italic;
   text-align: center;
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 .beorn-cover-info-grid {
   display: grid;
@@ -307,14 +302,30 @@ h3 {
   );
 }
 
-/* ── Page footer ── */
-.pdf-page-footer {
-  display: none;
+/* ── Footer logo (bottom-left running element) ── */
+.pdf-footer-logo {
+  position: running(pdf-footer-logo);
+  display: flex;
+  align-items: center;
+  height: 100%;
 }
-.pdf-page-footer-logo {
-  height: 22px;
+.pdf-footer-logo img {
+  height: 20px;
   width: auto;
-  opacity: 0.15;
+  opacity: 0.5;
+}
+
+/* ── Footer confidentiality (bottom-center running element) ── */
+.pdf-footer-confidential {
+  position: running(pdf-footer-confidential);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-family: "Hanken Grotesk", sans-serif;
+  font-size: 6.5pt;
+  font-style: italic;
+  color: #a0aec0;
 }
 
 .pdf-content {
@@ -674,7 +685,9 @@ figure.md-image figcaption {
 }
 
 /* ── Pagination ── */
-.pdf-content > section.level2:first-of-type {
+/* Suppress the page break for the very first section only when no cover or
+   sommaire precedes it (i.e. single-section preview, not full mémoire). */
+.pdf-content > section.level2:first-child {
   break-before: auto !important;
   page-break-before: auto !important;
 }

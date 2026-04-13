@@ -7,7 +7,7 @@ const { WebSocketServer } = require("ws");
 const crypto = require("crypto");
 const { editorRoot: BASE_ROOT } = require("@benjaminbini/paged-editor-base/server");
 
-// Static assets live in the base package (index.html, js/**, css/**, assets/)
+// Static assets live in the base package (index.html, dist/js/**, css/**, assets/)
 
 // ── App state persistence ────────────────────────────────────────────────────
 const STATE_FILE = path.join(app.getPath("userData"), "app-state.json");
