@@ -2,6 +2,7 @@
 
 import { cm } from '../editor/codemirror-editor.js';
 import { escapeHtml } from '../infrastructure/text-utils.js';
+import { signal, effect, batch } from '../infrastructure/signal.js';
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 
@@ -17,9 +18,10 @@ const contextPill: HTMLElement | null = document.getElementById("chatContextPill
 type Agent = { key: string; name: string };
 type Context = { text: string; lineStart: number; lineEnd: number; label: string | null };
 
-let activeAgentKey: string | null = null;
-let agents: Agent[] = [];           // [{ key, name }]
-let pendingContext: Context | null = null;  // { text, lineStart, lineEnd, label } or null
+const activeAgentKey = signal<string | null>(null);
+const agents = signal<Agent[]>([]);
+const pendingContext = signal<Context | null>(null);
+const conversationVersion = signal(0);
 
 // ── Callbacks (set by app.js) ───────────────────────────────────────────────
 
@@ -47,72 +49,27 @@ export function isVisible(): boolean {
   return sidebar?.classList.contains("open") || false;
 }
 
-// ── Agent management ────────────────────────────────────────────────────────
-
-export function setAgents(agentList: Agent[]): void {
-  agents = agentList;
-  if (agents.length > 0 && !activeAgentKey) {
-    activeAgentKey = agents[0].key;
-  }
-  // If active agent disconnected, switch to first available
-  if (activeAgentKey && !agents.find((a: Agent) => a.key === activeAgentKey)) {
-    activeAgentKey = agents.length > 0 ? agents[0].key : null;
-  }
-  renderTabs();
-  updateInputState();
-  renderMessages();
-}
-
-export function getActiveAgentKey(): string | null { return activeAgentKey; }
-
-// ── Focus chat with context ─────────────────────────────────────────────────
-
-export function focusWithContext(context: Context): void {
-  if (!input) return;
-  pendingContext = context;
-  renderContextPill();
-  input.focus();
-}
-
-export function focusForAgent(agentKey: string): void {
-  if (agents.find(a => a.key === agentKey)) {
-    activeAgentKey = agentKey;
-    renderTabs();
-    renderMessages();
-  }
-  updateInputState();
-  if (input) input.focus();
-}
-
-// ── Refresh messages (called when conversation updates) ─────────────────────
-
-export function refresh(): void {
-  renderMessages();
-}
-
 // ── Tab rendering ───────────────────────────────────────────────────────────
 
-function renderTabs(): void {
+function renderTabs(agentList: Agent[], activeKey: string | null): void {
   if (!agentTabs) return;
   agentTabs.innerHTML = "";
 
-  if (agents.length <= 1 && agents.length > 0) {
+  if (agentList.length <= 1 && agentList.length > 0) {
     // Single agent — just show name, no tabs
     const el = document.createElement("div");
     el.className = "chat-agent-tab active";
-    el.innerHTML = '<span class="chat-agent-dot"></span>' + escapeHtml(agents[0].name);
+    el.innerHTML = '<span class="chat-agent-dot"></span>' + escapeHtml(agentList[0].name);
     agentTabs.appendChild(el);
     return;
   }
 
-  for (const agent of agents) {
+  for (const agent of agentList) {
     const el = document.createElement("div");
-    el.className = "chat-agent-tab" + (agent.key === activeAgentKey ? " active" : "");
+    el.className = "chat-agent-tab" + (agent.key === activeKey ? " active" : "");
     el.innerHTML = '<span class="chat-agent-dot"></span>' + escapeHtml(agent.name);
     el.onclick = () => {
-      activeAgentKey = agent.key;
-      renderTabs();
-      renderMessages();
+      activeAgentKey.value = agent.key;
     };
     agentTabs.appendChild(el);
   }
@@ -120,22 +77,22 @@ function renderTabs(): void {
 
 // ── Message rendering ───────────────────────────────────────────────────────
 
-function renderMessages(): void {
+function renderMessages(activeKey: string | null): void {
   if (!messagesEl) return;
   messagesEl.innerHTML = "";
 
-  if (!activeAgentKey || !_getConversation) {
+  if (!activeKey || !_getConversation) {
     messagesEl.innerHTML = '<div class="chat-empty">No conversation yet</div>';
     return;
   }
 
-  const conv = _getConversation(activeAgentKey);
+  const conv = _getConversation(activeKey);
   if (!conv || conv.length === 0) {
     messagesEl.innerHTML = '<div class="chat-empty">Start a conversation</div>';
     return;
   }
 
-  const agentName = agents.find(a => a.key === activeAgentKey)?.name || "Agent";
+  const agentName = agents.value.find(a => a.key === activeKey)?.name || "Agent";
 
   for (const entry of conv) {
     if (entry.type === "request") {
@@ -174,9 +131,9 @@ function renderMessages(): void {
             btn.className = "chat-choice-btn";
             btn.textContent = choice;
             btn.onclick = () => {
-              if (_onAnswer && activeAgentKey) _onAnswer(activeAgentKey, entry.id, choice);
+              if (_onAnswer && activeAgentKey.value) _onAnswer(activeAgentKey.value, entry.id, choice);
               entry.answered = true;
-              renderMessages();
+              conversationVersion.value++;
             };
             choices.appendChild(btn);
           }
@@ -191,9 +148,9 @@ function renderMessages(): void {
           const doReply = () => {
             const val = replyInput.value.trim();
             if (!val) return;
-            if (_onAnswer && activeAgentKey) _onAnswer(activeAgentKey, entry.id, val);
+            if (_onAnswer && activeAgentKey.value) _onAnswer(activeAgentKey.value, entry.id, val);
             entry.answered = true;
-            renderMessages();
+            conversationVersion.value++;
           };
           replyBtn.onclick = doReply;
           replyInput.addEventListener("keydown", (e) => {
@@ -238,20 +195,52 @@ function renderMessages(): void {
 
 // ── Context pill ────────────────────────────────────────────────────────────
 
-function renderContextPill(): void {
+function renderContextPill(context: Context | null): void {
   if (!contextPill) return;
-  if (!pendingContext) {
+  if (!context) {
     contextPill.style.display = "none";
     return;
   }
   contextPill.style.display = "";
-  const preview = pendingContext.text.length > 60
-    ? pendingContext.text.substring(0, 60) + "..."
-    : pendingContext.text;
-  contextPill.textContent = pendingContext.label
-    ? "\uD83D\uDCCE " + pendingContext.label
-    : "\uD83D\uDCCE Lines " + (pendingContext.lineStart + 1) + "-" + (pendingContext.lineEnd + 1) + ': "' + preview + '"';
+  const preview = context.text.length > 60
+    ? context.text.substring(0, 60) + "..."
+    : context.text;
+  contextPill.textContent = context.label
+    ? "\uD83D\uDCCE " + context.label
+    : "\uD83D\uDCCE Lines " + (context.lineStart + 1) + "-" + (context.lineEnd + 1) + ': "' + preview + '"';
 }
+
+// ── Input state ─────────────────────────────────────────────────────────────
+
+function updateInputState(activeKey: string | null, agentList: Agent[]): void {
+  if (!input || !sendBtn) return;
+  const hasAgent = activeKey && agentList.length > 0;
+  const hasFile = cm && cm.getValue().length > 0;
+
+  if (!hasAgent) {
+    input.disabled = true;
+    sendBtn.disabled = true;
+    input.placeholder = "No agent connected";
+  } else if (!hasFile) {
+    input.disabled = true;
+    sendBtn.disabled = true;
+    input.placeholder = "Open a file to start";
+  } else {
+    input.disabled = false;
+    sendBtn.disabled = false;
+    input.placeholder = "Ask about your document...";
+  }
+}
+
+// ── Effects (auto-render when state changes) ────────────────────────────────
+
+effect(() => { renderTabs(agents.value, activeAgentKey.value); });
+effect(() => {
+  const _v = conversationVersion.value; // track conversationVersion
+  renderMessages(activeAgentKey.value);
+});
+effect(() => { updateInputState(activeAgentKey.value, agents.value); });
+effect(() => { renderContextPill(pendingContext.value); });
 
 // ── Compute context from cursor position ────────────────────────────────────
 
@@ -276,41 +265,55 @@ function getAutoContext(): Context | null {
   return null;
 }
 
-// ── Input state ─────────────────────────────────────────────────────────────
+// ── Agent management ────────────────────────────────────────────────────────
 
-function updateInputState(): void {
-  if (!input || !sendBtn) return;
-  const hasAgent = activeAgentKey && agents.length > 0;
-  const hasFile = cm && cm.getValue().length > 0;
+export function setAgents(agentList: Agent[]): void {
+  batch(() => {
+    agents.value = agentList;
+    if (agentList.length > 0 && !activeAgentKey.value) {
+      activeAgentKey.value = agentList[0].key;
+    }
+    if (activeAgentKey.value && !agentList.find((a: Agent) => a.key === activeAgentKey.value)) {
+      activeAgentKey.value = agentList.length > 0 ? agentList[0].key : null;
+    }
+  });
+}
 
-  if (!hasAgent) {
-    input.disabled = true;
-    sendBtn.disabled = true;
-    input.placeholder = "No agent connected";
-  } else if (!hasFile) {
-    input.disabled = true;
-    sendBtn.disabled = true;
-    input.placeholder = "Open a file to start";
-  } else {
-    input.disabled = false;
-    sendBtn.disabled = false;
-    input.placeholder = "Ask about your document...";
+export function getActiveAgentKey(): string | null { return activeAgentKey.value; }
+
+// ── Focus chat with context ─────────────────────────────────────────────────
+
+export function focusWithContext(context: Context): void {
+  if (!input) return;
+  pendingContext.value = context;
+  input.focus();
+}
+
+export function focusForAgent(agentKey: string): void {
+  if (agents.value.find(a => a.key === agentKey)) {
+    activeAgentKey.value = agentKey;
   }
+  if (input) input.focus();
+}
+
+// ── Refresh messages (called when conversation updates) ─────────────────────
+
+export function refresh(): void {
+  conversationVersion.value++;
 }
 
 // ── Send ────────────────────────────────────────────────────────────────────
 
 function doSend(): void {
-  if (!input || !activeAgentKey || !_onSend) return;
+  if (!input || !activeAgentKey.value || !_onSend) return;
   const prompt = input.value.trim();
   if (!prompt) return;
 
   // Use pending context (from spark button) or auto-compute
-  const context = pendingContext || getAutoContext();
-  pendingContext = null;
-  renderContextPill();
+  const context = pendingContext.value || getAutoContext();
+  pendingContext.value = null;
 
-  _onSend(activeAgentKey, prompt, context);
+  _onSend(activeAgentKey.value, prompt, context);
   input.value = "";
 }
 
@@ -325,4 +328,3 @@ if (input) {
     }
   });
 }
-
