@@ -20,6 +20,10 @@ export class ScrollSyncController {
   followTarget: Record<string, number>;
   followAnimationFrame: Record<string, number>;
   followLastTimestamp: Record<string, number>;
+  // When true, all programmatic writes to the editor scroll position are
+  // silently dropped.  Set during the render cycle to guarantee the editor
+  // never jumps while the preview is being rebuilt.
+  editorScrollLocked: boolean;
 
   constructor({ editorApi, getLineMap, previewFrame }: { editorApi: any; getLineMap: () => any[]; previewFrame: Element }) {
     this.editorApi = editorApi;
@@ -31,6 +35,7 @@ export class ScrollSyncController {
     this.followTarget = { editor: 0, preview: 0 };
     this.followAnimationFrame = { editor: 0, preview: 0 };
     this.followLastTimestamp = { editor: 0, preview: 0 };
+    this.editorScrollLocked = false;
   }
 
   handleDocumentChange(): void {
@@ -131,6 +136,9 @@ export class ScrollSyncController {
   }
 
   writeScrollTop(source: string, scrollTop: number, force = false, updateTarget = true): void {
+    // Hard lock: never touch editor scroll during a render cycle.
+    if (source === "editor" && this.editorScrollLocked) return;
+
     const scroller = this.getPaneScroller(source);
     const nextScrollTop = this.clampScrollTop(scroller, scrollTop);
 

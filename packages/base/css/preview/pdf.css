@@ -714,8 +714,6 @@ p {
 table {
   break-inside: avoid;
   page-break-inside: avoid;
-  break-before: avoid;
-  page-break-before: avoid;
 }
 pre {
   break-inside: avoid;

@@ -27,6 +27,17 @@ export function rebuildAnchorMap(): void {
   syncController.handleLayoutChange();
 }
 
+// Lock/unlock the editor scroll position.  While locked, the sync controller
+// silently drops all programmatic writes to the editor scroll — guaranteeing
+// the editor never jumps during a preview render cycle.
+export function lockEditorScroll(): void {
+  ensureController().editorScrollLocked = true;
+}
+
+export function unlockEditorScroll(): void {
+  ensureController().editorScrollLocked = false;
+}
+
 export function setupPreviewClick(): void {
   if (clickBindingReady) return;
   clickBindingReady = true;

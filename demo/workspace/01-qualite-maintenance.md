@@ -29,6 +29,7 @@ En phase de croisière, le COPROJ est **mutualisé pour les trois applications**
 
 Compte-rendu transmis sous 48h ouvrées.
 
+
 #### Comité de pilotage (COPIL) — trimestriel
 
 Réunion stratégique trimestrielle associant la direction BEORN, le chef de projet, et les responsables CNC (SOSI, DAM si nécessaire). Son ordre du jour :
@@ -41,27 +42,29 @@ Réunion stratégique trimestrielle associant la direction BEORN, le chef de pro
 
 Compte-rendu transmis sous 5 jours ouvrés.
 
-#### Échanges quotidiens et hotline
+/newpage
+
+#### Échanges quotidiens et hotlines
 
 En dehors des comités formels, les échanges opérationnels s'effectuent via :
 - **Jira** : outil central de suivi de toutes les demandes (tickets correctifs, évolutions, études)
-- **Google Workspace** (messagerie, visioconférence) : communication rapide avec l'équipe CNC
+- **Teams** (messagerie, visioconférence) : communication rapide avec l'équipe CNC
 - **Hotline téléphonique** : disponible du lundi au vendredi, 9h00–18h00, pour les demandes bloquantes
 
 ### Indicateurs de pilotage qualité
 
 BEORN s'engage sur les 8 indicateurs de qualité de service définis dans le CCTP, présentés dans le tableau de bord partagé avec le CNC via Jira :
 
-| Indicateur | Engagement BEORN | Fréquence de mesure |
-|------------|-----------------|---------------------|
-| Délai de production d'un devis | ≤ 5 jours ouvrés (évolution simple) / ≤ 10 jours ouvrés (évolution complexe) | Par demande |
-| Adéquation des compétences | 100% des intervenants conformes au profil requis | Trimestriel |
-| Stabilité de l'équipe | Délai de remplacement ≤ 15 jours ouvrés | Par événement |
-| Taux de recouvrement | Phase d'initialisation ≤ 3 mois | À la mise en TMA |
-| Maintien de la vélocité | Écart ≤ 10% sur 3 sprints glissants | Mensuel |
-| Respect du planning | Jalons livrés à ±1 sprint | Par sprint |
-| Taux de régression | 0 régression bloquante en production | Par livraison |
-| Délai de MCO corrective | Conforme aux délais par gravité (cf. §1.3) | Par ticket |
+| Indicateur                     | Engagement BEORN                                                             | Fréquence de mesure |
+| ------------------------------ | ---------------------------------------------------------------------------- | ------------------- |
+| Délai de production d'un devis | ≤ 5 jours ouvrés (évolution simple) / ≤ 10 jours ouvrés (évolution complexe) | Par demande         |
+| Adéquation des compétences     | 100% des intervenants conformes au profil requis                             | Trimestriel         |
+| Stabilité de l'équipe          | Délai de remplacement ≤ 15 jours ouvrés                                      | Par événement       |
+| Taux de recouvrement           | Phase d'initialisation ≤ 3 mois                                              | À la mise en TMA    |
+| Maintien de la vélocité        | Écart ≤ 10% sur 3 sprints glissants                                          | Mensuel             |
+| Respect du planning            | Jalons livrés à ±1 sprint                                                    | Par sprint          |
+| Taux de régression             | 0 régression bloquante en production                                         | Par livraison       |
+| Délai de MCO corrective        | Conforme aux délais par gravité (cf. §1.3)                                   | Par ticket          |
 
 Le tableau de bord est accessible en permanence au CNC dans l'espace projet Jira dédié. Un rapport mensuel synthétique est transmis avant chaque COPROJ.
 
@@ -101,26 +104,146 @@ Le PAQ sera formalisé et remis au CNC dans les 30 jours suivant la notification
 4.2. Plan d'amélioration annuel
 4.3. Gestion des risques projet
 
+/newpage
+
 ## 1.2. Modalités de mise en œuvre du service
 
 ### Un atout décisif : la connaissance directe du périmètre CNC
 
 BEORN aborde cette phase d'initialisation dans une position singulière : Benjamin Bini, qui assurera la responsabilité de pilotage du marché, a géré la TMA des applications CNC pendant trois ans au sein de Sully Group. Cette expérience directe constitue un avantage opérationnel majeur :
 
-- **Connaissance des trois applications** dans leur état réel — architecture, dette technique, comportements, historique des évolutions significatives
-- **Connaissance de l'organisation CNC** — mode de fonctionnement du SOSI, profils des chefs de projet, processus de validation
-- **Connaissance du prestataire sortant** — facilitant un recouvrement coordonné et non conflictuel
+- **Connaissance des applications** dans leur état réel : architecture, dette technique, comportements, historique des évolutions significatives
+- **Connaissance de l'organisation CNC** : mode de fonctionnement du SOSI, profils des chefs de projet, processus de validation
+- **Connaissance du prestataire sortant** : facilitant un recouvrement coordonné et non conflictuel
 
 En conséquence, la phase d'initialisation de BEORN sera **significativement plus courte** que celle d'un prestataire découvrant le périmètre. Nous nous engageons à une TMA pleinement opérationnelle **au plus tard le 1er juin 2027**, avec une cible interne à 8 semaines.
 
----
-
 ### Phase d'initialisation — déroulement en 4 étapes
+
+<div style="position: relative; padding-left: 28px; margin: 16px 0">
+        <div style="
+            position: absolute;
+            left: 11px;
+            top: 14px;
+            bottom: 34px;
+            width: 2px;
+            border-radius: 2px;
+            background: linear-gradient(to bottom, #3373b3, #0096ae);
+          "></div>
+        <div style="position: relative; padding: 8px 0 16px 16px">
+          <div style="
+              position: absolute;
+              left: -22px;
+              top: 12px;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: 3px solid #3373b3;
+              background: #fff;
+            "></div>
+          <div style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7.5pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              color: #3373b3;
+              margin-bottom: 2px;
+            ">
+            Semaines 1-2 — Kick-off
+          </div>
+          <div style="font-size: 8.5pt; color: #2d3748; line-height: 1.4">
+            Reunion de lancement, acces Jira/GitLab, environnements, plan
+            d'initialisation
+          </div>
+        </div>
+        <div style="position: relative; padding: 8px 0 16px 16px">
+          <div style="
+              position: absolute;
+              left: -22px;
+              top: 12px;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: 3px solid #5a93c8;
+              background: #fff;
+            "></div>
+          <div style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7.5pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              color: #5a93c8;
+              margin-bottom: 2px;
+            ">
+            Semaines 2-6 — Recouvrement &amp; audit
+          </div>
+          <div style="font-size: 8.5pt; color: #2d3748; line-height: 1.4">
+            Audit technique des 3 apps, convention de service, collaboration
+            prestataire sortant
+          </div>
+        </div>
+        <div style="position: relative; padding: 8px 0 16px 16px">
+          <div style="
+              position: absolute;
+              left: -22px;
+              top: 12px;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: 3px solid #2a9aa8;
+              background: #fff;
+            "></div>
+          <div style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7.5pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              color: #2a9aa8;
+              margin-bottom: 2px;
+            ">
+            Semaines 4-8 — Montee en competence
+          </div>
+          <div style="font-size: 8.5pt; color: #2d3748; line-height: 1.4">
+            Transfert de connaissances, plan de resorption des anomalies
+            residuelles
+          </div>
+        </div>
+        <div style="position: relative; padding: 8px 0 16px 16px">
+          <div style="
+              position: absolute;
+              left: -22px;
+              top: 12px;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: 3px solid #0096ae;
+              background: #fff;
+            "></div>
+          <div style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7.5pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              color: #0096ae;
+              margin-bottom: 2px;
+            ">
+            Semaines 8-12 — MOM &amp; demarrage TMA
+          </div>
+          <div style="font-size: 8.5pt; color: #2d3748; line-height: 1.4">
+            Validation MOM, demarrage corrective, premier COPROJ, remise PAQ +
+            PAS
+          </div>
+        </div>
+      </div>
 
 #### Étape 1 — Kick-off et mise en place (semaine 1–2)
 
 - Réunion de lancement avec le SOSI et le prestataire sortant
-- Mise en place de l'environnement de travail BEORN : accès Jira, espace documentaire partagé (Google Drive), accès dépôts GitLab
+- Mise en place de l'environnement de travail BEORN et des outils utilisés dans le cadre de la TMA
 - Ouverture des accès aux environnements (recette, pré-production, production) pour chacune des trois applications
 - Rédaction du **plan d'initialisation détaillé** avec jalons, responsables et critères d'achèvement
 
@@ -130,17 +253,17 @@ Le recouvrement s'effectue en collaboration avec le prestataire sortant. BEORN p
 
 **Audit de chaque application :**
 
-| Application | Points d'audit prioritaires |
-|---|---|
-| **Intranet** (Liferay EE 6.2) | État du code, modules custom, configuration SSO CAS/AD, périmètre fonctionnel réel, plan de migration |
-| **cnc.fr V2** (Liferay 7.4 / PostgreSQL) | État d'avancement de la refonte, DAT, DEX, points de reprise |
-| **Garance** (Liferay 7.4 / Docker) | Architecture Docker, intégration Axiell Collections, état post-ouverture au public |
+| Application                              | Points d'audit prioritaires                                                                           |
+| ---------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| **Intranet** (Liferay EE 6.2)            | État du code, modules custom, configuration SSO CAS/AD, périmètre fonctionnel réel, plan de migration |
+| **cnc.fr V2** (Liferay 7.4 / PostgreSQL) | État d'avancement de la refonte, DAT, DEX                                                             |
+| **Garance** (Liferay 7.4 / Docker)       | Architecture Docker, intégration Axiell Collections, état post-ouverture au public                    |
 
 L'audit produit pour chaque application : un rapport d'état technique, une liste des anomalies résiduelles et leur priorisation, et une cartographie des risques à court terme.
 
-**Rédaction de la convention de service** : niveaux de service par application, indicateurs, règles de calcul, procédures de signalement. Ce document est soumis au CNC pour validation avant la fin de l'initialisation.
+> **Rédaction de la convention de service** : niveaux de service par application, indicateurs, règles de calcul, procédures de signalement. Ce document est soumis au CNC pour validation avant la fin de l'initialisation.
 
-#### Étape 3 — Montée en compétence et plan de résorption (semaine 4–8)
+#### Étape 3 — Montée en compétence (semaine 4–8)
 
 - Transfert de connaissances formalisé avec le prestataire sortant (sessions de passation, documentation des points critiques)
 - Constitution du plan de résorption des anomalies résiduelles, priorisé avec le CNC
@@ -153,15 +276,14 @@ L'audit produit pour chaque application : un rapport d'état technique, une list
 - Premier COPROJ opérationnel
 - Remise du **Plan d'Assurance Qualité (PAQ)** définitif et du **Plan d'Assurance Sécurité (PAS)** dans les 30 jours suivant la MOM
 
----
 
 ### Proposition technique : consolidation multisite de l'intranet
 
-BEORN propose au CNC, dans le cadre de la maintenance adaptative (§1.5), d'intégrer l'intranet à la même instance Liferay 7.4 que le site cnc.fr V2, via la **fonction multisite native de Liferay**.
+BEORN propose au CNC, dans le cadre de la maintenance adaptative, d'intégrer l'intranet à la même instance Liferay 7.4 que le site cnc.fr V2, via la **fonction multisite native de Liferay**.
 
 Cette architecture offre :
 - Un **cloisonnement total** des données et des utilisateurs entre le site public et l'intranet (groupes et organisations distincts, droits indépendants)
-- Une **infrastructure mutualisée** : une seule instance à maintenir, une seule chaîne de mise à jour
+- Une **infrastructure mutualisée** : une seule instance à maintenir, une seule chaîne de mise à jour, une économie sur les licences Liferay
 - Une **résolution élégante du problème Liferay 6.2** (version hors support) sans projet de migration ad hoc
 
 Cette consolidation peut être planifiée comme un projet agile dans le cadre du marché subséquent, avec une priorité à définir avec le CNC. Elle ne constitue pas un prérequis à la prise en TMA — l'intranet en Liferay 6.2 sera maintenu en l'état le temps nécessaire.
@@ -172,17 +294,17 @@ Cette consolidation peut être planifiée comme un projet agile dans le cadre du
 
 En fin de marché, BEORN s'engage sur une réversibilité complète conforme au CCTP :
 
-**Durée maximale : 3 mois de transfert de compétences + 1 mois d'assistance technique**
+> **Durée maximale** : 3 mois de transfert de compétences + 1 mois d'assistance technique
 
 **Livrables de réversibilité :**
 
-| Livrable | Contenu |
-|---|---|
-| DAT, MCD, MPD | Mis à jour et reflétant l'état réel des applications en fin de marché |
-| Spécifications générales et détaillées | À jour, aux formats Microsoft Office modifiables |
-| Plan de tests | Stratégie, plans unitaires, d'intégration et de non-régression |
-| PAQ, sources, DEX, manuel d'exploitation | Complets et opérationnels |
-| Dossier d'installation | Procédures automatisées et vérifiées |
+| Livrable                                 | Contenu                                                               |
+| ---------------------------------------- | --------------------------------------------------------------------- |
+| DAT, MCD, MPD                            | Mis à jour et reflétant l'état réel des applications en fin de marché |
+| Spécifications générales et détaillées   | À jour, aux formats Microsoft Office modifiables                      |
+| Plan de tests                            | Stratégie, plans unitaires, d'intégration et de non-régression        |
+| PAQ, sources, DEX, manuel d'exploitation | Complets et opérationnels                                             |
+| Dossier d'installation                   | Procédures automatisées et vérifiées                                  |
 
 **Déroulement :**
 1. Notification de fin de marché → déclenchement du plan de réversibilité
@@ -190,17 +312,40 @@ En fin de marché, BEORN s'engage sur une réversibilité complète conforme au 
 3. Remise de l'ensemble des livrables documentaires
 4. Mois d'assistance technique en parallèle du démarrage du successeur
 
-BEORN s'engage à une réversibilité sans rétention d'information, dans l'intérêt du CNC et conformément au principe de continuité de service.
+> BEORN s'engage à une réversibilité sans rétention d'information, dans l'intérêt du CNC et conformément au principe de continuité de service.
+
+/newpage
 
 ## 1.3. Modalités de prise en charge et de suivi des demandes de maintenance corrective
 
 ### Cycle de traitement d'une anomalie
 
 Chaque demande de maintenance corrective suit un processus structuré, entièrement tracé dans Jira :
-
-```
-Signalement client → Accusé de réception → Qualification → Diagnostic → Correction → Recette → Clôture
-```
+<div style="display:flex;align-items:center;gap:0;margin:16px 0;">
+    <div style="flex:1;text-align:center;padding:12px 8px;background:rgba(51,115,179,0.06);border:1px solid #3373b3;border-radius:12px;font-size:8.5pt;font-weight:600;">
+      <span style="display:block;font-family:'Montserrat',sans-serif;font-size:16pt;font-weight:800;color:#3373b3;margin-bottom:4px;">1</span>Signalement
+    </div>
+    <div style="flex-shrink:0;width:24px;text-align:center;color:#718096;font-size:14pt;line-height:1;">→</div>
+    <div style="flex:1;text-align:center;padding:12px 8px;background:rgba(51,115,179,0.06);border:1px solid #3373b3;border-radius:12px;font-size:8.5pt;font-weight:600;">
+      <span style="display:block;font-family:'Montserrat',sans-serif;font-size:16pt;font-weight:800;color:#3373b3;margin-bottom:4px;">2</span>Qualification
+    </div>
+    <div style="flex-shrink:0;width:24px;text-align:center;color:#718096;font-size:14pt;line-height:1;">→</div>
+    <div style="flex:1;text-align:center;padding:12px 8px;background:rgba(51,115,179,0.06);border:1px solid #3373b3;border-radius:12px;font-size:8.5pt;font-weight:600;">
+      <span style="display:block;font-family:'Montserrat',sans-serif;font-size:16pt;font-weight:800;color:#3373b3;margin-bottom:4px;">3</span>Diagnostic
+    </div>
+    <div style="flex-shrink:0;width:24px;text-align:center;color:#718096;font-size:14pt;line-height:1;">→</div>
+    <div style="flex:1;text-align:center;padding:12px 8px;background:rgba(51,115,179,0.06);border:1px solid #3373b3;border-radius:12px;font-size:8.5pt;font-weight:600;">
+      <span style="display:block;font-family:'Montserrat',sans-serif;font-size:16pt;font-weight:800;color:#3373b3;margin-bottom:4px;">4</span>Correction
+    </div>
+    <div style="flex-shrink:0;width:24px;text-align:center;color:#718096;font-size:14pt;line-height:1;">→</div>
+    <div style="flex:1;text-align:center;padding:12px 8px;background:rgba(51,115,179,0.06);border:1px solid #3373b3;border-radius:12px;font-size:8.5pt;font-weight:600;">
+      <span style="display:block;font-family:'Montserrat',sans-serif;font-size:16pt;font-weight:800;color:#3373b3;margin-bottom:4px;">5</span>Recette
+    </div>
+    <div style="flex-shrink:0;width:24px;text-align:center;color:#718096;font-size:14pt;line-height:1;">→</div>
+    <div style="flex:1;text-align:center;padding:12px 8px;background:rgba(0,150,174,0.08);border:1px solid #0096ae;border-radius:12px;font-size:8.5pt;font-weight:600;">
+      <span style="display:block;font-family:'Montserrat',sans-serif;font-size:16pt;font-weight:800;color:#0096ae;margin-bottom:4px;">6</span>Cloture
+    </div>
+  </div>
 
 **1. Signalement** : le CNC ouvre un ticket Jira (ou par téléphone/email, immédiatement transcrit dans Jira par BEORN). Chaque ticket comprend : description, environnement, captures d'écran, criticité proposée.
 
@@ -208,7 +353,9 @@ Signalement client → Accusé de réception → Qualification → Diagnostic �
 
 **3. Diagnostic et correction** : prise en charge technique, correction développée sur branche Git dédiée, tests unitaires.
 
-**4. Livraison et recette** : déploiement en environnement de recette, procédure d'installation transmise au CNC, validation par le CNC.
+**4. Livraison** : déploiement en environnement de recette, procédure d'installation transmise au CNC
+
+**5. Recette** : Tests par les équipes du CNC. En cas d'anomalie
 
 **5. Clôture** : déploiement en production après validation CNC, clôture du ticket avec rapport de résolution, mise à jour de la documentation si nécessaire.
 
@@ -216,11 +363,11 @@ Signalement client → Accusé de réception → Qualification → Diagnostic �
 
 ### Niveaux de service par gravité
 
-| Niveau | Définition | Prise en compte | Résolution |
-|--------|-----------|-----------------|------------|
-| **Bloquant** | Application inaccessible ou perte de données — blocage total de l'activité | ≤ 4h ouvrées | ≤ 1 jour ouvré |
-| **Majeur** | Fonctionnalité critique indisponible, fort impact utilisateurs, contournement difficile | ≤ 1 jour ouvré | ≤ 3 jours ouvrés |
-| **Mineur** | Anomalie fonctionnelle avec contournement possible, impact limité | ≤ 2 jours ouvrés | ≤ 10 jours ouvrés |
+| Niveau       | Définition                                                                              | Prise en compte  | Résolution        |
+| ------------ | --------------------------------------------------------------------------------------- | ---------------- | ----------------- |
+| **Bloquant** | Application inaccessible ou perte de données — blocage total de l'activité              | ≤ 4h ouvrées     | ≤ 1 jour ouvré    |
+| **Majeur**   | Fonctionnalité critique indisponible, fort impact utilisateurs, contournement difficile | ≤ 1 jour ouvré   | ≤ 3 jours ouvrés  |
+| **Mineur**   | Anomalie fonctionnelle avec contournement possible, impact limité                       | ≤ 2 jours ouvrés | ≤ 10 jours ouvrés |
 
 **Plages horaires** : lundi au vendredi, 9h00–18h00, hors jours fériés.
 
@@ -262,11 +409,11 @@ Notre responsable de marché, Benjamin Bini, a assuré la TMA des applications C
 **2. Ratios empiriques par type d'application Liferay**
 BEORN dispose de données statistiques issues de ses contrats TMA actifs (ECHR, Delta Plus, Arkolia, APCA) permettant d'établir des ratios de charge corrective par type d'application :
 
-| Type d'application | Anomalies estimées/an | Charge estimée/anomalie | Charge annuelle MCO |
-|---|---|---|---|
-| Intranet (Liferay 6.2, ~500 utilisateurs) | 10–15 | 1–2 j | 15–25 j |
-| Site internet public (Liferay 7.4, 1,5M visites) | 15–20 | 1–3 j | 25–40 j |
-| Portail spécialisé (Garance, nouveau) | 15–25 (phase rodage) | 1–3 j | 20–40 j |
+| Type d'application                               | Anomalies estimées/an | Charge estimée/anomalie | Charge annuelle MCO |
+| ------------------------------------------------ | --------------------- | ----------------------- | ------------------- |
+| Intranet (Liferay 6.2, ~500 utilisateurs)        | 10–15                 | 1–2 j                   | 15–25 j             |
+| Site internet public (Liferay 7.4, 1,5M visites) | 15–20                 | 1–3 j                   | 25–40 j             |
+| Portail spécialisé (Garance, nouveau)            | 15–25 (phase rodage)  | 1–3 j                   | 20–40 j             |
 
 **3. Hypothèses conservatrices pour les nouvelles applications**
 Pour cnc.fr V2 (en cours de développement) et Garance (en production depuis décembre 2025), BEORN applique une majoration de 30% sur les 12 premiers mois de TMA — période de rodage post-lancement — puis une révision à la baisse après constitution de l'historique réel, dans le cadre de la convention de service annuelle.
@@ -285,10 +432,10 @@ Demande CNC → Analyse → Devis → Validation BC → Réalisation agile → L
 
 **2. Production du devis** : BEORN s'engage à produire le devis dans les délais suivants, conformes aux engagements SLA du marché :
 
-| Type d'évolution | Délai de remise du devis |
-|---|---|
-| Évolution simple (≤ 3 jours de charge) | ≤ 5 jours ouvrés |
-| Évolution complexe (atelier de cadrage requis) | ≤ 10 jours ouvrés |
+| Type d'évolution                               | Délai de remise du devis |
+| ---------------------------------------------- | ------------------------ |
+| Évolution simple (≤ 3 jours de charge)         | ≤ 5 jours ouvrés         |
+| Évolution complexe (atelier de cadrage requis) | ≤ 10 jours ouvrés        |
 
 Le devis précise : description de la solution retenue, charge estimée par profil, planning prévisionnel, livrables, et hypothèses retenues.
 
@@ -343,15 +490,15 @@ Ce tableau est présenté et commenté lors de chaque COPROJ bimensuel, permetta
 
 BEORN dispose d'abaques de chiffrage issus de 18 ans d'expérience sur les projets Liferay, permettant une estimation rapide et fiable :
 
-| Type de développement | Charge estimée |
-|---|---|
-| Fragment/portlet Liferay (standard) | 1 à 3 j |
-| Template de structure/affichage (FreeMarker) | 0,5 à 2 j |
-| Composant React côté frontend | 2 à 5 j |
-| Intégration API REST entrante/sortante | 2 à 5 j |
-| Migration de contenu (script + validation) | 1 à 4 j selon volume |
-| Évolution Search Blueprint (Elasticsearch) | 1 à 3 j |
-| Mise en accessibilité RGAA d'un composant | 0,5 à 2 j selon complexité |
+| Type de développement                        | Charge estimée             |
+| -------------------------------------------- | -------------------------- |
+| Fragment/portlet Liferay (standard)          | 1 à 3 j                    |
+| Template de structure/affichage (FreeMarker) | 0,5 à 2 j                  |
+| Composant React côté frontend                | 2 à 5 j                    |
+| Intégration API REST entrante/sortante       | 2 à 5 j                    |
+| Migration de contenu (script + validation)   | 1 à 4 j selon volume       |
+| Évolution Search Blueprint (Elasticsearch)   | 1 à 3 j                    |
+| Mise en accessibilité RGAA d'un composant    | 0,5 à 2 j selon complexité |
 
 Ces abaques sont présentés au CNC lors de l'initialisation pour validation et adaptation au contexte des applications du périmètre.
 
@@ -371,11 +518,11 @@ Chaque bulletin de sécurité ou release Liferay est analysé dans un délai de 
 
 ### Traitement des versions mineures et patches correctifs
 
-| Type | Délai d'analyse | Délai d'application |
-|---|---|---|
-| Patch de sécurité critique (CVE haute sévérité) | ≤ 2 jours ouvrés | ≤ 5 jours ouvrés après validation CNC |
-| Patch correctif standard | ≤ 5 jours ouvrés | Planifié au prochain COPROJ |
-| Version mineure (ex. 7.4.x → 7.4.x+1) | ≤ 10 jours ouvrés | Sur bon de commande, planifié avec le CNC |
+| Type                                            | Délai d'analyse   | Délai d'application                       |
+| ----------------------------------------------- | ----------------- | ----------------------------------------- |
+| Patch de sécurité critique (CVE haute sévérité) | ≤ 2 jours ouvrés  | ≤ 5 jours ouvrés après validation CNC     |
+| Patch correctif standard                        | ≤ 5 jours ouvrés  | Planifié au prochain COPROJ               |
+| Version mineure (ex. 7.4.x → 7.4.x+1)           | ≤ 10 jours ouvrés | Sur bon de commande, planifié avec le CNC |
 
 Chaque application de patch suit un processus systématique : environnement de développement → recette → validation CNC → production. Les procédures d'installation sont documentées et livrées avec chaque mise à jour.
 

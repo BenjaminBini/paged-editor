@@ -16,18 +16,25 @@ import { buildHeaderText } from "./export/html-document-wrapper.js";
 import { buildCoverRenderResult, buildCoverErrorRenderResult } from "./rendering/cover-pipeline.js";
 import { buildTocRenderResult } from "./rendering/toc-pipeline.js";
 import { getProjectMetadata, isCoverTab, isTocTab } from "./model/memoire-views.js";
+import { lockEditorScroll, unlockEditorScroll } from "./sync/preview-sync-setup.js";
 
 const A4_WIDTH_PX: number = 794;
 const previewWrapper: HTMLElement = document.getElementById("preview-wrapper")!;
 
-const previewSurface: HTMLDivElement = document.createElement("div");
-previewSurface.className = "preview-surface";
-previewWrapper.appendChild(previewSurface);
+const initialSurface: HTMLDivElement = document.createElement("div");
+initialSurface.className = "preview-surface";
+previewWrapper.appendChild(initialSurface);
 
 const previewRenderer: PreviewRenderer = new PreviewRenderer({
   previewFrame: previewContainer!,
-  previewPages: previewSurface,
+  previewPages: initialSurface,
 });
+
+// The renderer replaces the previewPages element on each render (fresh DOM).
+// Always read the current element via this getter.
+function previewSurface(): HTMLDivElement {
+  return previewRenderer.previewPages as HTMLDivElement;
+}
 
 let _userZoom: number = 1;
 let renderTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -64,10 +71,10 @@ function computeFrontmatterOffset(md: string): number {
 }
 
 function measurePreviewSurface(): { contentWidth: number; contentHeight: number } {
-  const pagesRoot = previewSurface.querySelector(".pagedjs_pages");
-  const firstPage = previewSurface.querySelector(".pagedjs_page") as HTMLElement | null;
+  const pagesRoot = previewSurface().querySelector(".pagedjs_pages");
+  const firstPage = previewSurface().querySelector(".pagedjs_page") as HTMLElement | null;
   const contentWidth = firstPage?.offsetWidth || pagesRoot?.scrollWidth || A4_WIDTH_PX;
-  const contentHeight = pagesRoot?.scrollHeight || previewSurface.scrollHeight || 0;
+  const contentHeight = pagesRoot?.scrollHeight || previewSurface().scrollHeight || 0;
   return { contentWidth, contentHeight };
 }
 
@@ -77,7 +84,7 @@ function scaleSurface(): void {
   const fitScale = contentWidth > 0 ? Math.min(1, containerW / contentWidth) : 1;
   const scale = fitScale * _userZoom;
 
-  previewSurface.style.transform = `scale(${scale})`;
+  previewSurface().style.transform = `scale(${scale})`;
   previewWrapper.style.width = `${Math.ceil(contentWidth * scale)}px`;
   previewWrapper.style.height = `${Math.ceil(contentHeight * scale)}px`;
 }
@@ -86,6 +93,7 @@ async function renderRequest(request: { markdown: string; generation: number }):
   const { markdown, generation } = request;
   renderStartTime = performance.now();
   status.textContent = "Rendering...";
+  lockEditorScroll();
   const previewScrollState = capturePreviewScrollState();
 
   const activeTab = getActiveTab();
@@ -131,6 +139,9 @@ async function renderRequest(request: { markdown: string; generation: number }):
   lastRenderStats.elapsed = elapsed;
   status.textContent = `${lastRenderStats.totalPages} pages — ${elapsed}ms`;
   emit("section-ready");
+  // Unlock after the deferred rebuildAnchorMap (350ms) and scalePreview (300ms)
+  // have finished so their syncFromCurrentSource calls cannot touch the editor.
+  setTimeout(unlockEditorScroll, 500);
   return true;
 }
 
@@ -152,6 +163,7 @@ async function flushRenderQueue(): Promise<void> {
       previewRenderer.clear();
       scaleSurface();
       status.textContent = "Preview failed";
+      unlockEditorScroll();
     }
   }
   isRendering = false;
@@ -213,7 +225,7 @@ export function scheduleRender(ms: number): void {
 }
 
 export function getPreviewFrame(): HTMLDivElement {
-  return previewSurface;
+  return previewSurface();
 }
 
 export function getPreviewScale(): number {
@@ -343,7 +355,7 @@ function applyCoverPatch(page: Element, project: Record<string, any>): void {
 // for structural changes (logo added/removed, ref/acheteur toggling empty↔filled).
 // Always returns true — the caller does not need to fall back to triggerRender.
 export function updateCoverPreview(project: Record<string, any>): boolean {
-  const page = previewSurface.querySelector(".pagedjs_page");
+  const page = previewSurface().querySelector(".pagedjs_page");
   if (!page || isCoverStructuralChange(page, project)) {
     void renderCoverFromProject(project);
   } else {

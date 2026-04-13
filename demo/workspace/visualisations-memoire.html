@@ -1,0 +1,4818 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visualisations — Memoire technique TMA Liferay CNC</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800&family=Source+Serif+4:wght@400;600;700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    style="
+      font-family: &quot;Hanken Grotesk&quot;, sans-serif;
+      background: #e5e7eb;
+      color: #2d3748;
+      line-height: 1.5;
+      margin: 0;
+      padding: 0;
+    "
+  >
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 0 — PREAMBULE                                  -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div
+      style="
+        width: 210mm;
+        min-height: 270mm;
+        background: #fff;
+        margin: 24px auto;
+        padding: 28px 32px;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+      "
+    >
+      <div
+        style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 5px;
+          background: linear-gradient(
+            90deg,
+            #3373b3 0%,
+            #0096ae 35%,
+            #493a8b 65%,
+            #b82775 100%
+          );
+        "
+      ></div>
+
+      <!-- Header -->
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 24px;
+          padding-top: 8px;
+        "
+      >
+        <div
+          style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            font-family: &quot;Montserrat&quot;, sans-serif;
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            background: #193658;
+            flex-shrink: 0;
+          "
+        >
+          P
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #193658;
+              line-height: 1.2;
+            "
+          >
+            Preambule
+          </div>
+          <div style="font-size: 9pt; color: #718096; margin-top: 2px">
+            BEORN Technologies — Portrait et positionnement
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI Row -->
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 20px;
+        "
+      >
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #3373b3;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 8pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              color: #718096;
+              margin-bottom: 8px;
+            "
+          >
+            Fondee en
+          </div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 22pt;
+              font-weight: 800;
+              line-height: 1.1;
+              color: #3373b3;
+            "
+          >
+            2007
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            Toulouse, France
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #0096ae;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 8pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              color: #718096;
+              margin-bottom: 8px;
+            "
+          >
+            Expertise Liferay
+          </div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 22pt;
+              font-weight: 800;
+              line-height: 1.1;
+              color: #0096ae;
+            "
+          >
+            18 ans
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            de v5.x a v7.4 LTS
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #493a8b;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 8pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              color: #718096;
+              margin-bottom: 8px;
+            "
+          >
+            Projets Liferay
+          </div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 22pt;
+              font-weight: 800;
+              line-height: 1.1;
+              color: #493a8b;
+            "
+          >
+            100+
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            realises depuis 2007
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #b82775;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 8pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              color: #718096;
+              margin-bottom: 8px;
+            "
+          >
+            Partenaire Liferay
+          </div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 14pt;
+              font-weight: 800;
+              line-height: 1.1;
+              color: #b82775;
+            "
+          >
+            depuis 2010
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            Tech 2010 / Commercial 2018
+          </div>
+        </div>
+      </div>
+
+      <!-- Domaines d'expertise -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Domaines d'expertise
+      </div>
+      <div style="margin: 12px 0">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+          "
+        >
+          <div
+            style="
+              width: 120px;
+              font-size: 8pt;
+              font-weight: 600;
+              text-align: right;
+              flex-shrink: 0;
+            "
+          >
+            Dev. logiciel
+          </div>
+          <div
+            style="
+              flex: 1;
+              height: 22px;
+              background: #f1f5f9;
+              border-radius: 6px;
+              overflow: hidden;
+            "
+          >
+            <div
+              style="
+                height: 100%;
+                width: 95%;
+                border-radius: 6px;
+                background: #3373b3;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: 8px;
+                font-size: 7.5pt;
+                font-weight: 700;
+                color: #fff;
+              "
+            >
+              95%
+            </div>
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+          "
+        >
+          <div
+            style="
+              width: 120px;
+              font-size: 8pt;
+              font-weight: 600;
+              text-align: right;
+              flex-shrink: 0;
+            "
+          >
+            Hub Employe / Intranet
+          </div>
+          <div
+            style="
+              flex: 1;
+              height: 22px;
+              background: #f1f5f9;
+              border-radius: 6px;
+              overflow: hidden;
+            "
+          >
+            <div
+              style="
+                height: 100%;
+                width: 90%;
+                border-radius: 6px;
+                background: #0096ae;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: 8px;
+                font-size: 7.5pt;
+                font-weight: 700;
+                color: #fff;
+              "
+            >
+              90%
+            </div>
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+          "
+        >
+          <div
+            style="
+              width: 120px;
+              font-size: 8pt;
+              font-weight: 600;
+              text-align: right;
+              flex-shrink: 0;
+            "
+          >
+            Data & Analytics
+          </div>
+          <div
+            style="
+              flex: 1;
+              height: 22px;
+              background: #f1f5f9;
+              border-radius: 6px;
+              overflow: hidden;
+            "
+          >
+            <div
+              style="
+                height: 100%;
+                width: 70%;
+                border-radius: 6px;
+                background: #493a8b;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: 8px;
+                font-size: 7.5pt;
+                font-weight: 700;
+                color: #fff;
+              "
+            >
+              70%
+            </div>
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+          "
+        >
+          <div
+            style="
+              width: 120px;
+              font-size: 8pt;
+              font-weight: 600;
+              text-align: right;
+              flex-shrink: 0;
+            "
+          >
+            Cloud & Infra
+          </div>
+          <div
+            style="
+              flex: 1;
+              height: 22px;
+              background: #f1f5f9;
+              border-radius: 6px;
+              overflow: hidden;
+            "
+          >
+            <div
+              style="
+                height: 100%;
+                width: 75%;
+                border-radius: 6px;
+                background: #b82775;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: 8px;
+                font-size: 7.5pt;
+                font-weight: 700;
+                color: #fff;
+              "
+            >
+              75%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trois convictions -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Trois convictions fortes
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px">
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-left: 4px solid #3373b3;
+          "
+        >
+          <div style="font-size: 24px; margin-bottom: 6px">&#127919;</div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 8pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              color: #3373b3;
+              margin-bottom: 8px;
+            "
+          >
+            Connaissance directe du CNC
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            3 ans de TMA CNC (B. Bini, ex-Sully Group). Initialisation cible :
+            <strong style="color: #193658">8 semaines</strong>
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-left: 4px solid #0096ae;
+          "
+        >
+          <div style="font-size: 24px; margin-bottom: 6px">&#128736;</div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 8pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              color: #0096ae;
+              margin-bottom: 8px;
+            "
+          >
+            Expertise Liferay 18 ans
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            Partenaire depuis 2010. Couverture complete : v6.2, v7.0, v7.4, DXP
+            Cloud
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-left: 4px solid #493a8b;
+          "
+        >
+          <div style="font-size: 24px; margin-bottom: 6px">&#129309;</div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 8pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.08em;
+              color: #493a8b;
+              margin-bottom: 8px;
+            "
+          >
+            Equipe stable et engagee
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            100% collaborateurs BEORN, 0 sous-traitance. Pilotage assure en
+            propre
+          </div>
+        </div>
+      </div>
+
+      <!-- Perimetre applicatif -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Perimetre applicatif CNC
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px">
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #3373b3;
+            text-align: center;
+          "
+        >
+          <div style="font-size: 28px; margin-bottom: 8px">&#127968;</div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 700;
+              font-size: 10pt;
+              color: #193658;
+              margin-bottom: 4px;
+            "
+          >
+            Intranet CNC
+          </div>
+          <div
+            style="
+              display: inline-block;
+              padding: 3px 10px;
+              border-radius: 6px;
+              font-size: 7.5pt;
+              font-weight: 700;
+              background: rgba(235, 145, 38, 0.12);
+              color: #eb9126;
+            "
+          >
+            Liferay EE 6.2
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 6px">
+            500 agents<br />Version hors support
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #0096ae;
+            text-align: center;
+          "
+        >
+          <div style="font-size: 28px; margin-bottom: 8px">&#127760;</div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 700;
+              font-size: 10pt;
+              color: #193658;
+              margin-bottom: 4px;
+            "
+          >
+            Site cnc.fr
+          </div>
+          <div
+            style="
+              display: inline-block;
+              padding: 3px 10px;
+              border-radius: 6px;
+              font-size: 7.5pt;
+              font-weight: 700;
+              background: rgba(0, 150, 174, 0.12);
+              color: #0096ae;
+            "
+          >
+            Liferay 7.4
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 6px">
+            1,5M visiteurs / 5M pages<br />Refonte V2 en cours
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #493a8b;
+            text-align: center;
+          "
+        >
+          <div style="font-size: 28px; margin-bottom: 8px">&#127916;</div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 700;
+              font-size: 10pt;
+              color: #193658;
+              margin-bottom: 4px;
+            "
+          >
+            Portail Garance
+          </div>
+          <div
+            style="
+              display: inline-block;
+              padding: 3px 10px;
+              border-radius: 6px;
+              font-size: 7.5pt;
+              font-weight: 700;
+              background: rgba(73, 58, 139, 0.12);
+              color: #493a8b;
+            "
+          >
+            Liferay 7.4 / Docker
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 6px">
+            Cinematheque francaise<br />Prod. dec. 2025
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 1 — QUALITE DE LA MAINTENANCE                  -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div
+      style="
+        width: 210mm;
+        min-height: 270mm;
+        background: #fff;
+        margin: 24px auto;
+        padding: 28px 32px;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+      "
+    >
+      <div
+        style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 5px;
+          background: linear-gradient(
+            90deg,
+            #3373b3 0%,
+            #0096ae 35%,
+            #493a8b 65%,
+            #b82775 100%
+          );
+        "
+      ></div>
+
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 24px;
+          padding-top: 8px;
+        "
+      >
+        <div
+          style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            font-family: &quot;Montserrat&quot;, sans-serif;
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            background: #3373b3;
+            flex-shrink: 0;
+          "
+        >
+          1
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #193658;
+              line-height: 1.2;
+            "
+          >
+            Qualite de la maintenance
+          </div>
+          <div style="font-size: 9pt; color: #718096; margin-top: 2px">
+            Gouvernance, SLA, processus et chiffrage MCO
+          </div>
+        </div>
+      </div>
+
+      <!-- Governance -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Dispositif de gouvernance a 3 niveaux
+      </div>
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 16px;
+        "
+      >
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #3373b3;
+            text-align: center;
+          "
+        >
+          <div style="font-size: 22px; margin-bottom: 4px">&#128197;</div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 700;
+              font-size: 10pt;
+              color: #3373b3;
+            "
+          >
+            COPROJ
+          </div>
+          <div
+            style="
+              font-size: 16pt;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 800;
+              color: #193658;
+              margin: 4px 0;
+            "
+          >
+            Toutes les 2 sem.
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            Operationnel — Suivi tickets, SLA, plan de charge. Mutualise 3 apps.
+            CR sous 48h.
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #0096ae;
+            text-align: center;
+          "
+        >
+          <div style="font-size: 22px; margin-bottom: 4px">&#128202;</div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 700;
+              font-size: 10pt;
+              color: #0096ae;
+            "
+          >
+            COPIL
+          </div>
+          <div
+            style="
+              font-size: 16pt;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 800;
+              color: #193658;
+              margin: 4px 0;
+            "
+          >
+            Trimestriel
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            Strategique — Bilan qualite, revue PAQ, perspectives, satisfaction.
+            CR sous 5j.
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #493a8b;
+            text-align: center;
+          "
+        >
+          <div style="font-size: 22px; margin-bottom: 4px">&#128222;</div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 700;
+              font-size: 10pt;
+              color: #493a8b;
+            "
+          >
+            Hotline
+          </div>
+          <div
+            style="
+              font-size: 16pt;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 800;
+              color: #193658;
+              margin: 4px 0;
+            "
+          >
+            Quotidien
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            Jira + Google Workspace + telephone 9h-18h. Astreinte activable.
+          </div>
+        </div>
+      </div>
+
+      <!-- SLA Table -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Niveaux de service — SLA maintenance corrective
+      </div>
+      <table
+        style="
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          font-size: 8.5pt;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          overflow: hidden;
+          margin: 12px 0;
+        "
+      >
+        <thead>
+          <tr>
+            <th
+              style="
+                background: #3373b3;
+                color: #fff;
+                padding: 8px 12px;
+                text-align: left;
+                font-weight: 700;
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                width: 15%;
+              "
+            >
+              Niveau
+            </th>
+            <th
+              style="
+                background: #3373b3;
+                color: #fff;
+                padding: 8px 12px;
+                text-align: left;
+                font-weight: 700;
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                border-left: 1px solid rgba(255, 255, 255, 0.15);
+              "
+            >
+              Definition
+            </th>
+            <th
+              style="
+                background: #3373b3;
+                color: #fff;
+                padding: 8px 12px;
+                text-align: left;
+                font-weight: 700;
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                border-left: 1px solid rgba(255, 255, 255, 0.15);
+                width: 18%;
+              "
+            >
+              Prise en compte
+            </th>
+            <th
+              style="
+                background: #3373b3;
+                color: #fff;
+                padding: 8px 12px;
+                text-align: left;
+                font-weight: 700;
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                border-left: 1px solid rgba(255, 255, 255, 0.15);
+                width: 18%;
+              "
+            >
+              Resolution
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px 12px; border-top: 1px solid #e2e8f0">
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #fecaca;
+                  color: #991b1b;
+                "
+                >&#9679; Bloquant</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+              "
+            >
+              Application inaccessible ou perte de donnees
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                font-weight: 700;
+                color: #193658;
+                text-align: center;
+              "
+            >
+              &#8804; 4h ouvrees
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                font-weight: 700;
+                color: #193658;
+                text-align: center;
+              "
+            >
+              &#8804; 1 jour ouvre
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; border-top: 1px solid #e2e8f0">
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #fed7aa;
+                  color: #9a3412;
+                "
+                >&#9679; Majeur</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+              "
+            >
+              Fonctionnalite critique indisponible
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                font-weight: 700;
+                color: #193658;
+                text-align: center;
+              "
+            >
+              &#8804; 1 jour ouvre
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                font-weight: 700;
+                color: #193658;
+                text-align: center;
+              "
+            >
+              &#8804; 3 jours ouvres
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; border-top: 1px solid #e2e8f0">
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #dcfce7;
+                  color: #166534;
+                "
+                >&#9679; Mineur</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+              "
+            >
+              Anomalie avec contournement possible
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                font-weight: 700;
+                color: #193658;
+                text-align: center;
+              "
+            >
+              &#8804; 2 jours ouvres
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                font-weight: 700;
+                color: #193658;
+                text-align: center;
+              "
+            >
+              &#8804; 10 jours ouvres
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Corrective Flow -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Cycle de traitement d'une anomalie
+      </div>
+      <div
+        style="
+          margin: 18px 0 8px;
+          padding: 16px 12px;
+          background: #ffffff;
+          border: 1px solid #e2e8f0;
+          border-radius: 18px;
+          overflow-x: auto;
+        "
+      >
+        <svg
+          viewBox="0 0 960 480"
+          style="display: block; width: 100%; height: auto"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-label="Flowchart du cycle de traitement d'une anomalie"
+        >
+          <defs>
+            <marker id="arrow-flow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"></path>
+            </marker>
+            <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+              <path d="M0,0 L10,5 L0,10 z" fill="#3373b3"></path>
+            </marker>
+          </defs>
+
+          <!-- ── Row 1: Signalement → Prise en charge ── -->
+          <rect x="30" y="30" width="200" height="74" rx="18" fill="#f0f5fb" stroke="#3373b3" stroke-width="2.5"></rect>
+          <text x="130" y="60" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="24" font-weight="800" fill="#3373b3">1</text>
+          <text x="130" y="84" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="14" font-weight="700" fill="#334155">Signalement</text>
+
+          <line x1="230" y1="67" x2="280" y2="67" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+
+          <rect x="280" y="30" width="340" height="74" rx="18" fill="#f0f5fb" stroke="#3373b3" stroke-width="2.5"></rect>
+          <text x="450" y="60" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="24" font-weight="800" fill="#3373b3">2</text>
+          <text x="450" y="84" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="14" font-weight="700" fill="#334155">Prise en charge et qualification</text>
+
+          <!-- ── Arrow down to diamond ── -->
+          <line x1="450" y1="104" x2="450" y2="130" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+
+          <!-- ── Diamond: decision ── -->
+          <polygon points="450,130 550,210 450,290 350,210" fill="#fff" stroke="#3373b3" stroke-width="2.5"></polygon>
+          <text x="450" y="196" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="700" fill="#334155">Delai estime</text>
+          <text x="450" y="214" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="700" fill="#334155">&#8804; SLA ?</text>
+
+          <!-- ── OUI path (left): direct down to Correction ── -->
+          <line x1="350" y1="210" x2="240" y2="210" stroke="#2d8659" stroke-width="2.5"></line>
+          <line x1="240" y1="210" x2="240" y2="350" stroke="#2d8659" stroke-width="2.5"></line>
+          <line x1="240" y1="350" x2="365" y2="350" stroke="#2d8659" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+          <rect x="178" y="196" width="48" height="22" rx="6" fill="#dcfce7"></rect>
+          <text x="202" y="212" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="13" font-weight="800" fill="#166534">OUI</text>
+
+          <!-- ── NON path (right): Contournement then down to Correction ── -->
+          <line x1="550" y1="210" x2="660" y2="210" stroke="#b82775" stroke-width="2.5"></line>
+          <line x1="660" y1="210" x2="660" y2="236" stroke="#b82775" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+          <rect x="663" y="196" width="52" height="22" rx="6" fill="#fce7f3"></rect>
+          <text x="689" y="212" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="13" font-weight="800" fill="#9f1239">NON</text>
+
+          <!-- Contournement box -->
+          <rect x="586" y="238" width="148" height="56" rx="14" fill="#fdf2f8" stroke="#b82775" stroke-width="2.5"></rect>
+          <text x="660" y="261" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="12" font-weight="700" fill="#9f1239">Solution de</text>
+          <text x="660" y="279" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="12" font-weight="700" fill="#9f1239">contournement</text>
+
+          <!-- Contournement → down to Correction -->
+          <line x1="660" y1="294" x2="660" y2="350" stroke="#b82775" stroke-width="2.5"></line>
+          <line x1="660" y1="350" x2="535" y2="350" stroke="#b82775" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+
+          <!-- ── Row 3: Single Correction (both paths merge here) ── -->
+          <rect x="365" y="325" width="170" height="50" rx="25" fill="#f0f5fb" stroke="#3373b3" stroke-width="2.5"></rect>
+          <text x="450" y="356" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="15" font-weight="700" fill="#334155">Correction</text>
+
+          <!-- Correction → Livraison -->
+          <line x1="450" y1="375" x2="450" y2="406" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+
+          <!-- ── Row 4: Livraison → Recette → Cloture ── -->
+          <rect x="385" y="408" width="130" height="46" rx="23" fill="#f0f5fb" stroke="#3373b3" stroke-width="2.5"></rect>
+          <text x="450" y="437" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="15" font-weight="700" fill="#334155">Livraison</text>
+
+          <line x1="515" y1="431" x2="550" y2="431" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+
+          <rect x="550" y="408" width="130" height="46" rx="23" fill="#f0f5fb" stroke="#3373b3" stroke-width="2.5"></rect>
+          <text x="615" y="437" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="15" font-weight="700" fill="#334155">Recette</text>
+
+          <line x1="680" y1="431" x2="715" y2="431" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+
+          <rect x="715" y="408" width="130" height="46" rx="23" fill="#e8f5fa" stroke="#0096ae" stroke-width="2.5"></rect>
+          <text x="780" y="437" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="15" font-weight="700" fill="#0096ae">Cloture</text>
+        </svg>
+      </div>
+
+      <!-- Initialisation Timeline -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Phase d'initialisation — Planning
+      </div>
+      <div style="position: relative; padding-left: 28px; margin: 16px 0">
+        <div
+          style="
+            position: absolute;
+            left: 10px;
+            top: 6px;
+            bottom: 6px;
+            width: 3px;
+            border-radius: 2px;
+            background: linear-gradient(to bottom, #3373b3, #0096ae);
+          "
+        ></div>
+        <div style="position: relative; padding: 8px 0 16px 16px">
+          <div
+            style="
+              position: absolute;
+              left: -22px;
+              top: 12px;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: 3px solid #3373b3;
+              background: #fff;
+            "
+          ></div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7.5pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              color: #3373b3;
+              margin-bottom: 2px;
+            "
+          >
+            Semaines 1-2 — Kick-off
+          </div>
+          <div style="font-size: 8.5pt; color: #2d3748; line-height: 1.4">
+            Reunion de lancement, acces Jira/GitLab, environnements, plan
+            d'initialisation
+          </div>
+        </div>
+        <div style="position: relative; padding: 8px 0 16px 16px">
+          <div
+            style="
+              position: absolute;
+              left: -22px;
+              top: 12px;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: 3px solid #5a93c8;
+              background: #fff;
+            "
+          ></div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7.5pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              color: #5a93c8;
+              margin-bottom: 2px;
+            "
+          >
+            Semaines 2-6 — Recouvrement & audit
+          </div>
+          <div style="font-size: 8.5pt; color: #2d3748; line-height: 1.4">
+            Audit technique des 3 apps, convention de service, collaboration
+            prestataire sortant
+          </div>
+        </div>
+        <div style="position: relative; padding: 8px 0 16px 16px">
+          <div
+            style="
+              position: absolute;
+              left: -22px;
+              top: 12px;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: 3px solid #2a9aa8;
+              background: #fff;
+            "
+          ></div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7.5pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              color: #2a9aa8;
+              margin-bottom: 2px;
+            "
+          >
+            Semaines 4-8 — Montee en competence
+          </div>
+          <div style="font-size: 8.5pt; color: #2d3748; line-height: 1.4">
+            Transfert de connaissances, plan de resorption des anomalies
+            residuelles
+          </div>
+        </div>
+        <div style="position: relative; padding: 8px 0 16px 16px">
+          <div
+            style="
+              position: absolute;
+              left: -22px;
+              top: 12px;
+              width: 12px;
+              height: 12px;
+              border-radius: 50%;
+              border: 3px solid #0096ae;
+              background: #fff;
+            "
+          ></div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7.5pt;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              color: #0096ae;
+              margin-bottom: 2px;
+            "
+          >
+            Semaines 8-12 — MOM & demarrage TMA
+          </div>
+          <div style="font-size: 8.5pt; color: #2d3748; line-height: 1.4">
+            Validation MOM, demarrage corrective, premier COPROJ, remise PAQ +
+            PAS
+          </div>
+        </div>
+      </div>
+
+      <!-- MCO Chiffrage -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Estimation MCO corrective annuelle (jours)
+      </div>
+      <div style="margin: 12px 0">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+          "
+        >
+          <div
+            style="
+              width: 140px;
+              font-size: 8pt;
+              font-weight: 600;
+              text-align: right;
+              flex-shrink: 0;
+            "
+          >
+            Intranet (6.2)
+          </div>
+          <div
+            style="
+              flex: 1;
+              height: 22px;
+              background: #f1f5f9;
+              border-radius: 6px;
+              overflow: hidden;
+            "
+          >
+            <div
+              style="
+                height: 100%;
+                width: 31%;
+                border-radius: 6px;
+                background: #3373b3;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: 8px;
+                font-size: 7.5pt;
+                font-weight: 700;
+                color: #fff;
+              "
+            >
+              15-25j
+            </div>
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+          "
+        >
+          <div
+            style="
+              width: 140px;
+              font-size: 8pt;
+              font-weight: 600;
+              text-align: right;
+              flex-shrink: 0;
+            "
+          >
+            cnc.fr V2 (7.4)
+          </div>
+          <div
+            style="
+              flex: 1;
+              height: 22px;
+              background: #f1f5f9;
+              border-radius: 6px;
+              overflow: hidden;
+            "
+          >
+            <div
+              style="
+                height: 100%;
+                width: 50%;
+                border-radius: 6px;
+                background: #0096ae;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: 8px;
+                font-size: 7.5pt;
+                font-weight: 700;
+                color: #fff;
+              "
+            >
+              25-40j
+            </div>
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+          "
+        >
+          <div
+            style="
+              width: 140px;
+              font-size: 8pt;
+              font-weight: 600;
+              text-align: right;
+              flex-shrink: 0;
+            "
+          >
+            Garance (7.4)
+          </div>
+          <div
+            style="
+              flex: 1;
+              height: 22px;
+              background: #f1f5f9;
+              border-radius: 6px;
+              overflow: hidden;
+            "
+          >
+            <div
+              style="
+                height: 100%;
+                width: 50%;
+                border-radius: 6px;
+                background: #493a8b;
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+                padding-right: 8px;
+                font-size: 7.5pt;
+                font-weight: 700;
+                color: #fff;
+              "
+            >
+              20-40j
+            </div>
+          </div>
+        </div>
+      </div>
+      <div
+        style="
+          font-size: 7.5pt;
+          color: #718096;
+          margin-top: 4px;
+          font-style: italic;
+        "
+      >
+        Majoration +30% les 12 premiers mois pour cnc.fr V2 et Garance (phase de
+        rodage)
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 2 — GESTION DE PROJET AGILE                    -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div
+      style="
+        width: 210mm;
+        min-height: 270mm;
+        background: #fff;
+        margin: 24px auto;
+        padding: 28px 32px;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+      "
+    >
+      <div
+        style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 5px;
+          background: linear-gradient(
+            90deg,
+            #3373b3 0%,
+            #0096ae 35%,
+            #493a8b 65%,
+            #b82775 100%
+          );
+        "
+      ></div>
+
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 24px;
+          padding-top: 8px;
+        "
+      >
+        <div
+          style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            font-family: &quot;Montserrat&quot;, sans-serif;
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            background: #0096ae;
+            flex-shrink: 0;
+          "
+        >
+          2
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #193658;
+              line-height: 1.2;
+            "
+          >
+            Gestion de projet agile
+          </div>
+          <div style="font-size: 9pt; color: #718096; margin-top: 2px">
+            Methodologie Scrum / Kanban & cas d'ecole site jeu video CNC
+          </div>
+        </div>
+      </div>
+
+      <!-- Scrum/Kanban -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Approche hybride
+      </div>
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 16px;
+        "
+      >
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #0096ae;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              margin-bottom: 8px;
+            "
+          >
+            <div style="font-size: 20px">&#9889;</div>
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-weight: 800;
+                font-size: 14pt;
+                color: #0096ae;
+              "
+            >
+              Scrum
+            </div>
+          </div>
+          <div style="font-size: 8.5pt; color: #718096">
+            Projets de developpement agile, evolutions structurantes. Sprints de
+            2 semaines, ceremonies completes, velocite pilotee.
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #493a8b;
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 10px;
+              margin-bottom: 8px;
+            "
+          >
+            <div style="font-size: 20px">&#128260;</div>
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-weight: 800;
+                font-size: 14pt;
+                color: #493a8b;
+              "
+            >
+              Kanban
+            </div>
+          </div>
+          <div style="font-size: 8.5pt; color: #718096">
+            Maintenance corrective et petites evolutions. Flux continu,
+            priorisation temps reel. Jira : A faire / En cours / En recette /
+            Termine.
+          </div>
+        </div>
+      </div>
+
+      <!-- Rituels -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Rituels agiles — Sprint de 2 semaines
+      </div>
+      <div style="display: flex; align-items: center; gap: 0; margin: 16px 0">
+        <div
+          style="
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(0, 150, 174, 0.08);
+            border: 1px solid #0096ae;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+          "
+        >
+          <span
+            style="
+              display: block;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #0096ae;
+              margin-bottom: 4px;
+            "
+            >J1</span
+          >Sprint Planning<br /><span style="font-size: 7pt; color: #718096"
+            >2h</span
+          >
+        </div>
+        <div
+          style="
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+            color: #718096;
+            font-size: 14pt;
+          "
+        >
+          &#8594;
+        </div>
+        <div
+          style="
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(0, 150, 174, 0.05);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+          "
+        >
+          <span
+            style="
+              display: block;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #0096ae;
+              margin-bottom: 4px;
+            "
+            >J2-9</span
+          >Daily Standup<br /><span style="font-size: 7pt; color: #718096"
+            >15min/j</span
+          >
+        </div>
+        <div
+          style="
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+            color: #718096;
+            font-size: 14pt;
+          "
+        >
+          &#8594;
+        </div>
+        <div
+          style="
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(0, 150, 174, 0.05);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+          "
+        >
+          <span
+            style="
+              display: block;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #0096ae;
+              margin-bottom: 4px;
+            "
+            >J5</span
+          >Refinement<br /><span style="font-size: 7pt; color: #718096"
+            >1h</span
+          >
+        </div>
+        <div
+          style="
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+            color: #718096;
+            font-size: 14pt;
+          "
+        >
+          &#8594;
+        </div>
+        <div
+          style="
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(0, 150, 174, 0.08);
+            border: 1px solid #0096ae;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+          "
+        >
+          <span
+            style="
+              display: block;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #0096ae;
+              margin-bottom: 4px;
+            "
+            >J10</span
+          >Sprint Review<br /><span style="font-size: 7pt; color: #718096"
+            >1h</span
+          >
+        </div>
+        <div
+          style="
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+            color: #718096;
+            font-size: 14pt;
+          "
+        >
+          &#8594;
+        </div>
+        <div
+          style="
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(73, 58, 139, 0.06);
+            border: 1px solid #493a8b;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+          "
+        >
+          <span
+            style="
+              display: block;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #493a8b;
+              margin-bottom: 4px;
+            "
+            >J10</span
+          >Retro<br /><span style="font-size: 7pt; color: #718096">45min</span>
+        </div>
+      </div>
+
+      <!-- Sprint board -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Cas d'ecole — Site jeu video : repartition par sprint
+      </div>
+      <div style="display: flex; gap: 8px; margin-bottom: 8px">
+        <span
+          style="
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 7.5pt;
+            font-weight: 700;
+            background: rgba(0, 150, 174, 0.12);
+            color: #0096ae;
+          "
+          >Total : 38 points</span
+        >
+        <span
+          style="
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 7.5pt;
+            font-weight: 700;
+            background: rgba(73, 58, 139, 0.12);
+            color: #493a8b;
+          "
+          >3 sprints (6 semaines)</span
+        >
+        <span
+          style="
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 6px;
+            font-size: 7.5pt;
+            font-weight: 700;
+            background: rgba(51, 115, 179, 0.12);
+            color: #3373b3;
+          "
+          >Velocite cible : 20 pts/sprint</span
+        >
+      </div>
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 10px;
+          margin: 12px 0;
+        "
+      >
+        <!-- Sprint 1 -->
+        <div
+          style="
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+          "
+        >
+          <div
+            style="
+              padding: 8px 12px;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 8pt;
+              font-weight: 700;
+              color: #fff;
+              text-align: center;
+              background: #3373b3;
+            "
+          >
+            Sprint 1 — Socle (16 pts)
+          </div>
+          <div
+            style="
+              padding: 8px;
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+              background: rgba(51, 115, 179, 0.03);
+            "
+          >
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-01 Provisioning<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(51, 115, 179, 0.12);
+                  color: #3373b3;
+                  margin-left: 6px;
+                "
+                >3</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-02 Theme jeu video<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(51, 115, 179, 0.12);
+                  color: #3373b3;
+                  margin-left: 6px;
+                "
+                >5</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-03 Accueil actus<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(51, 115, 179, 0.12);
+                  color: #3373b3;
+                  margin-left: 6px;
+                "
+                >2</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-04 Publish actu<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(51, 115, 179, 0.12);
+                  color: #3373b3;
+                  margin-left: 6px;
+                "
+                >1</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-05 Navigation<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(51, 115, 179, 0.12);
+                  color: #3373b3;
+                  margin-left: 6px;
+                "
+                >2</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-06 Liste actus<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(51, 115, 179, 0.12);
+                  color: #3373b3;
+                  margin-left: 6px;
+                "
+                >2</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-07 Detail actu<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(51, 115, 179, 0.12);
+                  color: #3373b3;
+                  margin-left: 6px;
+                "
+                >1</span
+              >
+            </div>
+          </div>
+        </div>
+        <!-- Sprint 2 -->
+        <div
+          style="
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+          "
+        >
+          <div
+            style="
+              padding: 8px 12px;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 8pt;
+              font-weight: 700;
+              color: #fff;
+              text-align: center;
+              background: #0096ae;
+            "
+          >
+            Sprint 2 — Fonctionnalites (15 pts)
+          </div>
+          <div
+            style="
+              padding: 8px;
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+              background: rgba(0, 150, 174, 0.03);
+            "
+          >
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-08 Pages contenu<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(0, 150, 174, 0.12);
+                  color: #0096ae;
+                  margin-left: 6px;
+                "
+                >2</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-09 Agenda<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(0, 150, 174, 0.12);
+                  color: #0096ae;
+                  margin-left: 6px;
+                "
+                >2</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-10 Creer evenement<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(0, 150, 174, 0.12);
+                  color: #0096ae;
+                  margin-left: 6px;
+                "
+                >1</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-11 Filtres agenda<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(0, 150, 174, 0.12);
+                  color: #0096ae;
+                  margin-left: 6px;
+                "
+                >2</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-12 Recherche<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(0, 150, 174, 0.12);
+                  color: #0096ae;
+                  margin-left: 6px;
+                "
+                >3</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-13 Filtres recherche<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(0, 150, 174, 0.12);
+                  color: #0096ae;
+                  margin-left: 6px;
+                "
+                >2</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-14 Formulaire<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(0, 150, 174, 0.12);
+                  color: #0096ae;
+                  margin-left: 6px;
+                "
+                >2</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-15 Notifications<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(0, 150, 174, 0.12);
+                  color: #0096ae;
+                  margin-left: 6px;
+                "
+                >1</span
+              >
+            </div>
+          </div>
+        </div>
+        <!-- Sprint 3 -->
+        <div
+          style="
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+          "
+        >
+          <div
+            style="
+              padding: 8px 12px;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 8pt;
+              font-weight: 700;
+              color: #fff;
+              text-align: center;
+              background: #493a8b;
+            "
+          >
+            Sprint 3 — Qualite (7 pts)
+          </div>
+          <div
+            style="
+              padding: 8px;
+              display: flex;
+              flex-direction: column;
+              gap: 4px;
+              background: rgba(73, 58, 139, 0.03);
+            "
+          >
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-16 Audit RGAA<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(73, 58, 139, 0.12);
+                  color: #493a8b;
+                  margin-left: 6px;
+                "
+                >5</span
+              >
+            </div>
+            <div
+              style="
+                padding: 6px 8px;
+                background: #fff;
+                border: 1px solid #e2e8f0;
+                border-radius: 6px;
+                font-size: 7pt;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              US-17 Responsive<span
+                style="
+                  font-family: &quot;Montserrat&quot;, sans-serif;
+                  font-weight: 700;
+                  font-size: 8pt;
+                  padding: 2px 6px;
+                  border-radius: 4px;
+                  background: rgba(73, 58, 139, 0.12);
+                  color: #493a8b;
+                  margin-left: 6px;
+                "
+                >2</span
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mutualisation donut -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Strategie de mutualisation — composants cnc.fr V2
+      </div>
+      <div
+        style="display: flex; align-items: center; gap: 24px; margin: 12px 0"
+      >
+        <div
+          style="
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: conic-gradient(#0096ae 0% 85%, #e2e8f0 85% 100%);
+            position: relative;
+            flex-shrink: 0;
+          "
+        >
+          <div
+            style="
+              position: absolute;
+              top: 20px;
+              left: 20px;
+              right: 20px;
+              bottom: 20px;
+              background: #fff;
+              border-radius: 50%;
+            "
+          ></div>
+          <div
+            style="
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              z-index: 1;
+              text-align: center;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 18pt;
+                font-weight: 800;
+                color: #0096ae;
+              "
+            >
+              85%
+            </div>
+            <div style="font-size: 6.5pt; color: #718096">reutilise</div>
+          </div>
+        </div>
+        <div
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            font-size: 8pt;
+          "
+        >
+          <div style="display: flex; align-items: center; gap: 6px">
+            <div
+              style="
+                width: 10px;
+                height: 10px;
+                border-radius: 3px;
+                background: #0096ae;
+                flex-shrink: 0;
+              "
+            ></div>
+            <strong style="color: #193658">85% Composants V2 reutilises</strong>
+            — Fragments, client extensions, structures DDM, templates
+          </div>
+          <div style="display: flex; align-items: center; gap: 6px">
+            <div
+              style="
+                width: 10px;
+                height: 10px;
+                border-radius: 3px;
+                background: #e2e8f0;
+                flex-shrink: 0;
+              "
+            ></div>
+            <strong style="color: #193658">15% Configuration specifique</strong>
+            — Theme CSS, categories, parametrage
+          </div>
+          <div
+            style="
+              margin-top: 6px;
+              font-size: 7.5pt;
+              color: #718096;
+              font-style: italic;
+            "
+          >
+            0 composant custom a developper. Cout MCO nul (composants deja
+            maintenus).
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 3 — EQUIPE DEDIEE                              -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div
+      style="
+        width: 210mm;
+        min-height: 270mm;
+        background: #fff;
+        margin: 24px auto;
+        padding: 28px 32px;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+      "
+    >
+      <div
+        style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 5px;
+          background: linear-gradient(
+            90deg,
+            #3373b3 0%,
+            #0096ae 35%,
+            #493a8b 65%,
+            #b82775 100%
+          );
+        "
+      ></div>
+
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 24px;
+          padding-top: 8px;
+        "
+      >
+        <div
+          style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            font-family: &quot;Montserrat&quot;, sans-serif;
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            background: #493a8b;
+            flex-shrink: 0;
+          "
+        >
+          3
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #193658;
+              line-height: 1.2;
+            "
+          >
+            Equipe dediee au marche
+          </div>
+          <div style="font-size: 9pt; color: #718096; margin-top: 2px">
+            7 collaborateurs BEORN — 0 sous-traitance
+          </div>
+        </div>
+      </div>
+
+      <!-- Org chart -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Organigramme du marche
+      </div>
+      <div
+        style="
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 0;
+          margin: 16px 0;
+        "
+      >
+        <!-- Level 1 -->
+        <div style="display: flex; justify-content: center; gap: 12px">
+          <div
+            style="
+              border: 2px solid #193658;
+              border-radius: 12px;
+              padding: 10px 16px;
+              text-align: center;
+              min-width: 130px;
+              background: #fff;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 9pt;
+                font-weight: 700;
+                color: #193658;
+              "
+            >
+              Benjamin Bini
+            </div>
+            <div style="font-size: 7.5pt; color: #718096; margin-top: 2px">
+              Responsable de marche
+            </div>
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 8pt;
+                font-weight: 700;
+                margin-top: 4px;
+                padding: 2px 8px;
+                border-radius: 4px;
+                display: inline-block;
+                background: rgba(25, 54, 88, 0.1);
+                color: #193658;
+              "
+            >
+              30%
+            </div>
+          </div>
+        </div>
+        <div
+          style="width: 2px; height: 20px; background: #e2e8f0; margin: 0 auto"
+        ></div>
+        <!-- Level 2 -->
+        <div style="display: flex; justify-content: center; gap: 12px">
+          <div
+            style="
+              border: 2px solid #3373b3;
+              border-radius: 12px;
+              padding: 10px 16px;
+              text-align: center;
+              min-width: 130px;
+              background: #fff;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 9pt;
+                font-weight: 700;
+                color: #3373b3;
+              "
+            >
+              Cedric Pierron
+            </div>
+            <div style="font-size: 7.5pt; color: #718096; margin-top: 2px">
+              Chef de projet TMA
+            </div>
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 8pt;
+                font-weight: 700;
+                margin-top: 4px;
+                padding: 2px 8px;
+                border-radius: 4px;
+                display: inline-block;
+                background: rgba(51, 115, 179, 0.1);
+                color: #3373b3;
+              "
+            >
+              50%
+            </div>
+          </div>
+          <div
+            style="
+              border: 2px solid #0096ae;
+              border-radius: 12px;
+              padding: 10px 16px;
+              text-align: center;
+              min-width: 130px;
+              background: #fff;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 9pt;
+                font-weight: 700;
+                color: #0096ae;
+              "
+            >
+              O. Bonnet-Torres
+            </div>
+            <div style="font-size: 7.5pt; color: #718096; margin-top: 2px">
+              Architecte / Ref. securite
+            </div>
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 8pt;
+                font-weight: 700;
+                margin-top: 4px;
+                padding: 2px 8px;
+                border-radius: 4px;
+                display: inline-block;
+                background: rgba(0, 150, 174, 0.1);
+                color: #0096ae;
+              "
+            >
+              30%
+            </div>
+          </div>
+        </div>
+        <div
+          style="width: 2px; height: 20px; background: #e2e8f0; margin: 0 auto"
+        ></div>
+        <!-- Level 3 -->
+        <div
+          style="
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+          "
+        >
+          <div
+            style="
+              border: 2px solid #493a8b;
+              border-radius: 12px;
+              padding: 10px 16px;
+              text-align: center;
+              min-width: 120px;
+              background: #fff;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 9pt;
+                font-weight: 700;
+                color: #493a8b;
+              "
+            >
+              Loic Veroudart
+            </div>
+            <div style="font-size: 7.5pt; color: #718096; margin-top: 2px">
+              Lead dev Liferay
+            </div>
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 8pt;
+                font-weight: 700;
+                margin-top: 4px;
+                padding: 2px 8px;
+                border-radius: 4px;
+                display: inline-block;
+                background: rgba(73, 58, 139, 0.1);
+                color: #493a8b;
+              "
+            >
+              100%
+            </div>
+          </div>
+          <div
+            style="
+              border: 2px solid #493a8b;
+              border-radius: 12px;
+              padding: 10px 16px;
+              text-align: center;
+              min-width: 120px;
+              background: #fff;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 9pt;
+                font-weight: 700;
+                color: #493a8b;
+              "
+            >
+              Thibault
+            </div>
+            <div style="font-size: 7.5pt; color: #718096; margin-top: 2px">
+              Dev Liferay
+            </div>
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 8pt;
+                font-weight: 700;
+                margin-top: 4px;
+                padding: 2px 8px;
+                border-radius: 4px;
+                display: inline-block;
+                background: rgba(73, 58, 139, 0.1);
+                color: #493a8b;
+              "
+            >
+              100%
+            </div>
+          </div>
+          <div
+            style="
+              border: 2px solid #493a8b;
+              border-radius: 12px;
+              padding: 10px 16px;
+              text-align: center;
+              min-width: 120px;
+              background: #fff;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 9pt;
+                font-weight: 700;
+                color: #493a8b;
+              "
+            >
+              Hau
+            </div>
+            <div style="font-size: 7.5pt; color: #718096; margin-top: 2px">
+              Dev Liferay
+            </div>
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 8pt;
+                font-weight: 700;
+                margin-top: 4px;
+                padding: 2px 8px;
+                border-radius: 4px;
+                display: inline-block;
+                background: rgba(73, 58, 139, 0.1);
+                color: #493a8b;
+              "
+            >
+              100%
+            </div>
+          </div>
+          <div
+            style="
+              border: 2px solid #b82775;
+              border-radius: 12px;
+              padding: 10px 16px;
+              text-align: center;
+              min-width: 120px;
+              background: #fff;
+            "
+          >
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 9pt;
+                font-weight: 700;
+                color: #b82775;
+              "
+            >
+              Vincent
+            </div>
+            <div style="font-size: 7.5pt; color: #718096; margin-top: 2px">
+              Designer UI/UX
+            </div>
+            <div
+              style="
+                font-family: &quot;Montserrat&quot;, sans-serif;
+                font-size: 8pt;
+                font-weight: 700;
+                margin-top: 4px;
+                padding: 2px 8px;
+                border-radius: 4px;
+                display: inline-block;
+                background: rgba(184, 39, 117, 0.1);
+                color: #b82775;
+              "
+            >
+              50%
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Garanties -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Garanties de stabilite
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px">
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            text-align: center;
+            border-top: 3px solid #493a8b;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 18pt;
+              font-weight: 800;
+              line-height: 1.1;
+              color: #493a8b;
+            "
+          >
+            15j
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            Delai de remplacement max (jours ouvres)
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            text-align: center;
+            border-top: 3px solid #0096ae;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 18pt;
+              font-weight: 800;
+              line-height: 1.1;
+              color: #0096ae;
+            "
+          >
+            5j
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            Chevauchement min lors d'un remplacement
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            text-align: center;
+            border-top: 3px solid #3373b3;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 18pt;
+              font-weight: 800;
+              line-height: 1.1;
+              color: #3373b3;
+            "
+          >
+            0%
+          </div>
+          <div style="font-size: 8.5pt; color: #718096; margin-top: 4px">
+            Taux de rotation cible sur la duree du marche
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 4 — SECURITE INFORMATIQUE                      -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div
+      style="
+        width: 210mm;
+        min-height: 270mm;
+        background: #fff;
+        margin: 24px auto;
+        padding: 28px 32px;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+      "
+    >
+      <div
+        style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 5px;
+          background: linear-gradient(
+            90deg,
+            #3373b3 0%,
+            #0096ae 35%,
+            #493a8b 65%,
+            #b82775 100%
+          );
+        "
+      ></div>
+
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 24px;
+          padding-top: 8px;
+        "
+      >
+        <div
+          style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            font-family: &quot;Montserrat&quot;, sans-serif;
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            background: #b82775;
+            flex-shrink: 0;
+          "
+        >
+          4
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #193658;
+              line-height: 1.2;
+            "
+          >
+            Securite informatique
+          </div>
+          <div style="font-size: 9pt; color: #718096; margin-top: 2px">
+            Demarche DevSecOps, gestion des risques et plan de crise
+          </div>
+        </div>
+      </div>
+
+      <!-- DevSecOps Pipeline -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Pipeline DevSecOps — Securite a chaque etape
+      </div>
+      <div
+        style="
+          display: flex;
+          margin: 16px 0;
+          border-radius: 12px;
+          overflow: hidden;
+          border: 1px solid #e2e8f0;
+        "
+      >
+        <div
+          style="
+            flex: 1;
+            padding: 14px 10px;
+            text-align: center;
+            color: #fff;
+            background: #3373b3;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7pt;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              margin-bottom: 4px;
+            "
+          >
+            Developpement
+          </div>
+          <div
+            style="
+              font-size: 7pt;
+              font-weight: 400;
+              opacity: 0.85;
+              line-height: 1.4;
+            "
+          >
+            Revues OWASP<br />SonarQube<br />Secret Detection
+          </div>
+        </div>
+        <div
+          style="
+            flex: 1;
+            padding: 14px 10px;
+            text-align: center;
+            color: #fff;
+            background: #3a7cc2;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7pt;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              margin-bottom: 4px;
+            "
+          >
+            CI/CD
+          </div>
+          <div
+            style="
+              font-size: 7pt;
+              font-weight: 400;
+              opacity: 0.85;
+              line-height: 1.4;
+            "
+          >
+            Analyse statique<br />Dependency-Check<br />npm audit
+          </div>
+        </div>
+        <div
+          style="
+            flex: 1;
+            padding: 14px 10px;
+            text-align: center;
+            color: #fff;
+            background: #0096ae;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7pt;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              margin-bottom: 4px;
+            "
+          >
+            Deploiement
+          </div>
+          <div
+            style="
+              font-size: 7pt;
+              font-weight: 400;
+              opacity: 0.85;
+              line-height: 1.4;
+            "
+          >
+            Hardening Liferay<br />TLS 1.2+<br />Headers CSP/HSTS
+          </div>
+        </div>
+        <div
+          style="
+            flex: 1;
+            padding: 14px 10px;
+            text-align: center;
+            color: #fff;
+            background: #493a8b;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7pt;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              margin-bottom: 4px;
+            "
+          >
+            Production
+          </div>
+          <div
+            style="
+              font-size: 7pt;
+              font-weight: 400;
+              opacity: 0.85;
+              line-height: 1.4;
+            "
+          >
+            Veille CVE hebdo<br />Journalisation<br />Alertes patterns
+          </div>
+        </div>
+        <div
+          style="
+            flex: 1;
+            padding: 14px 10px;
+            text-align: center;
+            color: #fff;
+            background: #b82775;
+          "
+        >
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 7pt;
+              font-weight: 800;
+              text-transform: uppercase;
+              letter-spacing: 0.06em;
+              margin-bottom: 4px;
+            "
+          >
+            Maintenance
+          </div>
+          <div
+            style="
+              font-size: 7pt;
+              font-weight: 400;
+              opacity: 0.85;
+              line-height: 1.4;
+            "
+          >
+            Bulletins Liferay<br />Patches &#8804;5j<br />Audit annuel PAS
+          </div>
+        </div>
+      </div>
+
+      <!-- Risk Table -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Matrice des risques securite
+      </div>
+      <table
+        style="
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          font-size: 8.5pt;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          overflow: hidden;
+          margin: 12px 0;
+        "
+      >
+        <thead>
+          <tr>
+            <th
+              style="
+                background: #b82775;
+                color: #fff;
+                padding: 8px 12px;
+                text-align: left;
+                font-weight: 700;
+                font-size: 7.5pt;
+                text-transform: uppercase;
+              "
+            >
+              Risque
+            </th>
+            <th
+              style="
+                background: #b82775;
+                color: #fff;
+                padding: 8px 12px;
+                text-align: center;
+                font-weight: 700;
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                border-left: 1px solid rgba(255, 255, 255, 0.15);
+                width: 13%;
+              "
+            >
+              Prob.
+            </th>
+            <th
+              style="
+                background: #b82775;
+                color: #fff;
+                padding: 8px 12px;
+                text-align: center;
+                font-weight: 700;
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                border-left: 1px solid rgba(255, 255, 255, 0.15);
+                width: 13%;
+              "
+            >
+              Impact
+            </th>
+            <th
+              style="
+                background: #b82775;
+                color: #fff;
+                padding: 8px 12px;
+                text-align: left;
+                font-weight: 700;
+                font-size: 7.5pt;
+                text-transform: uppercase;
+                border-left: 1px solid rgba(255, 255, 255, 0.15);
+              "
+            >
+              Traitement
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="padding: 8px 12px; border-top: 1px solid #e2e8f0">
+              CVE Liferay en production
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                text-align: center;
+              "
+            >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #dcfce7;
+                  color: #166534;
+                "
+                >Faible</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                text-align: center;
+              "
+            >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #fecaca;
+                  color: #991b1b;
+                "
+                >Critique</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+              "
+            >
+              Veille CVE hebdo, patch &#8804; 5j
+            </td>
+          </tr>
+          <tr>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                background: #f8f9fc;
+              "
+            >
+              Compromission compte dev
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                text-align: center;
+                background: #f8f9fc;
+              "
+            >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #dcfce7;
+                  color: #166534;
+                "
+                >Faible</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                text-align: center;
+                background: #f8f9fc;
+              "
+            >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #fed7aa;
+                  color: #9a3412;
+                "
+                >Eleve</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                background: #f8f9fc;
+              "
+            >
+              MFA obligatoire, rotation secrets
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 8px 12px; border-top: 1px solid #e2e8f0">
+              Injection SQL / XSS
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                text-align: center;
+              "
+            >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #dcfce7;
+                  color: #166534;
+                "
+                >Faible</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                text-align: center;
+              "
+            >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #fed7aa;
+                  color: #9a3412;
+                "
+                >Eleve</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+              "
+            >
+              Revue OWASP, SonarQube CI/CD
+            </td>
+          </tr>
+          <tr>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                background: #f8f9fc;
+                font-weight: 700;
+                color: #b82775;
+              "
+            >
+              Intranet 6.2 — CVE sans patch
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                text-align: center;
+                background: #f8f9fc;
+              "
+            >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #fef9c3;
+                  color: #854d0e;
+                "
+                >Moyenne</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                text-align: center;
+                background: #f8f9fc;
+              "
+            >
+              <span
+                style="
+                  display: inline-block;
+                  padding: 3px 10px;
+                  border-radius: 6px;
+                  font-size: 7.5pt;
+                  font-weight: 700;
+                  background: #fed7aa;
+                  color: #9a3412;
+                "
+                >Eleve</span
+              >
+            </td>
+            <td
+              style="
+                padding: 8px 12px;
+                border-top: 1px solid #e2e8f0;
+                border-left: 1px solid #e2e8f0;
+                background: #f8f9fc;
+              "
+            >
+              Hardening + consolidation multisite
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- Crisis Timeline -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Plan de crise — Chronologie d'intervention
+      </div>
+      <div style="display: flex; align-items: center; gap: 0; margin: 16px 0">
+        <div
+          style="
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(184, 39, 117, 0.08);
+            border: 1px solid #b82775;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+          "
+        >
+          <span
+            style="
+              display: block;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #b82775;
+              margin-bottom: 4px;
+            "
+            >H+0</span
+          >Detection<br /><span style="font-size: 7pt; color: #718096"
+            >Logs, alerte CVE</span
+          >
+        </div>
+        <div
+          style="
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+            color: #718096;
+            font-size: 14pt;
+          "
+        >
+          &#8594;
+        </div>
+        <div
+          style="
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(184, 39, 117, 0.06);
+            border: 1px solid #b82775;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+          "
+        >
+          <span
+            style="
+              display: block;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #b82775;
+              margin-bottom: 4px;
+            "
+            >H+2</span
+          >Notification CNC<br /><span style="font-size: 7pt; color: #718096"
+            >SOSI + RSSI sous 2h</span
+          >
+        </div>
+        <div
+          style="
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+            color: #718096;
+            font-size: 14pt;
+          "
+        >
+          &#8594;
+        </div>
+        <div
+          style="
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(73, 58, 139, 0.06);
+            border: 1px solid #493a8b;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+          "
+        >
+          <span
+            style="
+              display: block;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #493a8b;
+              margin-bottom: 4px;
+            "
+            >H+8</span
+          >Confinement<br /><span style="font-size: 7pt; color: #718096"
+            >Isolation, logs</span
+          >
+        </div>
+        <div
+          style="
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+            color: #718096;
+            font-size: 14pt;
+          "
+        >
+          &#8594;
+        </div>
+        <div
+          style="
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(51, 115, 179, 0.06);
+            border: 1px solid #3373b3;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+          "
+        >
+          <span
+            style="
+              display: block;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #3373b3;
+              margin-bottom: 4px;
+            "
+            >H+72</span
+          >Remediation<br /><span style="font-size: 7pt; color: #718096"
+            >Correctif + deploy</span
+          >
+        </div>
+        <div
+          style="
+            flex-shrink: 0;
+            width: 24px;
+            text-align: center;
+            color: #718096;
+            font-size: 14pt;
+          "
+        >
+          &#8594;
+        </div>
+        <div
+          style="
+            flex: 1;
+            text-align: center;
+            padding: 12px 8px;
+            background: rgba(0, 150, 174, 0.06);
+            border: 1px solid #0096ae;
+            border-radius: 12px;
+            font-size: 8.5pt;
+            font-weight: 600;
+          "
+        >
+          <span
+            style="
+              display: block;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #0096ae;
+              margin-bottom: 4px;
+            "
+            >J+5</span
+          >Rapport<br /><span style="font-size: 7pt; color: #718096"
+            >REX, MAJ PAS</span
+          >
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 5 — QUALITE ENVIRONNEMENTALE                   -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div
+      style="
+        width: 210mm;
+        min-height: 270mm;
+        background: #fff;
+        margin: 24px auto;
+        padding: 28px 32px;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+      "
+    >
+      <div
+        style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 5px;
+          background: linear-gradient(
+            90deg,
+            #3373b3 0%,
+            #0096ae 35%,
+            #493a8b 65%,
+            #b82775 100%
+          );
+        "
+      ></div>
+
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 24px;
+          padding-top: 8px;
+        "
+      >
+        <div
+          style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            font-family: &quot;Montserrat&quot;, sans-serif;
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            background: #2d8659;
+            flex-shrink: 0;
+          "
+        >
+          5
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #193658;
+              line-height: 1.2;
+            "
+          >
+            Qualite environnementale
+          </div>
+          <div style="font-size: 9pt; color: #718096; margin-top: 2px">
+            Green IT, ecoconception, DEEE et consommation responsable
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 pillars -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Quatre piliers de la demarche environnementale
+      </div>
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr 1fr;
+          gap: 16px;
+          margin-bottom: 20px;
+        "
+      >
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #2d8659;
+            text-align: center;
+          "
+        >
+          <div
+            style="
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+              font-size: 18px;
+              background: rgba(45, 134, 89, 0.1);
+              margin: 0 auto 8px;
+            "
+          >
+            &#9851;&#65039;
+          </div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 700;
+              font-size: 9pt;
+              color: #2d8659;
+              margin-bottom: 4px;
+            "
+          >
+            DEEE
+          </div>
+          <div style="font-size: 8.5pt; color: #718096">
+            Reemploi, tri, collecte agreee, lutte contre l'obsolescence
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #3a9a68;
+            text-align: center;
+          "
+        >
+          <div
+            style="
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+              font-size: 18px;
+              background: rgba(58, 154, 104, 0.1);
+              margin: 0 auto 8px;
+            "
+          >
+            &#9889;
+          </div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 700;
+              font-size: 9pt;
+              color: #3a9a68;
+              margin-bottom: 4px;
+            "
+          >
+            Energie
+          </div>
+          <div style="font-size: 8.5pt; color: #718096">
+            Extinction equipements, LED, sobriete video, hebergement vert
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #4aaf7a;
+            text-align: center;
+          "
+        >
+          <div
+            style="
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+              font-size: 18px;
+              background: rgba(74, 175, 122, 0.1);
+              margin: 0 auto 8px;
+            "
+          >
+            &#128296;
+          </div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 700;
+              font-size: 9pt;
+              color: #4aaf7a;
+              margin-bottom: 4px;
+            "
+          >
+            Durabilite
+          </div>
+          <div style="font-size: 8.5pt; color: #718096">
+            Duree de vie &ge;5 ans, materiels reconditionnables
+          </div>
+        </div>
+        <div
+          style="
+            background: #f8f9fc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 18px 20px;
+            border-top: 3px solid #5cc48c;
+            text-align: center;
+          "
+        >
+          <div
+            style="
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+              font-size: 18px;
+              background: rgba(92, 196, 140, 0.1);
+              margin: 0 auto 8px;
+            "
+          >
+            &#127891;
+          </div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-weight: 700;
+              font-size: 9pt;
+              color: #5cc48c;
+              margin-bottom: 4px;
+            "
+          >
+            Formation
+          </div>
+          <div style="font-size: 8.5pt; color: #718096">
+            Sensibilisation numerique responsable, ecoconception
+          </div>
+        </div>
+      </div>
+
+      <!-- Eco practices -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Pratiques d'ecoconception logicielle
+      </div>
+      <div style="display: flex; gap: 16px">
+        <div style="flex: 1">
+          <div
+            style="
+              background: #f8f9fc;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 18px 20px;
+              border-left: 4px solid #2d8659;
+              margin-bottom: 10px;
+            "
+          >
+            <div
+              style="
+                font-weight: 700;
+                font-size: 8.5pt;
+                color: #2d8659;
+                margin-bottom: 4px;
+              "
+            >
+              &#10003; Optimisation des performances
+            </div>
+            <div style="font-size: 8.5pt; color: #718096">
+              Compression, lazy loading, cache — reduction du poids des pages
+            </div>
+          </div>
+          <div
+            style="
+              background: #f8f9fc;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 18px 20px;
+              border-left: 4px solid #3a9a68;
+              margin-bottom: 10px;
+            "
+          >
+            <div
+              style="
+                font-weight: 700;
+                font-size: 8.5pt;
+                color: #3a9a68;
+                margin-bottom: 4px;
+              "
+            >
+              &#10003; Limitation des requetes
+            </div>
+            <div style="font-size: 8.5pt; color: #718096">
+              Pas de requetes HTTP inutiles ni d'appels API redondants
+            </div>
+          </div>
+          <div
+            style="
+              background: #f8f9fc;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 18px 20px;
+              border-left: 4px solid #4aaf7a;
+            "
+          >
+            <div
+              style="
+                font-weight: 700;
+                font-size: 8.5pt;
+                color: #4aaf7a;
+                margin-bottom: 4px;
+              "
+            >
+              &#10003; Scaling a la demande
+            </div>
+            <div style="font-size: 8.5pt; color: #718096">
+              Architecture sans ressources provisionnees a vide
+            </div>
+          </div>
+        </div>
+        <div style="flex: 1">
+          <div
+            style="
+              background: #f8f9fc;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 18px 20px;
+              border-left: 4px solid #5cc48c;
+              margin-bottom: 10px;
+            "
+          >
+            <div
+              style="
+                font-weight: 700;
+                font-size: 8.5pt;
+                color: #5cc48c;
+                margin-bottom: 4px;
+              "
+            >
+              &#10003; Accessibilite RGAA
+            </div>
+            <div style="font-size: 8.5pt; color: #718096">
+              Interfaces utilisables sur terminaux anciens — moins de
+              renouvellement
+            </div>
+          </div>
+          <div
+            style="
+              background: #f8f9fc;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 18px 20px;
+              border-left: 4px solid #2d8659;
+              margin-bottom: 10px;
+            "
+          >
+            <div
+              style="
+                font-weight: 700;
+                font-size: 8.5pt;
+                color: #2d8659;
+                margin-bottom: 4px;
+              "
+            >
+              &#10003; Sobriete des outils
+            </div>
+            <div style="font-size: 8.5pt; color: #718096">
+              Gestion video en reunion, politique emails, stockage raisonne
+            </div>
+          </div>
+          <div
+            style="
+              background: #f8f9fc;
+              border: 1px solid #e2e8f0;
+              border-radius: 12px;
+              padding: 18px 20px;
+              border-left: 4px solid #3a9a68;
+            "
+          >
+            <div
+              style="
+                font-weight: 700;
+                font-size: 8.5pt;
+                color: #3a9a68;
+                margin-bottom: 4px;
+              "
+            >
+              &#10003; Hebergement responsable
+            </div>
+            <div style="font-size: 8.5pt; color: #718096">
+              GCP : 100% renouvelable, PUE 1.10, neutralite carbone 2007
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!-- SECTION 6 — AUTRES                                     -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div
+      style="
+        width: 210mm;
+        min-height: 270mm;
+        background: #fff;
+        margin: 24px auto;
+        padding: 28px 32px;
+        box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+        border-radius: 12px;
+        position: relative;
+        overflow: hidden;
+      "
+    >
+      <div
+        style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 5px;
+          background: linear-gradient(
+            90deg,
+            #3373b3 0%,
+            #0096ae 35%,
+            #493a8b 65%,
+            #b82775 100%
+          );
+        "
+      ></div>
+
+      <div
+        style="
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          margin-bottom: 24px;
+          padding-top: 8px;
+        "
+      >
+        <div
+          style="
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            font-family: &quot;Montserrat&quot;, sans-serif;
+            font-size: 18px;
+            font-weight: 800;
+            color: #fff;
+            background: #eb9126;
+            flex-shrink: 0;
+          "
+        >
+          6
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 16pt;
+              font-weight: 800;
+              color: #193658;
+              line-height: 1.2;
+            "
+          >
+            Avantages differenciants
+          </div>
+          <div style="font-size: 9pt; color: #718096; margin-top: 2px">
+            Pourquoi choisir BEORN pour la TMA CNC
+          </div>
+        </div>
+      </div>
+
+      <!-- Differentiators -->
+      <div
+        style="
+          display: flex;
+          gap: 14px;
+          align-items: flex-start;
+          padding: 14px 16px;
+          background: #f8f9fc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          margin-bottom: 10px;
+        "
+      >
+        <div
+          style="
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            color: #fff;
+            background: #3373b3;
+          "
+        >
+          &#127919;
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 9.5pt;
+              font-weight: 700;
+              color: #193658;
+              margin-bottom: 3px;
+            "
+          >
+            1. Connaissance directe et unique du perimetre CNC
+          </div>
+          <div style="font-size: 8pt; color: #718096; line-height: 1.4">
+            Benjamin Bini : 3 ans de TMA CNC chez Sully Group. Connaissance des
+            3 applications, de l'organisation SOSI. Initialisation cible
+            <strong style="color: #193658">8 semaines</strong>.
+          </div>
+        </div>
+      </div>
+
+      <div
+        style="
+          display: flex;
+          gap: 14px;
+          align-items: flex-start;
+          padding: 14px 16px;
+          background: #f8f9fc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          margin-bottom: 10px;
+        "
+      >
+        <div
+          style="
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            color: #fff;
+            background: #0096ae;
+          "
+        >
+          &#128736;
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 9.5pt;
+              font-weight: 700;
+              color: #193658;
+              margin-bottom: 3px;
+            "
+          >
+            2. Expert Liferay de reference depuis 18 ans
+          </div>
+          <div style="font-size: 8pt; color: #718096; line-height: 1.4">
+            Partenaire technique 2010, commercial 2018.
+            <strong style="color: #193658">100+ projets</strong>. Maitrise
+            complete : Liferay 6.2 a 7.4 LTS + DXP Cloud.
+          </div>
+        </div>
+      </div>
+
+      <div
+        style="
+          display: flex;
+          gap: 14px;
+          align-items: flex-start;
+          padding: 14px 16px;
+          background: #f8f9fc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          margin-bottom: 10px;
+        "
+      >
+        <div
+          style="
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            color: #fff;
+            background: #493a8b;
+          "
+        >
+          &#129309;
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 9.5pt;
+              font-weight: 700;
+              color: #193658;
+              margin-bottom: 3px;
+            "
+          >
+            3. Equipe 100% dediee, sans sous-traitance
+          </div>
+          <div style="font-size: 8pt; color: #718096; line-height: 1.4">
+            7 collaborateurs BEORN identifies. Interlocuteurs stables, engages,
+            directement responsables. Pilotage en propre.
+          </div>
+        </div>
+      </div>
+
+      <div
+        style="
+          display: flex;
+          gap: 14px;
+          align-items: flex-start;
+          padding: 14px 16px;
+          background: #f8f9fc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          margin-bottom: 10px;
+        "
+      >
+        <div
+          style="
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            color: #fff;
+            background: #b82775;
+          "
+        >
+          &#128268;
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 9.5pt;
+              font-weight: 700;
+              color: #193658;
+              margin-bottom: 3px;
+            "
+          >
+            4. Consolidation multisite intranet
+          </div>
+          <div style="font-size: 8pt; color: #718096; line-height: 1.4">
+            Resolution Liferay 6.2 par consolidation sur instance 7.4 via
+            <strong style="color: #193658">multisite natif</strong>. Elegant,
+            economique, sans regression.
+          </div>
+        </div>
+      </div>
+
+      <div
+        style="
+          display: flex;
+          gap: 14px;
+          align-items: flex-start;
+          padding: 14px 16px;
+          background: #f8f9fc;
+          border: 1px solid #e2e8f0;
+          border-radius: 12px;
+          margin-bottom: 10px;
+        "
+      >
+        <div
+          style="
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+            color: #fff;
+            background: #eb9126;
+          "
+        >
+          &#9889;
+        </div>
+        <div>
+          <div
+            style="
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 9.5pt;
+              font-weight: 700;
+              color: #193658;
+              margin-bottom: 3px;
+            "
+          >
+            5. Methodologie hybride eprouvee
+          </div>
+          <div style="font-size: 8pt; color: #718096; line-height: 1.4">
+            Scrum + Kanban pratiques activement sur TMA en cours (ECHR, Delta
+            Plus, Arkolia). Methodologie rodee.
+          </div>
+        </div>
+      </div>
+
+      <!-- Summary gauges -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 24px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Synthese en chiffres
+      </div>
+      <div
+        style="
+          display: flex;
+          gap: 16px;
+          margin: 12px 0;
+          justify-content: center;
+          flex-wrap: wrap;
+        "
+      >
+        <div style="flex: 1; min-width: 100px; text-align: center">
+          <div
+            style="
+              width: 80px;
+              height: 80px;
+              border-radius: 50%;
+              margin: 0 auto 6px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 18pt;
+              font-weight: 800;
+              color: #fff;
+              background: #3373b3;
+            "
+          >
+            18
+          </div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #718096">
+            Annees<br />d'expertise Liferay
+          </div>
+        </div>
+        <div style="flex: 1; min-width: 100px; text-align: center">
+          <div
+            style="
+              width: 80px;
+              height: 80px;
+              border-radius: 50%;
+              margin: 0 auto 6px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 18pt;
+              font-weight: 800;
+              color: #fff;
+              background: #0096ae;
+            "
+          >
+            100+
+          </div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #718096">
+            Projets<br />Liferay realises
+          </div>
+        </div>
+        <div style="flex: 1; min-width: 100px; text-align: center">
+          <div
+            style="
+              width: 80px;
+              height: 80px;
+              border-radius: 50%;
+              margin: 0 auto 6px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 18pt;
+              font-weight: 800;
+              color: #fff;
+              background: #493a8b;
+            "
+          >
+            7
+          </div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #718096">
+            Collaborateurs<br />dedies (0 ST)
+          </div>
+        </div>
+        <div style="flex: 1; min-width: 100px; text-align: center">
+          <div
+            style="
+              width: 80px;
+              height: 80px;
+              border-radius: 50%;
+              margin: 0 auto 6px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 18pt;
+              font-weight: 800;
+              color: #fff;
+              background: #b82775;
+            "
+          >
+            3
+          </div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #718096">
+            Ans d'exp.<br />directe CNC
+          </div>
+        </div>
+        <div style="flex: 1; min-width: 100px; text-align: center">
+          <div
+            style="
+              width: 80px;
+              height: 80px;
+              border-radius: 50%;
+              margin: 0 auto 6px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 18pt;
+              font-weight: 800;
+              color: #fff;
+              background: #eb9126;
+            "
+          >
+            8
+          </div>
+          <div style="font-size: 7.5pt; font-weight: 600; color: #718096">
+            Semaines<br />d'initialisation cible
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

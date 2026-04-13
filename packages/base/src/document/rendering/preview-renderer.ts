@@ -83,10 +83,6 @@ export class PreviewRenderer {
   currentPreviewer: any;
   lineMap: any[];
   pendingLineMapData: any;
-  // Keep a reference to the previous polisher so its <style> elements stay in
-  // <head> while the new Previewer sets up its own styles.  This eliminates the
-  // flash caused by removing all Paged.js styles and then re-adding them.
-  private _retainedPolisher: any;
 
   constructor({ previewFrame, previewPages }: { previewFrame: Element; previewPages: Element }) {
     this.previewFrame = previewFrame;
@@ -94,7 +90,6 @@ export class PreviewRenderer {
     this.currentPreviewer = null;
     this.lineMap = [];
     this.pendingLineMapData = null;
-    this._retainedPolisher = null;
   }
 
   getLineMap(): any[] {
@@ -102,40 +97,23 @@ export class PreviewRenderer {
   }
 
   clear(): void {
-    this.dispose(true);
+    this.dispose();
     this.previewPages.replaceChildren();
     this.lineMap = [];
     this.pendingLineMapData = null;
   }
 
-  // Dispose of the current previewer.  By default the polisher (styles in
-  // <head>) is retained so the next render can overlap seamlessly — the old
-  // styles stay visible while the new ones load.  Pass `destroyStyles` to
-  // fully clean up (used by `clear()`).
-  dispose(destroyStyles: boolean = false): void {
-    if (!this.currentPreviewer) {
-      if (destroyStyles && this._retainedPolisher) {
-        try { this._retainedPolisher.destroy?.(); } catch {}
-        this._retainedPolisher = null;
-      }
-      return;
-    }
+  dispose(): void {
+    if (!this.currentPreviewer) return;
     const prev = this.currentPreviewer;
     this.currentPreviewer = null;
-    // Destroy the chunker (page DOM) but keep the polisher's styles alive so
-    // the page doesn't flash while the replacement Previewer initialises.
     try { prev.chunker?.removePages?.(0); } catch {}
     try { prev.chunker?.destroy?.(); } catch {}
-    if (destroyStyles) {
-      // Also clean up any previously retained polisher
-      try { this._retainedPolisher?.destroy?.(); } catch {}
-      this._retainedPolisher = null;
-      try { prev.polisher?.destroy?.(); } catch {}
-    } else {
-      // Discard the even-older retained polisher (two cycles ago) before
-      // retaining the current one.
-      try { this._retainedPolisher?.destroy?.(); } catch {}
-      this._retainedPolisher = prev.polisher;
+    try { prev.polisher?.destroy?.(); } catch {}
+    // Remove any orphaned Paged.js styles that the polisher's own destroy()
+    // may have missed (e.g. from a prior crash or concurrent renders).
+    for (const el of document.querySelectorAll("style[data-pagedjs-inserted-styles]")) {
+      el.remove();
     }
   }
 
@@ -149,9 +127,13 @@ export class PreviewRenderer {
       }),
     );
 
-    // Dispose chunker but keep polisher styles alive (no flash).
     this.dispose();
-    this.previewPages.replaceChildren();
+    // Replace the container with a fresh element so no stale Paged.js DOM state
+    // (data-ref attributes, orphaned chunker fragments) leaks between renders.
+    const fresh: HTMLDivElement = document.createElement("div");
+    fresh.className = (this.previewPages as HTMLElement).className;
+    (this.previewPages as HTMLElement).replaceWith(fresh);
+    this.previewPages = fresh;
 
     // Paged.js requires the render target to be attached to a visible part of the
     // DOM (it calls getBoundingClientRect on internal elements whose offsetParent
@@ -181,10 +163,6 @@ export class PreviewRenderer {
       buildPreviewStyles({ rootPageName }),
       this.previewPages,
     );
-
-    // The new polisher's styles are now active — destroy the retained old one.
-    try { this._retainedPolisher?.destroy?.(); } catch {}
-    this._retainedPolisher = null;
 
     await new Promise((resolve) => globalThis.requestAnimationFrame(resolve));
 
