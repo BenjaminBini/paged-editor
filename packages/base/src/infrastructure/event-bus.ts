@@ -4,6 +4,7 @@
 export interface EventMap {
   "content-loaded": [];
   "section-ready": [];
+  "editor-layout-changed": [];
   "file-saved": [payload: { file: string; name: string }];
   "agents-changed": [agents: Array<{ key: string; name: string }>];
   "conversation-updated": [agentKey: string];

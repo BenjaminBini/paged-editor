@@ -160,6 +160,13 @@ window.addEventListener("resize", () => {
   _anchorRebuildTimer = setTimeout(rebuildAnchorMap, 400);
 });
 
+// Rebuild scroll sync when editor layout changes (e.g., word wrap toggled).
+// Use a longer delay (500ms) to ensure CM6 has fully reflowed all wrapped lines.
+busOn("editor-layout-changed", () => {
+  clearTimeout(_anchorRebuildTimer ?? undefined);
+  _anchorRebuildTimer = setTimeout(rebuildAnchorMap, 500);
+});
+
 // ── Auto-render on pause ───────────────────────────────────────────────────
 
 let restoreDone: boolean = false;

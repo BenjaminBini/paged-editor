@@ -59,7 +59,33 @@ export class ScrollSyncController {
       return;
     }
 
-    this.followScrollTop("preview", this.mapEditorToPreview(this.getEditorScroller().scrollTop));
+    // Compute preview scroll position by finding which editor line is at the
+    // viewport anchor point, then looking up that line's preview position.
+    // This avoids relying on pre-computed heightAtLine values which are
+    // inaccurate for off-screen lines when word wrap is enabled (CM6 estimates
+    // heights for off-screen lines using averages).
+    const scroller = this.getEditorScroller();
+    const anchorY = scroller.scrollTop + scroller.clientHeight * VIEWPORT_ANCHOR_RATIO;
+    const anchorLine = this.editorApi.lineAtHeight(anchorY, "local");
+    const lineMap = this.getLineMap();
+
+    // Find the line map entry closest to the anchor line.
+    let bestEntry = lineMap[0];
+    let bestDist = Number.MAX_SAFE_INTEGER;
+    for (const entry of lineMap) {
+      const dist = Math.abs(entry.lineNumber - 1 - anchorLine);
+      if (dist < bestDist) { bestDist = dist; bestEntry = entry; }
+    }
+
+    if (bestEntry) {
+      const previewTarget = this.clampScrollTop(
+        this.previewFrame,
+        bestEntry.previewOffsetTop - this.previewFrame.clientHeight * VIEWPORT_ANCHOR_RATIO,
+      );
+      this.followScrollTop("preview", previewTarget);
+    } else {
+      this.followScrollTop("preview", this.mapEditorToPreview(scroller.scrollTop));
+    }
   }
 
   handlePreviewScroll(): void {
@@ -79,7 +105,29 @@ export class ScrollSyncController {
       return;
     }
 
-    this.followScrollTop("editor", this.mapPreviewToEditor(this.previewFrame.scrollTop));
+    // Find which line map entry is closest to the preview anchor point,
+    // then scroll the editor to that line using heightAtLine (accurate
+    // because we'll scroll there, making it visible and measured).
+    const anchorY = this.previewFrame.scrollTop + this.previewFrame.clientHeight * VIEWPORT_ANCHOR_RATIO;
+    const lineMap = this.getLineMap();
+
+    let bestEntry = lineMap[0];
+    let bestDist = Number.MAX_SAFE_INTEGER;
+    for (const entry of lineMap) {
+      const dist = Math.abs(entry.previewOffsetTop - anchorY);
+      if (dist < bestDist) { bestDist = dist; bestEntry = entry; }
+    }
+
+    if (bestEntry) {
+      const editorLineTop = this.editorApi.heightAtLine(bestEntry.lineNumber - 1, "local");
+      const editorTarget = this.clampScrollTop(
+        this.getEditorScroller(),
+        editorLineTop - this.getEditorScroller().clientHeight * VIEWPORT_ANCHOR_RATIO,
+      );
+      this.followScrollTop("editor", editorTarget);
+    } else {
+      this.followScrollTop("editor", this.mapPreviewToEditor(this.previewFrame.scrollTop));
+    }
   }
 
   restoreAfterRender(): void {

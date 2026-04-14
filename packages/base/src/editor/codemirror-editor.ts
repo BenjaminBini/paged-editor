@@ -545,7 +545,14 @@ export function hideLoading(): void {
 export function toggleWrap(): void {
   const on = !cm.getOption("lineWrapping");
   cm.setOption("lineWrapping", on);
-  requestAnimationFrame(updateScrollPastEndPadding);
+  // CM6 needs two rAF ticks to fully relayout wrapped lines before
+  // scroll sync can measure correct line heights.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      updateScrollPastEndPadding();
+      emit("editor-layout-changed");
+    });
+  });
   document.getElementById("btnToggleWrap")?.classList.toggle("active", on);
 }
 
