@@ -7,6 +7,34 @@ import {
 // pagedReady — kept for API compatibility with app.js startup sequence.
 export const pagedReady: Promise<void> = Promise.resolve();
 
+// ── CSS prefetch cache ──────────────────────────────────────────────
+// Fetched once at startup, then served as inline objects to Paged.js
+// so its Polisher skips XHR on every render.
+let _cssCache: { googleFonts: string | null; pdfCss: string | null; pagedCss: string | null } | null = null;
+let _cssCachePromise: Promise<void> | null = null;
+
+async function fetchCssText(url: string): Promise<string | null> {
+  try {
+    const resp = await fetch(url);
+    return resp.ok ? await resp.text() : null;
+  } catch { return null; }
+}
+
+function prefetchCss(): Promise<void> {
+  if (_cssCachePromise) return _cssCachePromise;
+  _cssCachePromise = Promise.all([
+    fetchCssText(GOOGLE_FONTS_URL),
+    fetchCssText("css/preview/pdf.css"),
+    fetchCssText("css/preview/paged.css"),
+  ]).then(([googleFonts, pdfCss, pagedCss]) => {
+    _cssCache = { googleFonts, pdfCss, pagedCss };
+  });
+  return _cssCachePromise;
+}
+
+// Start prefetch immediately on module load.
+prefetchCss();
+
 function buildPreviewDocument({ bodyHtml, headerText, rootPageName = "" }: { bodyHtml: string; headerText: string; rootPageName?: string }): string {
   const isCover = rootPageName === "cover";
   const isSommaire = rootPageName === "sommaire";
@@ -51,11 +79,18 @@ function buildPreviewDocument({ bodyHtml, headerText, rootPageName = "" }: { bod
 
 function buildPreviewStyles({ rootPageName = "" } = {}): Array<string | Record<string, string>> {
   const overridesCss = rootPageName ? "" : SECTION_ENTRY_CSS;
+  const c = _cssCache;
+
+  // Use inline CSS objects when prefetch succeeded (avoids Polisher XHR).
+  // Fall back to URL strings if prefetch failed or hasn't completed yet.
+  const fonts = c?.googleFonts ? { "google-fonts.css": c.googleFonts } : GOOGLE_FONTS_URL;
+  const pdf   = c?.pdfCss      ? { "pdf.css": c.pdfCss }              : "css/preview/pdf.css";
+  const paged = c?.pagedCss    ? { "paged.css": c.pagedCss }          : "css/preview/paged.css";
 
   return [
-    GOOGLE_FONTS_URL,
-    "css/preview/pdf.css",
-    "css/preview/paged.css",
+    fonts,
+    pdf,
+    paged,
     ...(overridesCss ? [{ "preview-overrides.css": overridesCss }] : []),
   ];
 }
@@ -117,6 +152,46 @@ export class PreviewRenderer {
     }
   }
 
+  /**
+   * Patch visible pages in-place by replacing changed elements identified
+   * by their data-source-line attribute. Much faster than a full Paged.js
+   * re-render since it only touches the DOM elements that actually changed.
+   */
+  patchVisiblePages(
+    newHtml: string,
+    changedLines: Set<string>,
+    visibleRange: { first: number; last: number },
+  ): number {
+    const startedAt = performance.now();
+    if (changedLines.size === 0) return 0;
+
+    // Parse the new section HTML to get fresh elements.
+    const tmp = document.createElement("div");
+    tmp.innerHTML = newHtml;
+
+    let patched = 0;
+    for (const line of changedLines) {
+      const newEl = tmp.querySelector(`[data-source-line="${line}"]`);
+      if (!newEl) continue;
+
+      // Find all occurrences in the live Paged.js DOM (element may be split across pages).
+      const liveEls = this.previewPages.querySelectorAll(`[data-source-line="${line}"]`);
+      for (const el of liveEls) {
+        // Check if this element is on a visible page.
+        const page = el.closest(".pagedjs_page") as HTMLElement | null;
+        if (!page) continue;
+        const pageNum = parseInt(page.dataset.pageNumber || "0", 10);
+        if (pageNum < visibleRange.first || pageNum > visibleRange.last) continue;
+
+        // Patch: replace inner content, preserving the outer element and Paged.js wrappers.
+        el.innerHTML = newEl.innerHTML;
+        patched++;
+      }
+    }
+
+    return patched;
+  }
+
   async render(renderResult: Record<string, any>): Promise<{ elapsed: number; totalPages: number }> {
     const rootPageName = renderResult.rootPageName || "";
     const previewMarkup = sanitizePreviewHtml(
@@ -126,6 +201,10 @@ export class PreviewRenderer {
         rootPageName,
       }),
     );
+
+    // Ensure CSS cache is ready before Paged.js runs (avoids broken first
+    // render after hard refresh when Polisher would need to fetch CSS).
+    await prefetchCss();
 
     this.dispose();
     // Replace the container with a fresh element so no stale Paged.js DOM state
@@ -160,7 +239,7 @@ export class PreviewRenderer {
     const startedAt = performance.now();
     const flow = await this.currentPreviewer.preview(
       previewMarkup,
-      buildPreviewStyles({ rootPageName }),
+      buildPreviewStyles({ rootPageName }) as any,
       this.previewPages,
     );
 

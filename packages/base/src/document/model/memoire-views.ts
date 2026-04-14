@@ -119,11 +119,28 @@ export function parseProjectJsonSource(source: string, folderPath: string | null
   return normalizeProjectData(parsed);
 }
 
+// Cache project metadata to avoid disk I/O + JSON parse on every render.
+// Invalidated after 5 seconds or when the folder path changes.
+let _metadataCache: { path: string | null | undefined; data: Record<string, any>; ts: number } = { path: null, data: {}, ts: 0 };
+const METADATA_CACHE_TTL = 5000;
+
+export function invalidateProjectMetadataCache(): void {
+  _metadataCache = { path: null, data: {}, ts: 0 };
+}
+
 export async function getProjectMetadata(folderPath: string | null | undefined = getFolderPath()): Promise<Record<string, any>> {
+  const now = Date.now();
+  if (_metadataCache.path === folderPath && now - _metadataCache.ts < METADATA_CACHE_TTL) {
+    return _metadataCache.data;
+  }
   try {
-    return parseProjectJsonSource(await loadProjectJsonSource(folderPath), folderPath);
+    const data = parseProjectJsonSource(await loadProjectJsonSource(folderPath), folderPath);
+    _metadataCache = { path: folderPath, data, ts: now };
+    return data;
   } catch {
-    return buildDefaultProjectData(folderPath || "");
+    const data = buildDefaultProjectData(folderPath || "");
+    _metadataCache = { path: folderPath, data, ts: now };
+    return data;
   }
 }
 

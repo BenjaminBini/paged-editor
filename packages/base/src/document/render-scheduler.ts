@@ -47,6 +47,10 @@ let lastRenderStats: { elapsed: number; totalPages: number } = {
   totalPages: 0,
 };
 let _cachedCoverAssetBaseHref: string | null = null;
+let _lastRenderedHtml: string | null = null;
+let _patchTimeout: ReturnType<typeof setTimeout> | null = null;
+let _lastSourceBlocks: Array<{ start: number; end: number; kind: string; text: string }> = [];
+let _isPatching: boolean = false;
 
 function capturePreviewScrollState(): { scrollTop: number; ratio: number } {
   const maxScrollTop = Math.max(0, previewContainer.scrollHeight - previewContainer.clientHeight);
@@ -89,6 +93,125 @@ function scaleSurface(): void {
   previewWrapper.style.height = `${Math.ceil(contentHeight * scale)}px`;
 }
 
+// ── Incremental patch utilities ─────────────────────────────────────
+
+/** Returns the page number range currently visible in the preview viewport. */
+function getVisiblePageRange(): { first: number; last: number } {
+  const pages = previewSurface().querySelectorAll(".pagedjs_page");
+  if (!pages.length) return { first: -1, last: -1 };
+  const containerRect = previewContainer.getBoundingClientRect();
+  let first = -1;
+  let last = -1;
+  for (const page of pages) {
+    const rect = page.getBoundingClientRect();
+    if (rect.bottom > containerRect.top && rect.top < containerRect.bottom) {
+      const num = parseInt((page as HTMLElement).dataset.pageNumber || "0", 10);
+      if (first < 0) first = num;
+      last = num;
+    }
+  }
+  return { first, last };
+}
+
+/**
+ * Compare old and new sourceBlocks to find which data-source-line values changed.
+ * Returns null if the block structure changed (additions/deletions) — caller should
+ * fall back to a full re-render in that case.
+ */
+function diffSourceBlocks(
+  oldBlocks: Array<{ start: number; end: number; kind: string; text: string }>,
+  newBlocks: Array<{ start: number; end: number; kind: string; text: string }>,
+  oldHtml: string,
+  newHtml: string,
+): Set<string> | null {
+  // If block count changed, we can't safely patch (insertions/deletions shift lines).
+  if (oldBlocks.length !== newBlocks.length) return null;
+
+  // Build a quick lookup: extract all data-source-line values and their outer HTML
+  // from old and new rendered HTML to detect which elements actually changed.
+  const lineRe = /data-source-line="(\d+)"/g;
+  const oldLines = new Set<string>();
+  const newLines = new Set<string>();
+  for (const m of oldHtml.matchAll(lineRe)) oldLines.add(m[1]);
+  for (const m of newHtml.matchAll(lineRe)) newLines.add(m[1]);
+
+  // If the set of source lines differs, structure changed — fall back.
+  if (oldLines.size !== newLines.size) return null;
+  for (const l of oldLines) { if (!newLines.has(l)) return null; }
+
+  // Compare elements by data-source-line in the rendered HTML.
+  const changed = new Set<string>();
+  const tmpOld = document.createElement("div");
+  tmpOld.innerHTML = oldHtml;
+  const tmpNew = document.createElement("div");
+  tmpNew.innerHTML = newHtml;
+
+  for (const line of oldLines) {
+    const oldEl = tmpOld.querySelector(`[data-source-line="${line}"]`);
+    const newEl = tmpNew.querySelector(`[data-source-line="${line}"]`);
+    if (!oldEl || !newEl) { return null; }
+    if (oldEl.innerHTML !== newEl.innerHTML) {
+      changed.add(line);
+    }
+  }
+
+  return changed;
+}
+
+const PATCH_DEBOUNCE_MS = 300;
+const PAGED_DEBOUNCE_MS = 800;
+
+/** Fast path: re-parse markdown and patch only changed elements in visible pages. */
+async function patchRequest(): Promise<void> {
+  const markdown = editor.value;
+  const activeTab = getActiveTab();
+
+  // Patch only applies to regular markdown sections with existing Paged.js output.
+  if (!markdown.trim() || isTocTab(activeTab) || isCoverTab(activeTab)) return;
+  if (!_lastRenderedHtml || !_lastSourceBlocks.length) return;
+  if (isRendering) return;
+
+  _isPatching = true;
+  try {
+    const startedAt = performance.now();
+    const assetBaseHref = await getAssetBaseHref(getActiveFilePath() || "");
+    const project = await getProjectMetadata(getFolderPath());
+    const startLine = computeFrontmatterOffset(markdown);
+
+    const renderResult = await renderMarkdown(markdown, {
+      assetBaseHref,
+      fileName: getActiveFileName(),
+      startLine,
+      headerText: buildHeaderText(project),
+      language: project?.language || "fr",
+    });
+
+    // Bail if a full render started while we were parsing.
+    if (isRendering) return;
+
+    const newHtml = renderResult.sectionHtml;
+    const newBlocks = renderResult.sourceBlocks || [];
+
+    // Diff source blocks to find changed elements.
+    const changedLines = diffSourceBlocks(_lastSourceBlocks, newBlocks, _lastRenderedHtml!, newHtml);
+
+    // If structure changed (blocks added/removed) or no changes, skip patching.
+    if (changedLines === null || changedLines.size === 0) return;
+
+    // Find visible page range and patch.
+    const visibleRange = getVisiblePageRange();
+    if (visibleRange.first < 0) return;
+
+    const patched = previewRenderer.patchVisiblePages(newHtml, changedLines, visibleRange);
+    if (patched > 0) {
+      const elapsed = Math.round(performance.now() - startedAt);
+      status.textContent = `Patched ${patched} — ${elapsed}ms`;
+    }
+  } finally {
+    _isPatching = false;
+  }
+}
+
 async function renderRequest(request: { markdown: string; generation: number }): Promise<boolean> {
   const { markdown, generation } = request;
   renderStartTime = performance.now();
@@ -129,8 +252,20 @@ async function renderRequest(request: { markdown: string; generation: number }):
 
   if (generation !== renderGeneration) return false;
 
+  // Skip Paged.js entirely if HTML output hasn't changed since last render.
+  const html = renderResult.sectionHtml;
+  if (html != null && html === _lastRenderedHtml) {
+    const elapsed = Math.round(performance.now() - renderStartTime);
+    status.textContent = `${lastRenderStats.totalPages} pages — ${elapsed}ms (cached)`;
+    unlockEditorScroll();
+    return true;
+  }
+
   lastRenderStats = await previewRenderer.render(renderResult);
   if (generation !== renderGeneration) return false;
+
+  _lastRenderedHtml = html ?? null;
+  _lastSourceBlocks = (renderResult.sourceBlocks || []) as typeof _lastSourceBlocks;
 
   scaleSurface();
   previewRenderer.rebuildLineMap();
@@ -215,13 +350,21 @@ export function getZoom(): number {
 
 export function clearRenderTimeout(): void {
   clearTimeout(renderTimeout ?? undefined);
+  clearTimeout(_patchTimeout ?? undefined);
 }
 
-export function scheduleRender(ms: number): void {
+export function scheduleRender(_ms?: number): void {
+  // Fast timer: patch visible pages after short pause.
+  clearTimeout(_patchTimeout ?? undefined);
+  _patchTimeout = setTimeout(() => {
+    if (!isRendering) void patchRequest();
+  }, PATCH_DEBOUNCE_MS);
+
+  // Slow timer: full Paged.js paginated render after longer pause.
   clearTimeout(renderTimeout ?? undefined);
   renderTimeout = setTimeout(() => {
     void triggerRender();
-  }, ms);
+  }, PAGED_DEBOUNCE_MS);
 }
 
 export function getPreviewFrame(): HTMLDivElement {

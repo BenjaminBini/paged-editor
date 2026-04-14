@@ -72,6 +72,8 @@ function buildPreviewFragments(previewFrame: Element, previewPages: Element): Pr
     const blockRect = block.getBoundingClientRect();
     const pageRect = page.getBoundingClientRect();
 
+    // Both scrollTop and getBoundingClientRect are in the same coordinate
+    // space (the scrollable container's viewport), so no scale conversion needed.
     fragments.push({
       height: blockRect.height,
       kind,
