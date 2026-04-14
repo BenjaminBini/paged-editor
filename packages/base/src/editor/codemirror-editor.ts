@@ -554,6 +554,7 @@ export function toggleWrap(): void {
     });
   });
   document.getElementById("btnToggleWrap")?.classList.toggle("active", on);
+  document.getElementById("btnWrap")?.classList.toggle("active", on);
 }
 
 const editorPane: HTMLElement | null = document.getElementById("editorPane");

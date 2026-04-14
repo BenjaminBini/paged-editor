@@ -121,6 +121,9 @@ export function updateMenuState(getActiveTab: () => any, hasOpenTabs: () => bool
   set("btnDownloadMemoire", hasFolder);
   set("btnDownloadMemoire2", hasFolder);
   set("btnToggleWrap", true);
+  const wrapOn = !!cm.getOption("lineWrapping");
+  document.getElementById("btnToggleWrap")?.classList.toggle("active", wrapOn);
+  document.getElementById("btnWrap")?.classList.toggle("active", wrapOn);
 
   updatePdfButtonLabel(getActiveTab);
 }
