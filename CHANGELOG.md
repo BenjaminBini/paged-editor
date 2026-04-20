@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.8.1] – 2026-04-21
+
+### Fixes
+- **Tab switching crash** — Fixed `RangeError: Selection points outside of document` thrown by `checkSelection` when switching tabs from a longer file to a shorter one. `createState` now resolves `{line, ch}` selection indices against the target document's `Text` instead of the live `view.state.doc`, so a cached selection from the previous tab is clamped into the new document instead of overrunning it.
+
 ## [1.8.0] – 2026-04-21
 
 ### Features

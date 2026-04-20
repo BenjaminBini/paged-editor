@@ -233,10 +233,30 @@ function selectionForState(selection: any): any {
   );
 }
 
+// Like selectionForState, but resolves {line, ch} against an explicit Text
+// (the doc being built) instead of the live view.state.doc. Used when creating
+// a fresh state for a different document — e.g. switching tabs — where indices
+// computed against the previous (longer) doc would overrun the new one and
+// trigger CodeMirror's "Selection points outside of document" guard.
+function selectionForDoc(selection: any, doc: any): any {
+  if (!selection) return undefined;
+  const toIndex = (pos: { line?: number; ch?: number } = {}): number => {
+    const lineNo = Math.min(Math.max(0, Number(pos.line) || 0), doc.lines - 1) + 1;
+    const line = doc.line(lineNo);
+    const ch = Math.max(0, Math.min(Number(pos.ch) || 0, line.length));
+    return line.from + ch;
+  };
+  return EditorSelection.single(
+    toIndex(selection.anchor || { line: 0, ch: 0 }),
+    toIndex(selection.head || selection.anchor || { line: 0, ch: 0 }),
+  );
+}
+
 function createState(docText: string = "", selection: any = null): any {
+  const base = EditorState.create({ doc: docText });
   return EditorState.create({
-    doc: docText,
-    selection: selectionForState(selection),
+    doc: base.doc,
+    selection: selectionForDoc(selection, base.doc),
     extensions: createExtensions(),
   });
 }
