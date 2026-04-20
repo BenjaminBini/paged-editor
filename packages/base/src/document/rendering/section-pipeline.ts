@@ -17,6 +17,7 @@ let _ctx: Record<string, any> | null = null;
 const PAGE_BREAK_TEXT_RE: RegExp = /\n[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
 const PAGE_BREAK_RAW_RE: RegExp = /\n\n?[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
 const STANDALONE_PAGE_BREAK_RE: RegExp = /^[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
+const AO_GRID_COL_HEADER_RE: RegExp = /^:::col-(\d+)[ \t]*\r?\n?/gm;
 const IMAGE_ALIGNMENT_VALUES: Set<string> = new Set(["left", "center", "right"]);
 const IMAGE_MAX_WIDTH_RE: RegExp = /^\d+(?:\.\d+)?(?:px|%|em|rem|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cm|mm|in|pt|pc|ch|ex)$/i;
 
@@ -213,6 +214,38 @@ function extractTrailingListPageBreak(listToken: MarkedToken): number | null {
 
 // ── Configure marked once at module load ───────────────────────────────────
 
+// Render the content of an ```ao-grid fenced block as a 12-column grid.
+// Body syntax:
+//   :::col-8
+//   <any markdown>
+//   :::col-4
+//   <any markdown>
+// Each :::col-N header (N = 1..12) opens a column spanning N/12. Columns
+// are implicitly closed by the next :::col-N or by the end of the fence.
+function renderAoGridBlock(body: string, sourceLineAttr: string): string {
+  AO_GRID_COL_HEADER_RE.lastIndex = 0;
+  const headers: Array<{ span: number; headerStart: number; contentStart: number }> = [];
+  let hm: RegExpExecArray | null;
+  while ((hm = AO_GRID_COL_HEADER_RE.exec(body)) !== null) {
+    const rawSpan = parseInt(hm[1], 10);
+    const span = Math.max(1, Math.min(12, Number.isFinite(rawSpan) ? rawSpan : 6));
+    headers.push({
+      span,
+      headerStart: hm.index,
+      contentStart: hm.index + hm[0].length,
+    });
+  }
+  if (!headers.length) return "";
+  const cols = headers.map((h, i) => {
+    const start = h.contentStart;
+    const end = i + 1 < headers.length ? headers[i + 1].headerStart : body.length;
+    const content = body.slice(start, end).replace(/\n+$/, "");
+    const inner = marked.parse(content) as string;
+    return `<div class="ao-grid-col" style="grid-column: span ${h.span}">\n${inner}</div>`;
+  });
+  return `<div class="ao-grid"${sourceLineAttr}>\n${cols.join("\n")}\n</div>\n`;
+}
+
 marked.use({
   renderer: {
     heading(this: any, token): string {
@@ -347,6 +380,9 @@ marked.use({
       if (lang === "mermaid") {
         const idx = pushToMermaidQueue(text || "");
         return `<div class="mermaid-diagram"${sl} data-mermaid-idx="${idx}"></div>\n`;
+      }
+      if (lang === "ao-grid") {
+        return renderAoGridBlock(text || "", sl);
       }
       const langClass = lang ? ` class="language-${escapeHtml(lang)}"` : "";
       return `<pre${sl}><code${langClass}>${escapeHtml(text || "")}</code></pre>\n`;

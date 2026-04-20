@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.6.0] – 2026-04-20
+
+### Features
+- **12-column grid layout** — New fenced block `` ```ao-grid `` renders a 12-column CSS grid inside a section. Each inner `:::col-N` header (N = 1..12) opens a column spanning N/12 of the row. Columns are implicitly closed by the next `:::col-N` or by the closing fence. Any markdown is allowed inside columns (headings, images, lists, tables, `:::info`/`:::warning`, Mermaid/ECharts). Gap and pagination rules match the rest of the pdf.css layout.
+
 ## [1.4.0] – 2026-04-09
 
 ### Features

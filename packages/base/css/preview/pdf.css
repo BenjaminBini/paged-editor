@@ -22,7 +22,7 @@
   @top-center {
     content: element(pdf-running-header);
   }
-  @bottom {
+  @bottom-right {
     content: counter(page);
     font-family: "Hanken Grotesk", sans-serif;
     font-size: 8pt;
@@ -50,7 +50,7 @@
 }
 @page sommaire {
   margin: 20mm 18mm 25mm 18mm;
-  @bottom {
+  @bottom-right {
     content: counter(page);
     font-family: "Hanken Grotesk", sans-serif;
     font-size: 8pt;
@@ -682,6 +682,33 @@ figure.md-image figcaption {
   color: var(--text-light);
   font-size: 9pt;
   font-style: italic;
+}
+
+/* ── 12-column grid block (::ao-grid … :::col-N … ::) ── */
+.ao-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.ao-grid-col {
+  min-width: 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.ao-grid-col > :first-child {
+  margin-top: 0;
+}
+.ao-grid-col > :last-child {
+  margin-bottom: 0;
+}
+.ao-grid-col figure.md-image {
+  margin: 0;
+}
+.ao-grid-col figure.md-image img {
+  max-width: 100%;
 }
 
 /* ── Pagination ── */
