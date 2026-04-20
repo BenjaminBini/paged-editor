@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.7.0] – 2026-04-21
+
+### Features
+- **Alert blocks (`:::info` / `:::warning` / `:::danger` / `:::success` / `:::note` / `:::tip`)** — Previously documented but unimplemented. Now rendered as colored, left-bordered call-out containers with tinted backgrounds (blue / orange / red / green / teal). Body is parsed as full markdown (nested lists, headings, citations, grids all work). `break-inside: avoid` keeps a callout from splitting across pages.
+
 ## [1.6.0] – 2026-04-20
 
 ### Features

@@ -24,10 +24,20 @@ interface MarkedRendererThis {
   [key: string]: unknown;
 }
 
+interface MarkedExtension {
+  name: string;
+  level: "block" | "inline";
+  start?: (this: unknown, src: string) => number | undefined;
+  tokenizer: (this: unknown, src: string, tokens?: MarkedToken[]) => MarkedToken | undefined;
+  renderer: (this: MarkedRendererThis, token: MarkedToken) => string | false;
+  childTokens?: string[];
+}
+
 interface MarkedOptions {
   renderer?: Record<string, (this: MarkedRendererThis, token: MarkedToken, ...args: unknown[]) => string>;
   hooks?: Record<string, (value: string) => string>;
   walkTokens?: (token: MarkedToken) => void;
+  extensions?: MarkedExtension[];
   breaks?: boolean;
   gfm?: boolean;
   headerIds?: boolean;

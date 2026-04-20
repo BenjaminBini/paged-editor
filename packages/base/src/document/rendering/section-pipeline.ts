@@ -18,6 +18,11 @@ const PAGE_BREAK_TEXT_RE: RegExp = /\n[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
 const PAGE_BREAK_RAW_RE: RegExp = /\n\n?[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
 const STANDALONE_PAGE_BREAK_RE: RegExp = /^[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
 const AO_GRID_COL_HEADER_RE: RegExp = /^:::col-(\d+)[ \t]*\r?\n?/gm;
+const MD_ALERT_KINDS = "info|warning|danger|success|note|tip";
+const MD_ALERT_BLOCK_RE: RegExp = new RegExp(
+  `^:::(${MD_ALERT_KINDS})[ \\t]*\\r?\\n([\\s\\S]*?)\\r?\\n:::[ \\t]*(?:\\r?\\n|$)`
+);
+const MD_ALERT_START_RE: RegExp = new RegExp(`(?:^|\\n):::(?:${MD_ALERT_KINDS})\\b`);
 const IMAGE_ALIGNMENT_VALUES: Set<string> = new Set(["left", "center", "right"]);
 const IMAGE_MAX_WIDTH_RE: RegExp = /^\d+(?:\.\d+)?(?:px|%|em|rem|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cm|mm|in|pt|pc|ch|ex)$/i;
 
@@ -247,6 +252,41 @@ function renderAoGridBlock(body: string, sourceLineAttr: string): string {
 }
 
 marked.use({
+  extensions: [
+    {
+      // Alert block container:
+      //   :::info
+      //   <markdown>
+      //   :::
+      // Supported kinds: info, warning, danger, success, note, tip.
+      // Body is parsed as normal markdown (nested grids, images, lists, etc.).
+      name: "mdAlert",
+      level: "block",
+      start(src: string): number | undefined {
+        const m = src.match(MD_ALERT_START_RE);
+        if (!m) return undefined;
+        const offset = m.index ?? 0;
+        return offset + (m[0].startsWith("\n") ? 1 : 0);
+      },
+      tokenizer(src: string): MarkedToken | undefined {
+        const match = MD_ALERT_BLOCK_RE.exec(src);
+        if (!match) return undefined;
+        return {
+          type: "mdAlert",
+          raw: match[0],
+          text: match[2] || "",
+          kind: match[1],
+        } as unknown as MarkedToken;
+      },
+      renderer(token: MarkedToken): string {
+        const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+        const kind = (token.kind as string) || "info";
+        const inner = marked.parse(token.text || "") as string;
+        return `<div class="md-alert md-alert-${kind}"${sl}>\n${inner}</div>\n`;
+      },
+    },
+  ],
+
   renderer: {
     heading(this: any, token): string {
       const ctx = _ctx;

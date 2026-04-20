@@ -684,6 +684,43 @@ figure.md-image figcaption {
   font-style: italic;
 }
 
+/* ── Alert blocks (:::info / :::warning / :::danger / :::success / :::note / :::tip) ── */
+.md-alert {
+  margin: var(--space-md) 0;
+  padding: var(--space-md) var(--space-lg);
+  border-left: 4px solid;
+  border-radius: 0 4px 4px 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.md-alert > :first-child {
+  margin-top: 0;
+}
+.md-alert > :last-child {
+  margin-bottom: 0;
+}
+.md-alert-info {
+  border-left-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
+}
+.md-alert-warning {
+  border-left-color: var(--orange);
+  background: color-mix(in srgb, var(--orange) 8%, transparent);
+}
+.md-alert-danger {
+  border-left-color: #c0392b;
+  background: color-mix(in srgb, #c0392b 8%, transparent);
+}
+.md-alert-success {
+  border-left-color: #27ae60;
+  background: color-mix(in srgb, #27ae60 8%, transparent);
+}
+.md-alert-note,
+.md-alert-tip {
+  border-left-color: var(--teal);
+  background: color-mix(in srgb, var(--teal) 8%, transparent);
+}
+
 /* ── 12-column grid block (::ao-grid … :::col-N … ::) ── */
 .ao-grid {
   display: grid;
