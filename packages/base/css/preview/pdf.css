@@ -721,6 +721,146 @@ figure.md-image figcaption {
   background: color-mix(in srgb, var(--teal) 8%, transparent);
 }
 
+/* ── KPI tiles (:::kpi — one "VALUE | LABEL [| NOTE]" per line) ── */
+.md-kpi {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  margin: var(--space-md) 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.md-kpi-item {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: var(--space-md);
+  background: var(--light-bg);
+  border-left: 3px solid var(--blue);
+  border-radius: 0 4px 4px 0;
+  text-align: center;
+}
+.md-kpi-value {
+  font-family: "Montserrat", "Hanken Grotesk", sans-serif;
+  font-size: 1.8em;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.1;
+}
+.md-kpi-label {
+  font-size: 0.9em;
+  color: var(--text);
+  margin-top: 0.3em;
+}
+.md-kpi-note {
+  font-size: 0.75em;
+  color: var(--text-light);
+  margin-top: 0.2em;
+  font-style: italic;
+}
+
+/* ── Quote / testimonial (:::quote author="…" role="…") ── */
+.md-quote {
+  margin: var(--space-lg) 0;
+  padding: var(--space-md) var(--space-lg);
+  border-left: 4px solid var(--purple);
+  background: color-mix(in srgb, var(--purple) 5%, transparent);
+  font-style: italic;
+  border-radius: 0 4px 4px 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.md-quote > :first-child {
+  margin-top: 0;
+}
+.md-quote > :last-child {
+  margin-bottom: 0;
+}
+.md-quote-footer {
+  margin-top: var(--space-sm);
+  font-style: normal;
+  font-size: 0.9em;
+  color: var(--text-light);
+}
+.md-quote-author {
+  font-weight: 600;
+  color: var(--text);
+  font-style: normal;
+}
+.md-quote-author::before {
+  content: "— ";
+}
+.md-quote-role::before {
+  content: ", ";
+}
+
+/* ── Timeline (:::timeline with :::step TITLE | META headers) ── */
+.md-timeline {
+  margin: var(--space-lg) 0;
+  padding-left: var(--space-md);
+  border-left: 2px solid var(--border);
+}
+.md-step {
+  position: relative;
+  padding: 0 0 var(--space-md) var(--space-lg);
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.md-step:last-child {
+  padding-bottom: 0;
+}
+.md-step-dot {
+  position: absolute;
+  left: calc(-1 * var(--space-md) - 6px);
+  top: 0.35em;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--blue);
+  border: 2px solid white;
+  box-sizing: content-box;
+}
+.md-step-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xs);
+  flex-wrap: wrap;
+}
+.md-step-title {
+  font-weight: 600;
+  color: var(--navy);
+  font-size: 1.05em;
+}
+.md-step-meta {
+  font-size: 0.85em;
+  color: var(--text-light);
+}
+.md-step-body > :first-child {
+  margin-top: 0;
+}
+.md-step-body > :last-child {
+  margin-bottom: 0;
+}
+
+/* ── GFM task lists (- [ ] / - [x]) ── */
+ul:has(> li > input[type="checkbox"]) {
+  list-style: none;
+  padding-left: 0;
+}
+ul:has(> li > input[type="checkbox"]) > li {
+  position: relative;
+  padding-left: 1.6em;
+}
+ul:has(> li > input[type="checkbox"]) > li > input[type="checkbox"] {
+  position: absolute;
+  left: 0;
+  top: 0.2em;
+  width: 1.05em;
+  height: 1.05em;
+  accent-color: var(--blue);
+  margin: 0;
+}
+
 /* ── 12-column grid block (::ao-grid … :::col-N … ::) ── */
 .ao-grid {
   display: grid;

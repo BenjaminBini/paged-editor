@@ -18,11 +18,19 @@ const PAGE_BREAK_TEXT_RE: RegExp = /\n[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
 const PAGE_BREAK_RAW_RE: RegExp = /\n\n?[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
 const STANDALONE_PAGE_BREAK_RE: RegExp = /^[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
 const AO_GRID_COL_HEADER_RE: RegExp = /^:::col-(\d+)[ \t]*\r?\n?/gm;
-const MD_ALERT_KINDS = "info|warning|danger|success|note|tip";
-const MD_ALERT_BLOCK_RE: RegExp = new RegExp(
-  `^:::(${MD_ALERT_KINDS})[ \\t]*\\r?\\n([\\s\\S]*?)\\r?\\n:::[ \\t]*(?:\\r?\\n|$)`
-);
-const MD_ALERT_START_RE: RegExp = new RegExp(`(?:^|\\n):::(?:${MD_ALERT_KINDS})\\b`);
+// Generic `:::name [attrs]\n…body…\n:::` container. Dispatched by name.
+const MD_CONTAINER_BLOCK_RE: RegExp =
+  /^:::([a-z][a-z0-9-]*)(?:[ \t]+([^\n]*))?\r?\n([\s\S]*?)\r?\n:::[ \t]*(?:\r?\n|$)/;
+const MD_CONTAINER_START_RE: RegExp = /(?:^|\n):::[a-z]/;
+const MD_ALERT_KINDS: Set<string> = new Set(["info", "warning", "danger", "success", "note", "tip"]);
+const MD_KNOWN_CONTAINERS: Set<string> = new Set([
+  ...MD_ALERT_KINDS,
+  "kpi",
+  "quote",
+  "timeline",
+]);
+const MD_STEP_HEADER_RE: RegExp = /^:::step[ \t]+([^\n]+)\r?\n/gm;
+const MD_ATTR_RE: RegExp = /(\w+)="([^"]*)"/g;
 const IMAGE_ALIGNMENT_VALUES: Set<string> = new Set(["left", "center", "right"]);
 const IMAGE_MAX_WIDTH_RE: RegExp = /^\d+(?:\.\d+)?(?:px|%|em|rem|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cm|mm|in|pt|pc|ch|ex)$/i;
 
@@ -219,6 +227,81 @@ function extractTrailingListPageBreak(listToken: MarkedToken): number | null {
 
 // ── Configure marked once at module load ───────────────────────────────────
 
+function parseContainerAttrs(attrs: string): Record<string, string> {
+  const out: Record<string, string> = {};
+  if (!attrs) return out;
+  MD_ATTR_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = MD_ATTR_RE.exec(attrs)) !== null) out[m[1]] = m[2];
+  return out;
+}
+
+function renderAlertContainer(kind: string, body: string, sl: string): string {
+  const inner = marked.parse(body) as string;
+  return `<div class="md-alert md-alert-${kind}"${sl}>\n${inner}</div>\n`;
+}
+
+// `:::kpi` — each non-empty body line becomes a KPI tile.
+// Line syntax: `VALUE | LABEL [| NOTE]` (pipes are trimmed).
+function renderKpiContainer(body: string, sl: string): string {
+  const items = body
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split("|").map((p) => p.trim());
+      return { value: parts[0] || "", label: parts[1] || "", note: parts[2] || "" };
+    });
+  if (!items.length) return "";
+  const tiles = items
+    .map((it) => {
+      const label = it.label ? `<div class="md-kpi-label">${marked.parseInline(it.label)}</div>` : "";
+      const note = it.note ? `<div class="md-kpi-note">${marked.parseInline(it.note)}</div>` : "";
+      return `<div class="md-kpi-item">\n<div class="md-kpi-value">${marked.parseInline(it.value)}</div>\n${label}${note}</div>`;
+    })
+    .join("\n");
+  return `<div class="md-kpi"${sl}>\n${tiles}\n</div>\n`;
+}
+
+// `:::quote author="…" role="…"` — blockquote with attribution footer.
+function renderQuoteContainer(attrsRaw: string, body: string, sl: string): string {
+  const attrs = parseContainerAttrs(attrsRaw);
+  const inner = marked.parse(body) as string;
+  const parts: string[] = [];
+  if (attrs.author) parts.push(`<cite class="md-quote-author">${escapeHtml(attrs.author)}</cite>`);
+  if (attrs.role) parts.push(`<span class="md-quote-role">${escapeHtml(attrs.role)}</span>`);
+  const footer = parts.length ? `<footer class="md-quote-footer">${parts.join("")}</footer>\n` : "";
+  return `<blockquote class="md-quote"${sl}>\n${inner}${footer}</blockquote>\n`;
+}
+
+// `:::timeline` with inner `:::step TITLE | META` headers (no per-step closer).
+function renderTimelineContainer(body: string, sl: string): string {
+  MD_STEP_HEADER_RE.lastIndex = 0;
+  const headers: Array<{ title: string; meta: string; at: number; end: number }> = [];
+  let hm: RegExpExecArray | null;
+  while ((hm = MD_STEP_HEADER_RE.exec(body)) !== null) {
+    const parts = hm[1].split("|").map((p) => p.trim());
+    headers.push({
+      title: parts[0] || "",
+      meta: parts[1] || "",
+      at: hm.index,
+      end: hm.index + hm[0].length,
+    });
+  }
+  if (!headers.length) return "";
+  const steps = headers
+    .map((h, i) => {
+      const start = h.end;
+      const end = i + 1 < headers.length ? headers[i + 1].at : body.length;
+      const content = body.slice(start, end).replace(/\n+$/, "");
+      const inner = marked.parse(content) as string;
+      const meta = h.meta ? `<span class="md-step-meta">${marked.parseInline(h.meta)}</span>` : "";
+      return `<div class="md-step">\n<div class="md-step-dot"></div>\n<div class="md-step-head"><span class="md-step-title">${marked.parseInline(h.title)}</span>${meta}</div>\n<div class="md-step-body">\n${inner}</div>\n</div>`;
+    })
+    .join("\n");
+  return `<div class="md-timeline"${sl}>\n${steps}\n</div>\n`;
+}
+
 // Render the content of an ```ao-grid fenced block as a 12-column grid.
 // Body syntax:
 //   :::col-8
@@ -254,35 +337,41 @@ function renderAoGridBlock(body: string, sourceLineAttr: string): string {
 marked.use({
   extensions: [
     {
-      // Alert block container:
-      //   :::info
-      //   <markdown>
-      //   :::
-      // Supported kinds: info, warning, danger, success, note, tip.
-      // Body is parsed as normal markdown (nested grids, images, lists, etc.).
-      name: "mdAlert",
+      // Generic `:::name [attrs]\n…body…\n:::` container. Name dispatches to
+      // the appropriate renderer (alert / kpi / quote / timeline). Unknown
+      // names return undefined so marked falls through to its default
+      // tokenizers. Containers cannot be nested — a bare `:::` line always
+      // closes the nearest container.
+      name: "mdContainer",
       level: "block",
       start(src: string): number | undefined {
-        const m = src.match(MD_ALERT_START_RE);
+        const m = src.match(MD_CONTAINER_START_RE);
         if (!m) return undefined;
         const offset = m.index ?? 0;
         return offset + (m[0].startsWith("\n") ? 1 : 0);
       },
       tokenizer(src: string): MarkedToken | undefined {
-        const match = MD_ALERT_BLOCK_RE.exec(src);
+        const match = MD_CONTAINER_BLOCK_RE.exec(src);
         if (!match) return undefined;
+        const name = match[1];
+        if (!MD_KNOWN_CONTAINERS.has(name)) return undefined;
         return {
-          type: "mdAlert",
+          type: "mdContainer",
           raw: match[0],
-          text: match[2] || "",
-          kind: match[1],
+          name,
+          attrs: match[2] || "",
+          text: match[3] || "",
         } as unknown as MarkedToken;
       },
       renderer(token: MarkedToken): string {
         const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
-        const kind = (token.kind as string) || "info";
-        const inner = marked.parse(token.text || "") as string;
-        return `<div class="md-alert md-alert-${kind}"${sl}>\n${inner}</div>\n`;
+        const name = (token.name as string) || "";
+        const body = (token.text as string) || "";
+        if (MD_ALERT_KINDS.has(name)) return renderAlertContainer(name, body, sl);
+        if (name === "kpi") return renderKpiContainer(body, sl);
+        if (name === "quote") return renderQuoteContainer((token.attrs as string) || "", body, sl);
+        if (name === "timeline") return renderTimelineContainer(body, sl);
+        return "";
       },
     },
   ],

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.8.0] – 2026-04-21
+
+### Features
+- **KPI tiles (`:::kpi`)** — horizontal row of call-out figures. Body is one `VALUE | LABEL | NOTE` per line; each line renders as a card with large navy value, small label and optional italic note. Best paired with `ao-grid` for custom layouts, or used as-is for a flex row.
+- **Quote / testimonial (`:::quote author="…" role="…"`)** — attributed blockquote with purple left border and tinted background. Attribution rendered as a footer (`— Author, Role`). Body accepts full markdown, including citations.
+- **Timeline (`:::timeline` + `:::step TITLE | META`)** — vertical timeline with a colored dot per step. Each `:::step` auto-closes on the next `:::step` or the outer `:::`. Body accepts full markdown.
+- **Task-list polish** — GFM `- [ ]` / `- [x]` lists now get a styled checkbox (blue accent, no native bullet). CSS-only — no change to agent-facing syntax.
+
+### Refactor
+- Alert / kpi / quote / timeline containers share a single `mdContainer` marked extension with name-based dispatch, replacing the dedicated `mdAlert` extension from 1.7.0.
+
 ## [1.7.0] – 2026-04-21
 
 ### Features

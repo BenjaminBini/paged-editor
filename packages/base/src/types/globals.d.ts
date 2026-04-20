@@ -50,6 +50,7 @@ declare const marked: {
   lexer(src: string, options?: MarkedOptions): MarkedToken[];
   parser(tokens: MarkedToken[], options?: MarkedOptions): string;
   parse(src: string, options?: MarkedOptions): string;
+  parseInline(src: string, options?: MarkedOptions): string;
 };
 
 // ── Paged.js (loaded from assets/paged.polyfill.js) ──────────────────────────
