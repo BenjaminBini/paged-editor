@@ -1,6 +1,4 @@
 {
-  "workbench.colorCustomizations": {
-    "tab.activeBorderTop": "#FA9E9E"
-  },
+  "workbench.colorCustomizations": {},
   "claudeCode.environmentVariables": []
 }
