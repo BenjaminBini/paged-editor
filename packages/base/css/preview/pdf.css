@@ -769,20 +769,19 @@ figure.md-image figcaption {
 }
 
 /* ── KPI tiles (:::kpi — one "VALUE | LABEL [| NOTE]" per line) ──
-   Dashboard-card look: gradient surface, one row per `:::kpi` block.
-   `nowrap` enforces a single row — authors who need a second row should
-   author a second `:::kpi` component. Tiles share the row via `flex: 1 1 0`
-   and shrink proportionally; tabular numerals keep values aligned. */
+   Dashboard-card look: gradient surface, fixed 4-column grid so every
+   row of tiles stays aligned regardless of count. 5 items → 4 + 1 (last
+   tile in col 1); 8 items → two full rows. Authors who want exactly one
+   row for fewer items get predictable widths instead of flex stretching. */
 .md-kpi {
-  display: flex;
-  flex-wrap: nowrap;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: var(--space-md);
   margin: var(--space-md) 0;
   break-inside: avoid;
   page-break-inside: avoid;
 }
 .md-kpi-item {
-  flex: 1 1 0;
   min-width: 0;
   padding: var(--space-md) var(--space-sm);
   background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 55%, var(--teal) 120%);
