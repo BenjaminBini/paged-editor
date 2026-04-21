@@ -68,7 +68,7 @@ body {
   position: relative;
 }
 .pagedjs_margin-bottom-center > .pagedjs_margin-content::after {
-  font-family: "Hanken Grotesk", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 8pt;
   color: #718096;
 }

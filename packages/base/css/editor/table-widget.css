@@ -15,7 +15,7 @@
 }
 .table-widget th, .table-widget td {
   border: 1px solid #2d2d3f; padding: 4px 12px; font-size: 12px;
-  font-family: "JetBrains Mono", "SF Mono", monospace;
+  font-family: "JetBrains Mono", Menlo, Consolas, monospace;
   line-height: 1.5; min-width: 80px; outline: none;
   white-space: nowrap; cursor: text;
 }

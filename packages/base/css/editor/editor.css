@@ -123,7 +123,7 @@
 /* CodeMirror theme overrides to match dark editor */
 .editor-pane .CodeMirror {
   height: 100% !important; background: #1e1e2e !important; color: #cdd6f4 !important;
-  font-family: "JetBrains Mono", "SF Mono", monospace !important;
+  font-family: "JetBrains Mono", Menlo, Consolas, monospace !important;
   font-size: 13px !important; line-height: 1.7 !important;
 }
 .editor-pane .CodeMirror-gutters { background: #1e1e2e !important; border-right: 1px solid #2d2d3f !important; }
@@ -131,7 +131,7 @@
 .editor-pane .cm-editor { height: 100%; }
 .editor-pane .cm-scroller {
   overflow: auto;
-  font-family: "JetBrains Mono", "SF Mono", monospace !important;
+  font-family: "JetBrains Mono", Menlo, Consolas, monospace !important;
   font-size: 13px !important;
   line-height: 1.7 !important;
 }
@@ -188,7 +188,7 @@
   min-width: 16px;
 }
 .cm-pagebreak-label {
-  font-family: "Montserrat", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 8px; font-weight: 600;
   letter-spacing: 0.15em; text-transform: uppercase;
   color: rgba(137, 180, 250, 0.45);
@@ -210,7 +210,7 @@
 }
 .cm-heading-badge {
   display: inline-flex; align-items: center; justify-content: center;
-  font-family: "Montserrat", "SF Mono", monospace;
+  font-family: "Nunito", sans-serif;
   font-weight: 700; line-height: 1;
   padding: 2px 6px; border-radius: 4px;
   margin-right: 6px; white-space: nowrap;

@@ -219,7 +219,7 @@
 .chat-input {
   width: 100%; background: #1e293b; border: 1px solid #334155; border-radius: 6px;
   padding: 6px 8px; color: #e2e8f0; font-size: 12px;
-  font-family: "Hanken Grotesk", sans-serif; resize: none;
+  font-family: "Nunito", sans-serif; resize: none;
 }
 .chat-input:focus { outline: none; border-color: #3373b3; }
 .chat-input:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -330,7 +330,7 @@
 .diff-review-feedback input {
   flex: 1; background: #0f172a; border: 1px solid #334155;
   border-radius: 6px; padding: 6px 10px; color: #e2e8f0;
-  font-size: 12px; font-family: "Hanken Grotesk", sans-serif;
+  font-size: 12px; font-family: "Nunito", sans-serif;
 }
 .diff-review-feedback input:focus { outline: none; border-color: #f38ba8; }
 .diff-review-feedback input::placeholder { color: #585b70; }
