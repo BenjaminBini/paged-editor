@@ -5,6 +5,9 @@
   --magenta: #b82775;
   --orange: #eb9126;
   --teal: #0096ae;
+  --slate: #64748b;
+  --green: #27ae60;
+  --red: #c0392b;
   --light-bg: #f8f9fc;
   --border: #e2e8f0;
   --text: #2d3748;
@@ -684,10 +687,15 @@ figure.md-image figcaption {
   font-style: italic;
 }
 
-/* ── Alert blocks (:::info / :::warning / :::danger / :::success / :::note / :::tip) ── */
+/* ── Alert blocks (:::info / :::warning / :::danger / :::success / :::note / :::tip) ──
+   Each kind gets a circular icon badge + distinct colour. Backgrounds are mixed
+   against white (not transparent) so PDF RIPs don't antialias the tint against
+   whatever is behind. The left border + same-hue accent dot read at a glance;
+   ::before renders the glyph with Montserrat for crispness at small sizes. */
 .md-alert {
+  position: relative;
   margin: var(--space-md) 0;
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-md) var(--space-lg) var(--space-md) calc(var(--space-lg) + 1.9em);
   border-left: 4px solid;
   border-radius: 0 4px 4px 0;
   break-inside: avoid;
@@ -699,29 +707,82 @@ figure.md-image figcaption {
 .md-alert > :last-child {
   margin-bottom: 0;
 }
+.md-alert::before {
+  position: absolute;
+  left: calc(var(--space-md) - 0.1em);
+  top: calc(var(--space-md) + 0.05em);
+  width: 1.35em;
+  height: 1.35em;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Montserrat", "Hanken Grotesk", sans-serif;
+  font-weight: 700;
+  font-size: 0.9em;
+  line-height: 1;
+  color: #fff;
+  box-shadow: 0 0 0 2px #fff; /* halo so the badge sits cleanly on the tinted background */
+}
 .md-alert-info {
   border-left-color: var(--blue);
-  background: color-mix(in srgb, var(--blue) 8%, transparent);
+  background: color-mix(in srgb, var(--blue) 8%, #fff);
+}
+.md-alert-info::before {
+  content: "i";
+  background: var(--blue);
+  font-style: italic;
 }
 .md-alert-warning {
   border-left-color: var(--orange);
-  background: color-mix(in srgb, var(--orange) 8%, transparent);
+  background: color-mix(in srgb, var(--orange) 10%, #fff);
+}
+.md-alert-warning::before {
+  content: "!";
+  background: var(--orange);
 }
 .md-alert-danger {
-  border-left-color: #c0392b;
-  background: color-mix(in srgb, #c0392b 8%, transparent);
+  border-left-color: var(--red);
+  background: color-mix(in srgb, var(--red) 8%, #fff);
+}
+.md-alert-danger::before {
+  content: "\2715"; /* ✕ */
+  background: var(--red);
+  font-weight: 600;
 }
 .md-alert-success {
-  border-left-color: #27ae60;
-  background: color-mix(in srgb, #27ae60 8%, transparent);
+  border-left-color: var(--green);
+  background: color-mix(in srgb, var(--green) 8%, #fff);
 }
-.md-alert-note,
+.md-alert-success::before {
+  content: "\2713"; /* ✓ */
+  background: var(--green);
+  font-weight: 800;
+}
+.md-alert-note {
+  border-left-color: var(--slate);
+  background: color-mix(in srgb, var(--slate) 7%, #fff);
+}
+.md-alert-note::before {
+  content: "\00A7"; /* § */
+  background: var(--slate);
+}
 .md-alert-tip {
   border-left-color: var(--teal);
-  background: color-mix(in srgb, var(--teal) 8%, transparent);
+  background: color-mix(in srgb, var(--teal) 8%, #fff);
+}
+.md-alert-tip::before {
+  content: "\2605"; /* ★ */
+  background: var(--teal);
+  font-size: 0.95em;
 }
 
-/* ── KPI tiles (:::kpi — one "VALUE | LABEL [| NOTE]" per line) ── */
+/* ── KPI tiles (:::kpi — one "VALUE | LABEL [| NOTE]" per line) ──
+   Dashboard-card look: white surface + hairline border + coloured top accent.
+   `flex: 1 1 180px` with a `min-width` floor keeps 5+ tiles legible instead of
+   letting `flex: 1 1 0` collapse them to illegibility. Value uses tabular
+   numerals + negative tracking so "€ 1 234" lines up across tiles. The label
+   sits on a stretched hairline rule for a clean value/label split. */
 .md-kpi {
   display: flex;
   flex-wrap: wrap;
@@ -731,39 +792,60 @@ figure.md-image figcaption {
   page-break-inside: avoid;
 }
 .md-kpi-item {
-  flex: 1 1 0;
-  min-width: 0;
-  padding: var(--space-md);
-  background: var(--light-bg);
-  border-left: 3px solid var(--blue);
-  border-radius: 0 4px 4px 0;
-  text-align: center;
+  flex: 1 1 180px;
+  min-width: 150px;
+  padding: var(--space-md) var(--space-sm);
+  background: #fff;
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--blue);
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
 }
 .md-kpi-value {
   font-family: "Montserrat", "Hanken Grotesk", sans-serif;
-  font-size: 1.8em;
-  font-weight: 700;
+  font-size: 2.1em;
+  font-weight: 800;
   color: var(--navy);
-  line-height: 1.1;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
 }
 .md-kpi-label {
-  font-size: 0.9em;
+  align-self: stretch;
+  text-align: center;
+  font-family: "Hanken Grotesk", sans-serif;
+  font-size: 0.85em;
+  font-weight: 500;
   color: var(--text);
-  margin-top: 0.3em;
+  margin-top: 0.5em;
+  padding-top: 0.5em;
+  border-top: 1px solid var(--border);
+  line-height: 1.3;
 }
 .md-kpi-note {
+  text-align: center;
   font-size: 0.75em;
   color: var(--text-light);
-  margin-top: 0.2em;
+  margin-top: 0.35em;
   font-style: italic;
+  line-height: 1.3;
 }
 
-/* ── Quote / testimonial (:::quote author="…" role="…") ── */
+/* ── Quote / testimonial (:::quote author="…" role="…") ──
+   A hanging "❝" mark sits in the margin so the quote reads as a testimonial
+   rather than another call-out. Body stays italic; footer gets its own
+   hairline separator so the attribution reads as a distinct voice instead
+   of "more italic text". Background mixed against white for print fidelity. */
 .md-quote {
+  position: relative;
   margin: var(--space-lg) 0;
-  padding: var(--space-md) var(--space-lg);
+  padding: var(--space-md) var(--space-lg) var(--space-md) calc(var(--space-lg) + 1.6em);
   border-left: 4px solid var(--purple);
-  background: color-mix(in srgb, var(--purple) 5%, transparent);
+  background: color-mix(in srgb, var(--purple) 5%, #fff);
   font-style: italic;
   border-radius: 0 4px 4px 0;
   break-inside: avoid;
@@ -775,33 +857,64 @@ figure.md-image figcaption {
 .md-quote > :last-child {
   margin-bottom: 0;
 }
-.md-quote-footer {
-  margin-top: var(--space-sm);
+.md-quote::before {
+  content: "\201C"; /* “ */
+  position: absolute;
+  left: 0.35em;
+  top: -0.1em;
+  font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
   font-style: normal;
-  font-size: 0.9em;
+  font-weight: 700;
+  font-size: 3.8em;
+  line-height: 1;
+  color: color-mix(in srgb, var(--purple) 35%, #fff);
+  pointer-events: none;
+  user-select: none;
+}
+.md-quote-footer {
+  margin-top: var(--space-md);
+  padding-top: var(--space-sm);
+  border-top: 1px solid color-mix(in srgb, var(--purple) 22%, #fff);
+  font-style: normal;
+  font-size: 0.88em;
   color: var(--text-light);
+  line-height: 1.4;
 }
 .md-quote-author {
-  font-weight: 600;
-  color: var(--text);
+  font-weight: 700;
+  color: var(--navy);
   font-style: normal;
+  letter-spacing: 0.01em;
 }
 .md-quote-author::before {
   content: "— ";
+  color: var(--text-light);
+  font-weight: 400;
+}
+.md-quote-role {
+  color: var(--text-light);
 }
 .md-quote-role::before {
-  content: ", ";
+  content: " · ";
+  color: var(--text-light);
 }
 
-/* ── Timeline (:::timeline with :::step TITLE | META headers) ── */
+/* ── Timeline (:::timeline with :::step TITLE | META headers) ──
+   Numbered dots via CSS counters (no HTML change) so steps auto-number 1, 2,
+   3… The rail is a tint of --blue instead of neutral --border so it reads as
+   a connected sequence, not a list. Meta is pushed right with `margin-left:
+   auto` so dates/durations sit opposite the title instead of wrapping on
+   their own line; `white-space: nowrap` keeps values like "Avr 2026" intact. */
 .md-timeline {
+  counter-reset: md-step;
   margin: var(--space-lg) 0;
-  padding-left: var(--space-md);
-  border-left: 2px solid var(--border);
+  padding-left: var(--space-lg);
+  border-left: 2px solid color-mix(in srgb, var(--blue) 22%, #fff);
 }
 .md-step {
+  counter-increment: md-step;
   position: relative;
-  padding: 0 0 var(--space-md) var(--space-lg);
+  padding: 0 0 var(--space-lg) var(--space-md);
   break-inside: avoid;
   page-break-inside: avoid;
 }
@@ -810,30 +923,47 @@ figure.md-image figcaption {
 }
 .md-step-dot {
   position: absolute;
-  left: calc(-1 * var(--space-md) - 6px);
-  top: 0.35em;
-  width: 10px;
-  height: 10px;
+  left: calc(-1 * var(--space-lg) - 12px);
+  top: -2px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: var(--blue);
-  border: 2px solid white;
+  border: 2px solid #fff;
   box-sizing: content-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Montserrat", "Hanken Grotesk", sans-serif;
+  font-size: 10pt;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+.md-step-dot::before {
+  content: counter(md-step);
 }
 .md-step-head {
   display: flex;
   align-items: baseline;
   gap: var(--space-md);
   margin-bottom: var(--space-xs);
-  flex-wrap: wrap;
+  min-height: 22px;
 }
 .md-step-title {
-  font-weight: 600;
+  font-weight: 700;
   color: var(--navy);
   font-size: 1.05em;
 }
 .md-step-meta {
-  font-size: 0.85em;
+  margin-left: auto;
+  font-family: "Hanken Grotesk", sans-serif;
+  font-size: 0.82em;
+  font-weight: 500;
   color: var(--text-light);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  letter-spacing: 0.02em;
 }
 .md-step-body > :first-child {
   margin-top: 0;
