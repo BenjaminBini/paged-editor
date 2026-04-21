@@ -769,22 +769,32 @@ figure.md-image figcaption {
 }
 
 /* ── KPI tiles (:::kpi — one "VALUE | LABEL [| NOTE]" per line) ──
-   Dashboard-card look: gradient surface, fixed 4-column grid so every
-   row of tiles stays aligned regardless of count. 5 items → 4 + 1 (last
-   tile in col 1); 8 items → two full rows. Authors who want exactly one
-   row for fewer items get predictable widths instead of flex stretching. */
+   Dashboard-card look, gradient surface. Grid caps at 4 tiles per row
+   but fills available width when there are fewer — 2 tiles share 50/50,
+   not 25/25 with two ghost columns. Works inside narrow ao-grid columns
+   (`:::col-4` etc.) where a fixed 4-track grid would crush tiles to
+   unreadable strips.
+   How it works: `minmax(calc(25% - 0.75rem), 1fr)` is a "cap width" of
+   a quarter of the row minus the 3-gap math (3 × 1rem / 4). `auto-fit`
+   packs as many of those tracks as fit, then collapses unused ones, so
+   remaining tracks expand to 1fr. */
 .md-kpi {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(calc(25% - 0.75rem), 1fr));
   gap: var(--space-md);
-  margin: var(--space-md) 0;
+  margin: var(--space-xl) 0;
   break-inside: avoid;
   page-break-inside: avoid;
 }
 .md-kpi-item {
   min-width: 0;
   padding: var(--space-md) var(--space-sm);
-  background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 55%, var(--teal) 120%);
+  background: linear-gradient(
+    135deg,
+    var(--navy) 0%,
+    var(--blue) 55%,
+    var(--teal) 120%
+  );
   border: none;
   border-radius: 6px;
   display: flex;
@@ -866,13 +876,27 @@ figure.md-image figcaption {
   break-inside: avoid;
   page-break-inside: avoid;
 }
-.md-enjeux-item:nth-child(1) { color: var(--navy); }
-.md-enjeux-item:nth-child(2) { color: var(--blue); }
-.md-enjeux-item:nth-child(3) { color: var(--teal); }
-.md-enjeux-item:nth-child(4) { color: var(--purple); }
-.md-enjeux-item:nth-child(5) { color: var(--magenta); }
-.md-enjeux-item:nth-child(6) { color: var(--orange); }
-.md-enjeux-item:nth-child(7) { color: var(--green); }
+.md-enjeux-item:nth-child(1) {
+  color: var(--navy);
+}
+.md-enjeux-item:nth-child(2) {
+  color: var(--blue);
+}
+.md-enjeux-item:nth-child(3) {
+  color: var(--teal);
+}
+.md-enjeux-item:nth-child(4) {
+  color: var(--purple);
+}
+.md-enjeux-item:nth-child(5) {
+  color: var(--magenta);
+}
+.md-enjeux-item:nth-child(6) {
+  color: var(--orange);
+}
+.md-enjeux-item:nth-child(7) {
+  color: var(--green);
+}
 .md-enjeux-num-row {
   display: flex;
   align-items: flex-end;
@@ -914,7 +938,8 @@ figure.md-image figcaption {
 .md-quote {
   position: relative;
   margin: var(--space-lg) 0;
-  padding: var(--space-md) var(--space-lg) var(--space-md) calc(var(--space-lg) + 1.6em);
+  padding: var(--space-md) var(--space-lg) var(--space-md)
+    calc(var(--space-lg) + 1.6em);
   border-left: 4px solid var(--purple);
   background: color-mix(in srgb, var(--purple) 5%, #fff);
   font-style: italic;
