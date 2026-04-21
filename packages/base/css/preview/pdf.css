@@ -27,7 +27,7 @@
   }
   @bottom-right {
     content: counter(page);
-    font-family: "Hanken Grotesk", sans-serif;
+    font-family: "Nunito", sans-serif;
     font-size: 8pt;
     color: #718096;
   }
@@ -55,7 +55,7 @@
   margin: 20mm 18mm 25mm 18mm;
   @bottom-right {
     content: counter(page);
-    font-family: "Hanken Grotesk", sans-serif;
+    font-family: "Nunito", sans-serif;
     font-size: 8pt;
     color: #718096;
   }
@@ -123,7 +123,7 @@
   filter: brightness(0) invert(1);
 }
 .beorn-cover-doctype {
-  font-family: "Montserrat", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 10pt;
   font-weight: 700;
   letter-spacing: 0.15em;
@@ -132,7 +132,7 @@
   margin-bottom: 1rem;
 }
 .beorn-cover-title {
-  font-family: "Montserrat", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 26pt;
   font-weight: 800;
   color: #fff;
@@ -182,7 +182,7 @@
 }
 .beorn-cover-confidential {
   font-size: 7.5pt;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.9);
   font-style: italic;
   text-align: center;
   margin-top: 1rem;
@@ -197,7 +197,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  color: rgba(255, 255, 255, 0.45);
+  color: rgba(255, 255, 255, 0.9);
   margin-bottom: 0.3rem;
 }
 .beorn-cover-info-value {
@@ -239,7 +239,7 @@ a.beorn-toc-entry::after {
   content: none;
 } /* suppress href display */
 .beorn-toc-num {
-  font-family: "Montserrat", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 10pt;
   font-weight: 800;
   color: var(--blue);
@@ -247,7 +247,7 @@ a.beorn-toc-entry::after {
   flex-shrink: 0;
 }
 .beorn-toc-title {
-  font-family: "Hanken Grotesk", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 10.5pt;
   font-weight: 500;
   color: var(--navy);
@@ -281,7 +281,7 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Montserrat", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 6.5pt;
   font-weight: 600;
   color: #c0c8d4;
@@ -325,7 +325,7 @@ h3 {
   align-items: center;
   justify-content: center;
   height: 100%;
-  font-family: "Hanken Grotesk", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 6.5pt;
   font-style: italic;
   color: #a0aec0;
@@ -341,7 +341,7 @@ h3,
 h4,
 h5,
 h6 {
-  font-family: "Montserrat", sans-serif;
+  font-family: "Nunito", sans-serif;
 }
 
 /* ── H1: Section title — large, with chunked underline ── */
@@ -710,7 +710,7 @@ figure.md-image figcaption {
   gap: 6px;
   padding: 3px 10px 3px 8px;
   border-radius: 999px;
-  font-family: "Inter", "Hanken Grotesk", sans-serif;
+  font-family: "Inter", "Nunito", sans-serif;
   font-size: 9pt;
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -786,41 +786,63 @@ figure.md-image figcaption {
   flex: 1 1 180px;
   min-width: 150px;
   padding: var(--space-md) var(--space-sm);
-  background: #fff;
-  border: 1px solid var(--border);
-  border-top: 3px solid var(--blue);
-  border-radius: 2px;
+  background: linear-gradient(135deg, var(--navy) 0%, var(--blue) 55%, var(--teal) 120%);
+  border: none;
+  border-radius: 6px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 0;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(25, 54, 88, 0.18);
 }
 .md-kpi-value {
-  font-family: "Montserrat", "Hanken Grotesk", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 2.1em;
   font-weight: 800;
-  color: var(--navy);
+  color: #fff;
   line-height: 1;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum";
 }
+/* Optional icon — sits inline with the label text (small, coloured) */
 .md-kpi-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
   align-self: stretch;
   text-align: center;
-  font-family: "Hanken Grotesk", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 0.85em;
-  font-weight: 500;
-  color: var(--text);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.94);
   margin-top: 0.5em;
   padding-top: 0.5em;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid rgba(255, 255, 255, 0.28);
   line-height: 1.3;
+}
+.md-kpi-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 13px;
+  height: 13px;
+  color: rgba(255, 255, 255, 0.88);
+}
+.md-kpi-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .md-kpi-note {
   text-align: center;
   font-size: 0.75em;
-  color: var(--text-light);
+  color: rgba(255, 255, 255, 0.72);
   margin-top: 0.35em;
   font-style: italic;
   line-height: 1.3;
@@ -898,7 +920,9 @@ figure.md-image figcaption {
    their own line; `white-space: nowrap` keeps values like "Avr 2026" intact. */
 .md-timeline {
   counter-reset: md-step;
-  margin: var(--space-lg) 0;
+  /* margin-left: 1.1rem aligns the rail + dot centers with the h2 .beorn-num
+     badge (min-width 2.2rem → center at 1.1rem from the section's left). */
+  margin: var(--space-lg) 0 var(--space-lg) 1.1rem;
   padding-left: var(--space-lg);
   border-left: 2px solid color-mix(in srgb, var(--blue) 22%, #fff);
 }
@@ -925,7 +949,7 @@ figure.md-image figcaption {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: "Montserrat", "Hanken Grotesk", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 10pt;
   font-weight: 700;
   color: #fff;
@@ -948,7 +972,7 @@ figure.md-image figcaption {
 }
 .md-step-meta {
   margin-left: auto;
-  font-family: "Hanken Grotesk", sans-serif;
+  font-family: "Nunito", sans-serif;
   font-size: 0.82em;
   font-weight: 500;
   color: var(--text-light);
