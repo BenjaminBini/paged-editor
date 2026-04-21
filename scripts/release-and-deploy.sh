@@ -7,6 +7,11 @@
 #   ./scripts/release-and-deploy.sh 1.9.0              # explicit version
 #   SKIP_AOANALYSER=1 ./scripts/release-and-deploy.sh  # publish only, skip consumer install
 #   DRY_RUN=1 ./scripts/release-and-deploy.sh          # show the plan, touch nothing
+#   LOCAL_ONLY=1 ./scripts/release-and-deploy.sh       # build + npm pack + extract into
+#                                                      # ao-analyser/node_modules. NO git,
+#                                                      # NO npm publish, NO version bump.
+#                                                      # Use when SSH/registry is blocked
+#                                                      # or for fast iteration cycles.
 #
 # What it does (in order):
 #   1. Resolve the new version (arg or auto-bump patch of packages/base).
@@ -31,6 +36,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AO_ANALYSER_DIR="${AO_ANALYSER_DIR:-$HOME/dev/projects/ao-analyser}"
 SKIP_AOANALYSER="${SKIP_AOANALYSER:-0}"
 DRY_RUN="${DRY_RUN:-0}"
+LOCAL_ONLY="${LOCAL_ONLY:-0}"
 
 # Packages ordered so that any package depending on another is listed after it.
 # Format: "relative/dir"
@@ -81,8 +87,9 @@ echo "  Consumer target : $AO_ANALYSER_DIR"
 echo ""
 
 # ── Sanity checks ─────────────────────────────────────────────────────────
-if [[ "$DRY_RUN" != "1" ]] && [[ -n "$(git status --porcelain)" ]]; then
+if [[ "$DRY_RUN" != "1" ]] && [[ "$LOCAL_ONLY" != "1" ]] && [[ -n "$(git status --porcelain)" ]]; then
   c_red "✗ Working tree not clean. Commit or stash first, then retry."
+  c_dim "  (Tip: LOCAL_ONLY=1 bypasses this check — no git operations run.)"
   git status --short
   exit 1
 fi
@@ -90,6 +97,64 @@ fi
 if [[ "$SKIP_AOANALYSER" != "1" ]] && [[ ! -d "$AO_ANALYSER_DIR" ]]; then
   c_red "✗ ao-analyser directory not found: $AO_ANALYSER_DIR"
   exit 1
+fi
+
+# ── LOCAL_ONLY fast path ──────────────────────────────────────────────────
+# Build, pack, extract into ao-analyser/node_modules. No git, no publish,
+# no version bump. Uses the version currently in each package.json.
+if [[ "$LOCAL_ONLY" == "1" ]]; then
+  c_blue "LOCAL_ONLY mode: build → pack → extract, no git, no registry."
+  echo ""
+
+  c_blue "[1/3] Building packages/base (tsc → dist/src → sync to dist/js)"
+  run "cd '$REPO_ROOT/packages/base' && npx tsc"
+  run "rsync -a --delete '$REPO_ROOT/packages/base/dist/src/' '$REPO_ROOT/packages/base/dist/js/'"
+  # web/react skipped — ao-analyser consumes only base + server
+  c_green "  ✓ base built"
+  echo ""
+
+  c_blue "[2/3] Packing tarballs"
+  TMP_DIR=$(mktemp -d)
+  trap 'rm -rf "$TMP_DIR"' EXIT
+  for pkg in "packages/base" "server"; do
+    pkg_abs="$REPO_ROOT/$pkg"
+    pkg_name=$(node -p "require('$pkg_abs/package.json').name")
+    pkg_ver=$(node -p  "require('$pkg_abs/package.json').version")
+    echo "  • packing $pkg_name@$pkg_ver"
+    run "cd '$pkg_abs' && npm pack --pack-destination='$TMP_DIR' >/dev/null"
+  done
+  c_green "  ✓ tarballs in $TMP_DIR"
+  echo ""
+
+  c_blue "[3/3] Extracting into ao-analyser/node_modules"
+  for pkg_dir in "packages/base" "server"; do
+    pkg_abs="$REPO_ROOT/$pkg_dir"
+    pkg_name=$(node -p "require('$pkg_abs/package.json').name")
+    pkg_ver=$(node -p  "require('$pkg_abs/package.json').version")
+    # npm pack names tarballs as `<scope>-<name>-<version>.tgz` with @ stripped.
+    tarball_name="${pkg_name/@/}"
+    tarball_name="${tarball_name/\//-}-${pkg_ver}.tgz"
+    tarball="$TMP_DIR/$tarball_name"
+    target="$AO_ANALYSER_DIR/node_modules/$pkg_name"
+    echo "  • $pkg_name → $target"
+    if [[ ! -f "$tarball" ]]; then
+      c_red "    ✗ tarball not found: $tarball"
+      exit 1
+    fi
+    run "rm -rf '$target'"
+    run "mkdir -p '$target'"
+    # npm's pack tarball wraps content under a top-level `package/` dir.
+    run "tar -xzf '$tarball' -C '$target' --strip-components=1"
+  done
+  c_green "  ✓ ao-analyser now runs from your local build"
+  echo ""
+
+  c_blue "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  c_green "✔ Local deploy complete."
+  c_dim  "  ao-analyser's package-lock.json is unchanged."
+  c_dim  "  Next 'npm install' in ao-analyser will revert to registry version."
+  c_blue "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  exit 0
 fi
 
 # ── 2. Bump all 5 package.json files ──────────────────────────────────────
