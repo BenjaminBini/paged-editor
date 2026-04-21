@@ -236,9 +236,23 @@ function parseContainerAttrs(attrs: string): Record<string, string> {
   return out;
 }
 
+// Variant B chip markup: inline SVG glyph + French kind label, rendered into
+// the top-left of the alert. Glyphs are kept minimal (bare "i", "!", "×",
+// "✓", document outline, lightbulb) at stroke-width 1.6 so they read as
+// light line-icons, not heavy badges, at the 12 px chip size.
+const ALERT_CHIPS: Record<string, string> = {
+  info: `<div class="md-alert-chip"><svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7v5.5"/><path d="M8 3.8v0.01"/></svg><span>Information</span></div>`,
+  warning: `<div class="md-alert-chip"><svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.8v6.4"/><path d="M8 12.2v0.01"/></svg><span>Attention</span></div>`,
+  danger: `<div class="md-alert-chip"><svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg><span>Critique</span></div>`,
+  success: `<div class="md-alert-chip"><svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8.6l3.3 3.3L13 4.8"/></svg><span>Succès</span></div>`,
+  note: `<div class="md-alert-chip"><svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 2.5h5l3.5 3.5v8a0.5 0.5 0 0 1-0.5 0.5h-8a0.5 0.5 0 0 1-0.5-0.5v-11a0.5 0.5 0 0 1 0.5-0.5z"/><path d="M8.5 2.5v3.5h3.5"/><path d="M5.5 9h5M5.5 11.5h3"/></svg><span>Note</span></div>`,
+  tip: `<div class="md-alert-chip"><svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.3a3.7 3.7 0 0 0-2.2 6.7v1.6h4.4V9A3.7 3.7 0 0 0 8 2.3z"/><path d="M6.6 12.4h2.8"/><path d="M7.1 13.9h1.8"/></svg><span>Conseil</span></div>`,
+};
+
 function renderAlertContainer(kind: string, body: string, sl: string): string {
   const inner = marked.parse(body) as string;
-  return `<div class="md-alert md-alert-${kind}"${sl}>\n${inner}</div>\n`;
+  const chip = ALERT_CHIPS[kind] ?? ALERT_CHIPS.info;
+  return `<div class="md-alert md-alert-${kind}"${sl}>\n${chip}\n${inner}</div>\n`;
 }
 
 // `:::kpi` — each non-empty body line becomes a KPI tile.

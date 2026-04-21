@@ -688,93 +688,84 @@ figure.md-image figcaption {
 }
 
 /* ── Alert blocks (:::info / :::warning / :::danger / :::success / :::note / :::tip) ──
-   Each kind gets a circular icon badge + distinct colour. Backgrounds are mixed
-   against white (not transparent) so PDF RIPs don't antialias the tint against
-   whatever is behind. The left border + same-hue accent dot read at a glance;
-   ::before renders the glyph with Montserrat for crispness at small sizes. */
+   "Soft chip" design (Notion / Vercel vibe): rounded tinted surface, no border.
+   A single coloured pill in the top-left combines an inline SVG glyph + the
+   kind label ("Information", "Attention", …) into one chip emitted by the
+   markdown pipeline (see `ALERT_CHIPS` in section-pipeline.ts). Each glyph is
+   tuned to fill roughly [2,14] of its 16-unit viewBox so the chip label
+   always sits at the same horizontal offset regardless of glyph shape.
+   Backgrounds are mixed against white (not transparent) so PDF RIPs don't
+   antialias the tint against whatever is behind. */
 .md-alert {
   position: relative;
   margin: var(--space-md) 0;
-  padding: var(--space-md) var(--space-lg) var(--space-md) calc(var(--space-lg) + 1.9em);
-  border-left: 4px solid;
-  border-radius: 0 4px 4px 0;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: 10px;
   break-inside: avoid;
   page-break-inside: avoid;
 }
-.md-alert > :first-child {
+.md-alert-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border-radius: 999px;
+  font-family: "Inter", "Hanken Grotesk", sans-serif;
+  font-size: 9pt;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  margin-bottom: 10px;
+  line-height: 1;
+}
+.md-alert-icon {
+  width: 12px;
+  height: 12px;
+  display: block;
+  flex-shrink: 0;
+  color: #fff; /* fill/stroke inside <svg> inherit via currentColor */
+}
+.md-alert > .md-alert-chip + * {
   margin-top: 0;
 }
 .md-alert > :last-child {
   margin-bottom: 0;
 }
-.md-alert::before {
-  position: absolute;
-  left: calc(var(--space-md) - 0.1em);
-  top: calc(var(--space-md) + 0.05em);
-  width: 1.35em;
-  height: 1.35em;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: "Montserrat", "Hanken Grotesk", sans-serif;
-  font-weight: 700;
-  font-size: 0.9em;
-  line-height: 1;
-  color: #fff;
-  box-shadow: 0 0 0 2px #fff; /* halo so the badge sits cleanly on the tinted background */
-}
 .md-alert-info {
-  border-left-color: var(--blue);
   background: color-mix(in srgb, var(--blue) 8%, #fff);
 }
-.md-alert-info::before {
-  content: "i";
+.md-alert-info .md-alert-chip {
   background: var(--blue);
-  font-style: italic;
 }
 .md-alert-warning {
-  border-left-color: var(--orange);
   background: color-mix(in srgb, var(--orange) 10%, #fff);
 }
-.md-alert-warning::before {
-  content: "!";
+.md-alert-warning .md-alert-chip {
   background: var(--orange);
 }
 .md-alert-danger {
-  border-left-color: var(--red);
   background: color-mix(in srgb, var(--red) 8%, #fff);
 }
-.md-alert-danger::before {
-  content: "\2715"; /* ✕ */
+.md-alert-danger .md-alert-chip {
   background: var(--red);
-  font-weight: 600;
 }
 .md-alert-success {
-  border-left-color: var(--green);
   background: color-mix(in srgb, var(--green) 8%, #fff);
 }
-.md-alert-success::before {
-  content: "\2713"; /* ✓ */
+.md-alert-success .md-alert-chip {
   background: var(--green);
-  font-weight: 800;
 }
 .md-alert-note {
-  border-left-color: var(--slate);
   background: color-mix(in srgb, var(--slate) 7%, #fff);
 }
-.md-alert-note::before {
-  content: "\00A7"; /* § */
+.md-alert-note .md-alert-chip {
   background: var(--slate);
 }
 .md-alert-tip {
-  border-left-color: var(--teal);
   background: color-mix(in srgb, var(--teal) 8%, #fff);
 }
-.md-alert-tip::before {
-  content: "\2605"; /* ★ */
+.md-alert-tip .md-alert-chip {
   background: var(--teal);
-  font-size: 0.95em;
 }
 
 /* ── KPI tiles (:::kpi — one "VALUE | LABEL [| NOTE]" per line) ──

@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Semantic panels — design preview</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Montserrat:wght@400;500;600;700;800&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../../packages/base/css/preview/pdf.css" />
+    <style>
+      /* Preview-only chrome (not in the real PDF output) */
+      body {
+        margin: 0;
+        padding: 40px 24px 80px;
+        background: #eef1f5;
+        font-family: "Hanken Grotesk", sans-serif;
+      }
+      .preview-page {
+        max-width: 720px;
+        margin: 0 auto 48px;
+        background: #fff;
+        padding: 48px 56px;
+        box-shadow: 0 2px 12px rgba(25, 54, 88, 0.08);
+        border-radius: 2px;
+      }
+      .preview-legend {
+        max-width: 720px;
+        margin: 0 auto 16px;
+        font-family: "Hanken Grotesk", sans-serif;
+        font-size: 11pt;
+        color: #193658;
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+      }
+      .preview-legend h1 {
+        font-family: "Montserrat", sans-serif;
+        font-size: 18pt;
+        font-weight: 800;
+        margin: 0;
+        color: #193658;
+      }
+      .preview-legend span {
+        font-size: 9pt;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #64748b;
+      }
+      .section-label {
+        font-family: "Montserrat", sans-serif;
+        font-size: 8pt;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #64748b;
+        margin: 28px 0 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .section-label:first-child {
+        margin-top: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="preview-legend">
+      <h1>Semantic panels</h1>
+      <span>pdf.css · v1.8.2+</span>
+    </div>
+
+    <!-- Each .preview-page simulates an A4 surface; the inner wrapper
+         mirrors what the renderer produces at runtime. -->
+    <div class="preview-page pdf-preview-root">
+      <div class="section-label">Alert blocks · :::info / :::warning / :::danger / :::success / :::note / :::tip</div>
+
+      <div class="md-alert md-alert-info">
+        <div class="md-alert-chip">
+          <svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7v5.5"/><path d="M8 3.8v0.01"/></svg>
+          <span>Information</span>
+        </div>
+        <p>
+          La version 1.8 introduit les panneaux sémantiques
+          (<code>:::info</code>, <code>:::kpi</code>, <code>:::quote</code>,
+          <code>:::timeline</code>). Le corps accepte tout le markdown&nbsp;:
+          listes, liens, citations, grilles imbriquées.
+        </p>
+      </div>
+
+      <div class="md-alert md-alert-warning">
+        <div class="md-alert-chip">
+          <svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.8v6.4"/><path d="M8 12.2v0.01"/></svg>
+          <span>Attention</span>
+        </div>
+        <p>
+          La migration Liferay 6.2 → 7.4 nécessite une fenêtre de maintenance
+          de 48&nbsp;h, à planifier en dehors des périodes de forte affluence
+          (rentrée scolaire, Festival de Cannes).
+        </p>
+      </div>
+
+      <div class="md-alert md-alert-danger">
+        <div class="md-alert-chip">
+          <svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+          <span>Critique</span>
+        </div>
+        <p>
+          Un incident P1 bloquant l'accès à l'intranet déclenche une prise en
+          charge immédiate avec astreinte 24/7, MTTR cible &lt;&nbsp;4&nbsp;h.
+        </p>
+      </div>
+
+      <div class="md-alert md-alert-success">
+        <div class="md-alert-chip">
+          <svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.2 8.6l3.3 3.3L13 4.8"/></svg>
+          <span>Succès</span>
+        </div>
+        <p>
+          Disponibilité constatée sur les 12 derniers mois&nbsp;: 99,82&nbsp;%
+          — supérieure au SLA contractuel de 99,5&nbsp;%.
+        </p>
+      </div>
+
+      <div class="md-alert md-alert-note">
+        <div class="md-alert-chip">
+          <svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 2.5h5l3.5 3.5v8a0.5 0.5 0 0 1-0.5 0.5h-8a0.5 0.5 0 0 1-0.5-0.5v-11a0.5 0.5 0 0 1 0.5-0.5z"/><path d="M8.5 2.5v3.5h3.5"/><path d="M5.5 9h5M5.5 11.5h3"/></svg>
+          <span>Note</span>
+        </div>
+        <p>
+          Les éléments chiffrés de cette section sont extraits du bilan annuel
+          BEORN 2025, consolidé et audité par un tiers indépendant.
+        </p>
+      </div>
+
+      <div class="md-alert md-alert-tip">
+        <div class="md-alert-chip">
+          <svg class="md-alert-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.3a3.7 3.7 0 0 0-2.2 6.7v1.6h4.4V9A3.7 3.7 0 0 0 8 2.3z"/><path d="M6.6 12.4h2.8"/><path d="M7.1 13.9h1.8"/></svg>
+          <span>Conseil</span>
+        </div>
+        <p>
+          Associez un panneau <code>:::kpi</code> à une grille
+          <code>ao-grid</code> pour composer des tableaux de bord mixtes
+          (chiffres-clés à gauche, commentaire à droite).
+        </p>
+      </div>
+
+      <div class="section-label">KPI tiles · :::kpi</div>
+
+      <div class="md-kpi">
+        <div class="md-kpi-item">
+          <div class="md-kpi-value">99,8&nbsp;%</div>
+          <div class="md-kpi-label">Disponibilité</div>
+          <div class="md-kpi-note">SLA contractuel 99,5&nbsp;%</div>
+        </div>
+        <div class="md-kpi-item">
+          <div class="md-kpi-value">&lt; 4&nbsp;h</div>
+          <div class="md-kpi-label">MTTR anomalies P1</div>
+          <div class="md-kpi-note">Heures ouvrées</div>
+        </div>
+        <div class="md-kpi-item">
+          <div class="md-kpi-value">−32&nbsp;%</div>
+          <div class="md-kpi-label">Dette technique</div>
+          <div class="md-kpi-note">Sur 12 mois</div>
+        </div>
+        <div class="md-kpi-item">
+          <div class="md-kpi-value">4,8/5</div>
+          <div class="md-kpi-label">Satisfaction DSI</div>
+          <div class="md-kpi-note">Enquête interne 2025</div>
+        </div>
+      </div>
+
+      <div class="md-kpi">
+        <div class="md-kpi-item">
+          <div class="md-kpi-value">1&nbsp;247</div>
+          <div class="md-kpi-label">Tickets résolus</div>
+        </div>
+        <div class="md-kpi-item">
+          <div class="md-kpi-value">€&nbsp;384&nbsp;K</div>
+          <div class="md-kpi-label">Coût évité</div>
+        </div>
+      </div>
+
+      <div class="section-label">Quote · :::quote author="…" role="…"</div>
+
+      <blockquote class="md-quote">
+        <p>
+          L'équipe BEORN a tenu ses engagements sur toute la durée du marché,
+          avec une qualité de livraison et une réactivité qui nous ont permis
+          de passer la V2 du site cnc.fr en production sans incident bloquant.
+        </p>
+        <footer class="md-quote-footer">
+          <cite class="md-quote-author">Marie Dupont</cite><span class="md-quote-role">Directrice des Systèmes d'Information, CNC</span>
+        </footer>
+      </blockquote>
+
+      <div class="section-label">Timeline · :::timeline + :::step TITLE | META</div>
+
+      <div class="md-timeline">
+        <div class="md-step">
+          <div class="md-step-dot"></div>
+          <div class="md-step-head">
+            <span class="md-step-title">Cadrage &amp; lancement</span>
+            <span class="md-step-meta">J+0 → J+15</span>
+          </div>
+          <div class="md-step-body">
+            <p>
+              Atelier de lancement, transfert de connaissances avec le
+              prestataire sortant, cartographie des applications et des
+              environnements.
+            </p>
+          </div>
+        </div>
+
+        <div class="md-step">
+          <div class="md-step-dot"></div>
+          <div class="md-step-head">
+            <span class="md-step-title">Initialisation</span>
+            <span class="md-step-meta">J+15 → J+45</span>
+          </div>
+          <div class="md-step-body">
+            <p>
+              Reprise des environnements, audit de la base installée, plan de
+              remédiation priorisé. Livrable&nbsp;: PAQ validé et premier
+              comité de pilotage.
+            </p>
+          </div>
+        </div>
+
+        <div class="md-step">
+          <div class="md-step-dot"></div>
+          <div class="md-step-head">
+            <span class="md-step-title">Régime de croisière</span>
+            <span class="md-step-meta">J+45 →</span>
+          </div>
+          <div class="md-step-body">
+            <p>
+              TMA courante (correctif, évolutif, adaptatif) et sprints de
+              développement agile, pilotés en comité mensuel avec indicateurs
+              SLA.
+            </p>
+          </div>
+        </div>
+
+        <div class="md-step">
+          <div class="md-step-dot"></div>
+          <div class="md-step-head">
+            <span class="md-step-title">Bilan &amp; transition</span>
+            <span class="md-step-meta">Fin de marché</span>
+          </div>
+          <div class="md-step-body">
+            <p>
+              Transfert au successeur, documentation à jour, passation sans
+              interruption de service pour les 500 agents du CNC.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
