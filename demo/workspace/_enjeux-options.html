@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Enjeux du projet — 3 options visuelles</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../../packages/base/css/preview/pdf.css" />
+    <style>
+      /* ═══════════════════════════════════════════════════════════
+         Preview chrome — not shipped in the PDF render
+         ═══════════════════════════════════════════════════════════ */
+      body {
+        margin: 0;
+        padding: 40px 24px 96px;
+        background: #eef1f5;
+        font-family: "Nunito", sans-serif;
+        color: #2d3748;
+      }
+      .preview-shell {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .preview-legend {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin: 0 0 24px;
+        color: #193658;
+      }
+      .preview-legend h1 {
+        font-size: 22pt;
+        font-weight: 800;
+        margin: 0;
+      }
+      .preview-legend span {
+        font-size: 9pt;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #64748b;
+      }
+      .preview-intro {
+        background: color-mix(in srgb, #3373b3 6%, #fff);
+        padding: 18px 24px;
+        margin: 0 0 32px;
+        border-radius: 4px;
+        font-size: 10.5pt;
+        line-height: 1.55;
+        color: #1a3758;
+      }
+      .preview-intro p {
+        margin: 0 0 8px;
+      }
+      .preview-intro p:last-child {
+        margin: 0;
+      }
+      .preview-intro code {
+        font-family: "JetBrains Mono", monospace;
+        font-size: 0.9em;
+        background: #f1f5f9;
+        padding: 1px 6px;
+        border-radius: 3px;
+      }
+      .option-label {
+        display: inline-block;
+        margin: 0 0 4px;
+        font-size: 9pt;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #3373b3;
+      }
+      .option-label.purple {
+        color: #493a8b;
+      }
+      .option-label.teal {
+        color: #0096ae;
+      }
+      .option-title {
+        font-size: 16pt;
+        font-weight: 800;
+        color: #193658;
+        margin: 0 0 6px;
+      }
+      .option-tagline {
+        margin: 0 0 22px;
+        color: #4a5568;
+        font-size: 10.5pt;
+        max-width: 780px;
+        line-height: 1.55;
+      }
+      .a4-page {
+        width: 210mm;
+        min-height: 148mm;
+        background: #fff;
+        margin: 0 auto 48px;
+        padding: 18mm;
+        box-shadow: 0 4px 24px rgba(25, 54, 88, 0.12);
+        border-radius: 6px;
+        box-sizing: border-box;
+        position: relative;
+      }
+      .a4-page::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3373b3 0%, #0096ae 55%, #493a8b 100%);
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+      }
+      .a4-page h2 {
+        font-family: "Nunito", sans-serif;
+        font-size: 14pt;
+        font-weight: 800;
+        color: #193658;
+        margin: 0 0 4px;
+        letter-spacing: -0.01em;
+      }
+      .a4-page h2 + .kicker {
+        margin: 0 0 20px;
+        font-size: 10pt;
+        color: #718096;
+        font-weight: 500;
+      }
+
+      /* ═══════════════════════════════════════════════════════════
+         OPTION 1 — Éditorial (index typographique, palette rotative)
+         No card chrome. Big display number + hairline in rotating BEORN
+         palette, title in the same palette colour, serif pitch. The tiles
+         read as a magazine index, not a product grid.
+         ═══════════════════════════════════════════════════════════ */
+      .enjeux-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        column-gap: 22px;
+        row-gap: 28px;
+        margin-top: 24px;
+      }
+      /* 4 on top row, 3 centered on second row (columns 1-3) */
+      .enjeux-grid .enjeux-card:nth-child(5) {
+        grid-column: 1;
+      }
+      .enjeux-grid .enjeux-card:nth-child(6) {
+        grid-column: 2;
+      }
+      .enjeux-grid .enjeux-card:nth-child(7) {
+        grid-column: 3;
+      }
+      .enjeux-card {
+        position: relative;
+        padding: 0 14px 0 0;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        break-inside: avoid;
+      }
+      .enjeux-card-top {
+        display: flex;
+        align-items: flex-end;
+        gap: 14px;
+        padding-bottom: 6px;
+        border-bottom: 1.5px solid currentColor;
+        line-height: 1;
+      }
+      .enjeux-num {
+        font-family: "Nunito", sans-serif;
+        font-size: 42pt;
+        font-weight: 900;
+        line-height: 0.85;
+        color: currentColor;
+        letter-spacing: -0.055em;
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: "tnum", "lnum";
+      }
+      .enjeux-card:nth-child(1) { color: #193658; } /* navy */
+      .enjeux-card:nth-child(2) { color: #3373b3; } /* blue */
+      .enjeux-card:nth-child(3) { color: #0096ae; } /* teal */
+      .enjeux-card:nth-child(4) { color: #493a8b; } /* purple */
+      .enjeux-card:nth-child(5) { color: #b82775; } /* magenta */
+      .enjeux-card:nth-child(6) { color: #eb9126; } /* orange */
+      .enjeux-card:nth-child(7) { color: #27ae60; } /* green */
+      /* Override global h3 pill (padding/bg/radius from pdf.css) — the title
+         must be a clean type element, not a highlighted badge. Color inherits
+         from the card's `color` rule → title matches its number's palette. */
+      .enjeux-title {
+        font-family: "Nunito", sans-serif;
+        font-size: 11.5pt;
+        font-weight: 800;
+        color: currentColor;
+        line-height: 1.22;
+        margin: 0;
+        padding: 0 !important;
+        background: transparent !important;
+        border-radius: 0 !important;
+        width: auto !important;
+      }
+      .enjeux-pitch {
+        font-family: "Source Serif 4", serif;
+        font-size: 9.5pt;
+        line-height: 1.5;
+        color: #4a5568;
+        margin: 0;
+      }
+
+      /* ═══════════════════════════════════════════════════════════
+         OPTION 2 — Arbre « 3 axes → 7 feuilles »
+         ═══════════════════════════════════════════════════════════ */
+      .axes-tree {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        margin-top: 18px;
+      }
+      .axe-row {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 18px;
+        align-items: stretch;
+      }
+      .axe-pill {
+        position: relative;
+        padding: 18px 16px;
+        border-radius: 6px;
+        color: #fff;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        box-shadow: 0 2px 6px rgba(25, 54, 88, 0.15);
+      }
+      .axe-pill.plateforme {
+        background: linear-gradient(135deg, #193658 0%, #3373b3 80%, #0096ae 140%);
+      }
+      .axe-pill.usages {
+        background: linear-gradient(135deg, #493a8b 0%, #7b52c9 80%, #b82775 140%);
+      }
+      .axe-pill.accompagnement {
+        background: linear-gradient(135deg, #0096ae 0%, #27ae60 100%);
+      }
+      .axe-kicker {
+        font-size: 8pt;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        opacity: 0.85;
+        margin-bottom: 4px;
+      }
+      .axe-name {
+        font-family: "Nunito", sans-serif;
+        font-size: 15pt;
+        font-weight: 800;
+        line-height: 1.1;
+      }
+      .axe-sub {
+        margin-top: 6px;
+        font-size: 8.5pt;
+        line-height: 1.35;
+        opacity: 0.82;
+        font-weight: 500;
+      }
+      .axe-leaves {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 10px;
+      }
+      .axe-row.single-leaf .axe-leaves {
+        grid-template-columns: 1fr;
+      }
+      .axe-leaf {
+        position: relative;
+        background: #f8f9fc;
+        border: 1px solid #e2e8f0;
+        border-left: 3px solid #3373b3;
+        border-radius: 4px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .axe-row:nth-child(2) .axe-leaf {
+        border-left-color: #493a8b;
+      }
+      .axe-row:nth-child(3) .axe-leaf {
+        border-left-color: #27ae60;
+      }
+      .axe-leaf-head {
+        display: flex;
+        align-items: baseline;
+        gap: 6px;
+      }
+      .axe-leaf-num {
+        font-family: "Nunito", sans-serif;
+        font-size: 9pt;
+        font-weight: 800;
+        color: #3373b3;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.02em;
+      }
+      .axe-row:nth-child(2) .axe-leaf-num {
+        color: #493a8b;
+      }
+      .axe-row:nth-child(3) .axe-leaf-num {
+        color: #27ae60;
+      }
+      .axe-leaf-title {
+        font-family: "Nunito", sans-serif;
+        font-size: 10pt;
+        font-weight: 700;
+        color: #193658;
+        line-height: 1.2;
+      }
+      .axe-leaf-pitch {
+        font-family: "Source Serif 4", serif;
+        font-size: 9pt;
+        line-height: 1.4;
+        color: #4a5568;
+        margin: 0;
+      }
+
+      /* ═══════════════════════════════════════════════════════════
+         OPTION 3 — Timeline « parcours utilisateur »
+         ═══════════════════════════════════════════════════════════ */
+      .journey {
+        position: relative;
+        margin-top: 24px;
+        padding: 0 0 8px;
+      }
+      .journey-rail {
+        position: absolute;
+        top: 40px;
+        left: 3%;
+        right: 3%;
+        height: 2px;
+        background: linear-gradient(
+          90deg,
+          #3373b3 0%,
+          #0096ae 40%,
+          #493a8b 75%,
+          #27ae60 100%
+        );
+        z-index: 0;
+        border-radius: 2px;
+      }
+      .journey-steps {
+        position: relative;
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 6px;
+        z-index: 1;
+      }
+      .journey-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding: 0 4px;
+      }
+      .journey-phase {
+        font-family: "Nunito", sans-serif;
+        font-size: 7.5pt;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: #3373b3;
+        margin-bottom: 10px;
+        min-height: 18px;
+      }
+      .journey-step:nth-child(1) .journey-phase { color: #3373b3; }
+      .journey-step:nth-child(2) .journey-phase { color: #1a8db3; }
+      .journey-step:nth-child(3) .journey-phase { color: #0096ae; }
+      .journey-step:nth-child(4) .journey-phase { color: #2a6ea8; }
+      .journey-step:nth-child(5) .journey-phase { color: #493a8b; }
+      .journey-step:nth-child(6) .journey-phase { color: #7b52c9; }
+      .journey-step:nth-child(7) .journey-phase { color: #27ae60; }
+      .journey-dot {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #fff;
+        border: 3px solid #3373b3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: "Nunito", sans-serif;
+        font-weight: 800;
+        font-size: 10pt;
+        color: #193658;
+        font-variant-numeric: tabular-nums;
+        box-shadow: 0 0 0 4px #fff;
+        position: relative;
+      }
+      .journey-step:nth-child(1) .journey-dot { border-color: #3373b3; color: #3373b3; }
+      .journey-step:nth-child(2) .journey-dot { border-color: #1a8db3; color: #1a8db3; }
+      .journey-step:nth-child(3) .journey-dot { border-color: #0096ae; color: #0096ae; }
+      .journey-step:nth-child(4) .journey-dot { border-color: #2a6ea8; color: #2a6ea8; }
+      .journey-step:nth-child(5) .journey-dot { border-color: #493a8b; color: #493a8b; }
+      .journey-step:nth-child(6) .journey-dot { border-color: #7b52c9; color: #7b52c9; }
+      .journey-step:nth-child(7) .journey-dot { border-color: #27ae60; color: #27ae60; }
+      .journey-title {
+        font-family: "Nunito", sans-serif;
+        font-size: 9.5pt;
+        font-weight: 800;
+        color: #193658;
+        margin: 14px 0 4px;
+        line-height: 1.15;
+      }
+      .journey-body {
+        font-family: "Source Serif 4", serif;
+        font-size: 8pt;
+        line-height: 1.35;
+        color: #4a5568;
+      }
+      .journey-src {
+        margin-top: 6px;
+        font-family: "JetBrains Mono", monospace;
+        font-size: 6.5pt;
+        color: #a0aec0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="preview-shell">
+      <header class="preview-legend">
+        <h1>Enjeux du projet — 3 options visuelles</h1>
+        <span>Mémoire technique · Paged.js preview</span>
+      </header>
+
+      <div class="preview-intro">
+        <p>
+          Trois traitements visuels pour les 7 enjeux identifiés dans le
+          <code>CSC §2.1.1</code>. Chaque option répond à une question
+          rhétorique différente&nbsp;: <strong>échelle</strong> (Option 1),
+          <strong>structure</strong> (Option 2) ou <strong>parcours</strong>
+          (Option 3). Les 3 maquettes utilisent les variables CSS et polices
+          réelles de <code>packages/base/css/preview/pdf.css</code>.
+        </p>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           OPTION 1 — Grille 7 piliers
+           ═══════════════════════════════════════════════════════════ -->
+      <div class="option-label">Option 1</div>
+      <h2 class="option-title">Index éditorial — 7 enjeux, palette BEORN</h2>
+      <p class="option-tagline">
+        Sans chrome de carte. Les chiffres (42&nbsp;pt, Nunito 900) portent
+        toute la présence visuelle&nbsp;; chaque enjeu reçoit sa propre couleur
+        de la palette BEORN (navy → blue → teal → purple → magenta → orange →
+        green). Hairlines fines comme seuls séparateurs. Le résultat lit comme
+        un sommaire de magazine, pas comme une grille de composants.
+      </p>
+
+      <div class="a4-page">
+        <h2>Les 7 enjeux du projet</h2>
+        <p class="kicker">
+          Lecture synthétique des objectifs exprimés au §2.1.1 du CSC
+        </p>
+
+        <div class="enjeux-grid">
+          <article class="enjeux-card">
+            <div class="enjeux-card-top">
+              <span class="enjeux-num">01</span>
+            </div>
+            <h3 class="enjeux-title">Remplacer l'intranet actuel</h3>
+            <p class="enjeux-pitch">
+              Documents, Infoboards et applicatifs accessibles partout, à tout
+              moment, depuis un point d'entrée unique.
+            </p>
+          </article>
+
+          <article class="enjeux-card">
+            <div class="enjeux-card-top">
+              <span class="enjeux-num">02</span>
+            </div>
+            <h3 class="enjeux-title">Communication transversale</h3>
+            <p class="enjeux-pitch">
+              Un réseau social interne ouvrant le dialogue entre management,
+              services et métiers — commentaires, idées, interactions.
+            </p>
+          </article>
+
+          <article class="enjeux-card">
+            <div class="enjeux-card-top">
+              <span class="enjeux-num">03</span>
+            </div>
+            <h3 class="enjeux-title">Engagement des collaborateurs</h3>
+            <p class="enjeux-pitch">
+              Ergonomie et mise en scène des fonctionnalités au service de
+              l'adhésion et des usages sociaux effectifs.
+            </p>
+          </article>
+
+          <article class="enjeux-card">
+            <div class="enjeux-card-top">
+              <span class="enjeux-num">04</span>
+            </div>
+            <h3 class="enjeux-title">Navigation intuitive</h3>
+            <p class="enjeux-pitch">
+              Prise en main naturelle pour l'utilisateur final, Ambassadeurs
+              formés en appui ponctuel.
+            </p>
+          </article>
+
+          <article class="enjeux-card">
+            <div class="enjeux-card-top">
+              <span class="enjeux-num">05</span>
+            </div>
+            <h3 class="enjeux-title">Solution prête à l'emploi</h3>
+            <p class="enjeux-pitch">
+              Templates packagés pour les cas d'usage éditoriaux, intégration
+              native avec Microsoft Office 365 et ses outils collaboratifs.
+            </p>
+          </article>
+
+          <article class="enjeux-card">
+            <div class="enjeux-card-top">
+              <span class="enjeux-num">06</span>
+            </div>
+            <h3 class="enjeux-title">Outils d'analyse</h3>
+            <p class="enjeux-pitch">
+              Tableau de bord d'usage et rapports détaillés par espace —
+              actifs/inactifs, contenus les plus lus, volume d'interactions.
+            </p>
+          </article>
+
+          <article class="enjeux-card">
+            <div class="enjeux-card-top">
+              <span class="enjeux-num">07</span>
+            </div>
+            <h3 class="enjeux-title">Accompagnement Communication</h3>
+            <p class="enjeux-pitch">
+              Un Chef de projet en posture <em>Customer Success Consultant</em>
+              tout au long du marché — conseil, lancement, dynamisation.
+            </p>
+          </article>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           OPTION 2 — Arbre 3 axes → 7 feuilles
+           ═══════════════════════════════════════════════════════════ -->
+      <div class="option-label purple">Option 2</div>
+      <h2 class="option-title">Arbre «&nbsp;3 axes → 7 feuilles&nbsp;»</h2>
+      <p class="option-tagline">
+        Les 7 enjeux regroupés en 3 méta-axes : <strong>Plateforme</strong>
+        (le socle), <strong>Usages</strong> (l'humain), <strong>Accompagnement</strong>
+        (la durée). Ce regroupement montre que nous avons lu, compris et
+        structuré le besoin — signal fort pour un jury qui score la
+        compréhension stratégique.
+      </p>
+
+      <div class="a4-page">
+        <h2>Les 7 enjeux structurés en 3 axes de valeur</h2>
+        <p class="kicker">
+          Lecture stratégique des objectifs exprimés au §2.1.1 du CSC
+        </p>
+
+        <div class="axes-tree">
+          <div class="axe-row">
+            <div class="axe-pill plateforme">
+              <div class="axe-kicker">Axe 1</div>
+              <div class="axe-name">Plateforme</div>
+              <div class="axe-sub">Le socle technique &amp; fonctionnel</div>
+            </div>
+            <div class="axe-leaves">
+              <div class="axe-leaf">
+                <div class="axe-leaf-head">
+                  <span class="axe-leaf-num">01</span>
+                  <span class="axe-leaf-title">Remplacer l'intranet actuel</span>
+                </div>
+                <p class="axe-leaf-pitch">
+                  Documents, Infoboards, applicatifs — partout, à tout moment.
+                </p>
+              </div>
+              <div class="axe-leaf">
+                <div class="axe-leaf-head">
+                  <span class="axe-leaf-num">05</span>
+                  <span class="axe-leaf-title">Solution prête à l'emploi</span>
+                </div>
+                <p class="axe-leaf-pitch">
+                  Templates packagés &amp; intégration Microsoft 365 native.
+                </p>
+              </div>
+              <div class="axe-leaf">
+                <div class="axe-leaf-head">
+                  <span class="axe-leaf-num">06</span>
+                  <span class="axe-leaf-title">Outils d'analyse</span>
+                </div>
+                <p class="axe-leaf-pitch">
+                  Tableau de bord d'usage &amp; rapports détaillés par espace.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="axe-row">
+            <div class="axe-pill usages">
+              <div class="axe-kicker">Axe 2</div>
+              <div class="axe-name">Usages</div>
+              <div class="axe-sub">L'expérience collaborateur</div>
+            </div>
+            <div class="axe-leaves">
+              <div class="axe-leaf">
+                <div class="axe-leaf-head">
+                  <span class="axe-leaf-num">02</span>
+                  <span class="axe-leaf-title">Communication transversale</span>
+                </div>
+                <p class="axe-leaf-pitch">
+                  Réseau social interne — dialogue entre services et métiers.
+                </p>
+              </div>
+              <div class="axe-leaf">
+                <div class="axe-leaf-head">
+                  <span class="axe-leaf-num">03</span>
+                  <span class="axe-leaf-title">Engagement</span>
+                </div>
+                <p class="axe-leaf-pitch">
+                  Ergonomie et mise en scène au service de l'adhésion.
+                </p>
+              </div>
+              <div class="axe-leaf">
+                <div class="axe-leaf-head">
+                  <span class="axe-leaf-num">04</span>
+                  <span class="axe-leaf-title">Navigation intuitive</span>
+                </div>
+                <p class="axe-leaf-pitch">
+                  Prise en main naturelle, Ambassadeurs en appui.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="axe-row single-leaf">
+            <div class="axe-pill accompagnement">
+              <div class="axe-kicker">Axe 3</div>
+              <div class="axe-name">Accompagnement</div>
+              <div class="axe-sub">La durée &amp; l'adoption</div>
+            </div>
+            <div class="axe-leaves">
+              <div class="axe-leaf">
+                <div class="axe-leaf-head">
+                  <span class="axe-leaf-num">07</span>
+                  <span class="axe-leaf-title">
+                    Accompagnement de l'équipe Communication
+                  </span>
+                </div>
+                <p class="axe-leaf-pitch">
+                  Chef de projet en posture <em>Customer Success Consultant</em>
+                  — conseil, lancement, dynamisation continue, veille
+                  fonctionnelle tout au long du marché.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           OPTION 3 — Timeline « parcours utilisateur »
+           ═══════════════════════════════════════════════════════════ -->
+      <div class="option-label teal">Option 3</div>
+      <h2 class="option-title">Timeline «&nbsp;parcours utilisateur&nbsp;»</h2>
+      <p class="option-tagline">
+        Les 7 enjeux lus comme les étapes du parcours vécu par le
+        collaborateur — de l'accès aux documents jusqu'au support continu.
+        Format narratif, différenciant, qui signale une lecture UX du besoin
+        dès la phase d'analyse.
+      </p>
+
+      <div class="a4-page">
+        <h2>Le parcours des 7 enjeux, vu côté utilisateur</h2>
+        <p class="kicker">
+          Mise en récit des objectifs exprimés au §2.1.1 du CSC
+        </p>
+
+        <div class="journey">
+          <div class="journey-rail"></div>
+          <div class="journey-steps">
+            <div class="journey-step">
+              <div class="journey-phase">Accès</div>
+              <div class="journey-dot">01</div>
+              <div class="journey-title">Intranet remplacé</div>
+              <div class="journey-body">
+                Documents &amp; Infoboards centralisés, disponibles partout.
+              </div>
+              <div class="journey-src">CSC §2.1.1.1</div>
+            </div>
+            <div class="journey-step">
+              <div class="journey-phase">Échange</div>
+              <div class="journey-dot">02</div>
+              <div class="journey-title">Réseau social</div>
+              <div class="journey-body">
+                Commentaires et dialogue ouvert entre tous les métiers.
+              </div>
+              <div class="journey-src">CSC §2.1.1.2</div>
+            </div>
+            <div class="journey-step">
+              <div class="journey-phase">Adhésion</div>
+              <div class="journey-dot">03</div>
+              <div class="journey-title">Engagement</div>
+              <div class="journey-body">
+                Fonctionnalités mises en scène pour déclencher l'usage.
+              </div>
+              <div class="journey-src">CSC §2.1.1.3</div>
+            </div>
+            <div class="journey-step">
+              <div class="journey-phase">Maîtrise</div>
+              <div class="journey-dot">04</div>
+              <div class="journey-title">Navigation intuitive</div>
+              <div class="journey-body">
+                Prise en main naturelle, soutien des Ambassadeurs.
+              </div>
+              <div class="journey-src">CSC §2.1.1.4</div>
+            </div>
+            <div class="journey-step">
+              <div class="journey-phase">Productivité</div>
+              <div class="journey-dot">05</div>
+              <div class="journey-title">Prête à l'emploi</div>
+              <div class="journey-body">
+                Templates &amp; intégration Microsoft 365 dès le jour&nbsp;1.
+              </div>
+              <div class="journey-src">CSC §2.1.1.5</div>
+            </div>
+            <div class="journey-step">
+              <div class="journey-phase">Mesure</div>
+              <div class="journey-dot">06</div>
+              <div class="journey-title">Analyse d'usage</div>
+              <div class="journey-body">
+                Tableau de bord &amp; rapports détaillés par espace.
+              </div>
+              <div class="journey-src">CSC §2.1.1.6</div>
+            </div>
+            <div class="journey-step">
+              <div class="journey-phase">Support</div>
+              <div class="journey-dot">07</div>
+              <div class="journey-title">Accompagnement</div>
+              <div class="journey-body">
+                <em>Customer Success Consultant</em> tout au long du marché.
+              </div>
+              <div class="journey-src">CSC §2.1.1.7</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

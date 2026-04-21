@@ -3165,7 +3165,7 @@
            ═══════════════════════════════════════════════════════════════ -->
       <h2 class="preview-group-title">
         Partie 1 — Fragments implémentés
-        <span class="count">10 conteneurs</span>
+        <span class="count">11 conteneurs</span>
       </h2>
 
       <!-- 1. Alert blocks -->
@@ -3826,6 +3826,74 @@ Suite du contenu.</code></pre>
           <strong>Non documenté dans la précédente preview.</strong>
           Produit un <code>&lt;div class="page-break"&gt;</code> qui force un
           <code>page-break-before</code> sur l'élément suivant.
+        </div>
+      </article>
+
+      <!-- 11. Enjeux grid -->
+      <article class="ex">
+        <h3>:::enjeux</h3>
+        <p class="ex-desc">
+          Grille éditoriale «&nbsp;piliers du projet&nbsp;». Une ligne par tuile,
+          séparateur <code>|</code>&nbsp;: <code>TITRE | DESCRIPTION</code>.
+          Chaque tuile est numérotée automatiquement (01 → 07) et reçoit une
+          couleur de la palette BEORN. 7 tuiles max par bloc&nbsp;; au-delà,
+          ouvrir un second <code>:::enjeux</code>.
+        </p>
+        <div class="ex-split">
+          <pre class="ex-md"><code>:::enjeux
+Remplacer l'intranet actuel | Documents, Infoboards et applicatifs accessibles partout, à tout moment.
+Communication transversale | Réseau social interne ouvrant le dialogue entre services et métiers.
+Engagement des collaborateurs | Ergonomie et mise en scène au service de l'adhésion.
+Navigation intuitive | Prise en main naturelle, Ambassadeurs en appui.
+Solution prête à l'emploi | Templates packagés &amp; intégration Microsoft 365 native.
+Outils d'analyse | Tableau de bord d'usage et rapports détaillés par espace.
+Accompagnement Communication | Chef de projet en posture *Customer Success Consultant* tout au long du marché.
+:::</code></pre>
+          <div class="ex-render">
+            <div class="md-enjeux">
+              <div class="md-enjeux-item">
+                <div class="md-enjeux-num-row"><span class="md-enjeux-num">01</span></div>
+                <div class="md-enjeux-title">Remplacer l'intranet actuel</div>
+                <p class="md-enjeux-pitch">Documents, Infoboards et applicatifs accessibles partout, à tout moment.</p>
+              </div>
+              <div class="md-enjeux-item">
+                <div class="md-enjeux-num-row"><span class="md-enjeux-num">02</span></div>
+                <div class="md-enjeux-title">Communication transversale</div>
+                <p class="md-enjeux-pitch">Réseau social interne ouvrant le dialogue entre services et métiers.</p>
+              </div>
+              <div class="md-enjeux-item">
+                <div class="md-enjeux-num-row"><span class="md-enjeux-num">03</span></div>
+                <div class="md-enjeux-title">Engagement des collaborateurs</div>
+                <p class="md-enjeux-pitch">Ergonomie et mise en scène au service de l'adhésion.</p>
+              </div>
+              <div class="md-enjeux-item">
+                <div class="md-enjeux-num-row"><span class="md-enjeux-num">04</span></div>
+                <div class="md-enjeux-title">Navigation intuitive</div>
+                <p class="md-enjeux-pitch">Prise en main naturelle, Ambassadeurs en appui.</p>
+              </div>
+              <div class="md-enjeux-item">
+                <div class="md-enjeux-num-row"><span class="md-enjeux-num">05</span></div>
+                <div class="md-enjeux-title">Solution prête à l'emploi</div>
+                <p class="md-enjeux-pitch">Templates packagés &amp; intégration Microsoft 365 native.</p>
+              </div>
+              <div class="md-enjeux-item">
+                <div class="md-enjeux-num-row"><span class="md-enjeux-num">06</span></div>
+                <div class="md-enjeux-title">Outils d'analyse</div>
+                <p class="md-enjeux-pitch">Tableau de bord d'usage et rapports détaillés par espace.</p>
+              </div>
+              <div class="md-enjeux-item">
+                <div class="md-enjeux-num-row"><span class="md-enjeux-num">07</span></div>
+                <div class="md-enjeux-title">Accompagnement Communication</div>
+                <p class="md-enjeux-pitch">Chef de projet en posture <em>Customer Success Consultant</em> tout au long du marché.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ex-note">
+          <strong>Index éditorial — 7 piliers max.</strong>
+          Pas de chrome de carte&nbsp;: chiffre 36&nbsp;pt, hairline coloré,
+          titre dans la même couleur, pitch en Source&nbsp;Serif. Palette
+          rotative&nbsp;: navy → blue → teal → purple → magenta → orange → green.
         </div>
       </article>
 

@@ -277,6 +277,37 @@ function renderKpiContainer(body: string, sl: string): string {
   return `<div class="md-kpi"${sl}>\n${tiles}\n</div>\n`;
 }
 
+// `:::enjeux` — editorial "project enjeux / pillars" grid.
+// Each non-empty body line becomes a numbered tile (auto 01…07) with a title
+// and optional pitch, rendered in a rotating BEORN palette colour.
+// Line syntax: `TITLE | PITCH` (PITCH optional). Cap at 7 items (palette size);
+// author a second `:::enjeux` block for more.
+function renderEnjeuxContainer(body: string, sl: string): string {
+  const items = body
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split("|").map((p) => p.trim());
+      return { title: parts[0] || "", pitch: parts[1] || "" };
+    })
+    .slice(0, 7);
+  if (!items.length) return "";
+  const tiles = items
+    .map((it, i) => {
+      const num = String(i + 1).padStart(2, "0");
+      const title = it.title
+        ? `<div class="md-enjeux-title">${marked.parseInline(it.title)}</div>`
+        : "";
+      const pitch = it.pitch
+        ? `<p class="md-enjeux-pitch">${marked.parseInline(it.pitch)}</p>`
+        : "";
+      return `<div class="md-enjeux-item">\n<div class="md-enjeux-num-row"><span class="md-enjeux-num">${num}</span></div>\n${title}${pitch}</div>`;
+    })
+    .join("\n");
+  return `<div class="md-enjeux"${sl}>\n${tiles}\n</div>\n`;
+}
+
 // `:::quote author="…" role="…"` — blockquote with attribution footer.
 function renderQuoteContainer(attrsRaw: string, body: string, sl: string): string {
   const attrs = parseContainerAttrs(attrsRaw);
@@ -383,6 +414,7 @@ marked.use({
         const body = (token.text as string) || "";
         if (MD_ALERT_KINDS.has(name)) return renderAlertContainer(name, body, sl);
         if (name === "kpi") return renderKpiContainer(body, sl);
+        if (name === "enjeux") return renderEnjeuxContainer(body, sl);
         if (name === "quote") return renderQuoteContainer((token.attrs as string) || "", body, sl);
         if (name === "timeline") return renderTimelineContainer(body, sl);
         return "";
