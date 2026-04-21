@@ -116,6 +116,68 @@ export function createEditorRoutes(options) {
     });
   });
 
+  // ── Project metadata (project.json) ─────────────────────────────────────
+  // Mirror the contract of server/router.js :: /api/project* routes. The web
+  // client shim (web-api-shim.js) routes project.json reads/writes here
+  // instead of through /files, so these endpoints must exist on every
+  // mountable router variant (Express + Hono) to keep parity.
+
+  // GET /project/meta — stat project.json. Registered before /project so Hono
+  // doesn't treat "meta" as a path segment under a wildcard.
+  app.get("/project/meta", async (c) => {
+    const dir = await getWorkDir(c);
+    if (!dir) return c.json({ error: "Invalid workspace" }, 400);
+    try {
+      const s = await stat(join(dir, "project.json"));
+      return c.json({ modifiedAt: s.mtimeMs });
+    } catch (e) {
+      if (e.code === "ENOENT") return c.json({ modifiedAt: 0 });
+      return c.json({ error: "Server error" }, 500);
+    }
+  });
+
+  // GET /project — read project.json (returns null content if absent, so the
+  // cover form can still bootstrap on a fresh workspace).
+  app.get("/project", async (c) => {
+    const dir = await getWorkDir(c);
+    if (!dir) return c.json({ error: "Invalid workspace" }, 400);
+    const projectPath = join(dir, "project.json");
+    try {
+      const content = await readFile(projectPath, "utf-8");
+      const s = await stat(projectPath);
+      return c.json({ content, modifiedAt: s.mtimeMs });
+    } catch (e) {
+      if (e.code === "ENOENT") return c.json({ content: null, modifiedAt: 0 });
+      return c.json({ error: "Server error" }, 500);
+    }
+  });
+
+  // PUT /project — write project.json, validating it's syntactically valid
+  // JSON before touching disk (same guard as the Express router).
+  app.put("/project", async (c) => {
+    const dir = await getWorkDir(c);
+    if (!dir) return c.json({ error: "Invalid workspace" }, 400);
+
+    const body = await c.req.json();
+    if (typeof body.content !== "string") {
+      return c.json({ error: "Missing content field" }, 400);
+    }
+    try {
+      JSON.parse(body.content);
+    } catch {
+      return c.json({ error: "Invalid JSON" }, 400);
+    }
+
+    const projectPath = join(dir, "project.json");
+    try {
+      await writeFile(projectPath, body.content, "utf-8");
+      const s = await stat(projectPath);
+      return c.json({ ok: true, modifiedAt: s.mtimeMs });
+    } catch {
+      return c.json({ error: "Write failed" }, 500);
+    }
+  });
+
   // GET /files
   app.get("/files", async (c) => {
     const dir = await getWorkDir(c);
