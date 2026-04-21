@@ -5,14 +5,14 @@
 Le Centre National du Cinéma et de l'Image Animée engage le renouvellement de son marché de tierce maintenance applicative (TMA) pour l'ensemble de ses applications en technologie Liferay. Ce marché, structuré en accord-cadre mono-attributaire à bons de commande, porte sur un périmètre de trois applications aux enjeux distincts :
 
 - **L'intranet du CNC** (Liferay EE 6.2), outil quotidien des 500 agents, dont la version en fin de support nécessite une stratégie de maintien en condition de sécurité puis de migration
-- **Le site internet cnc.fr** (Liferay 7.0, refonte V2 en cours sous Liferay 7.4 / PostgreSQL), vitrine institutionnelle du CNC avec 1,5 million de visiteurs et 5 millions de pages vues par an, dont la nouvelle version doit ouvrir au public à la rentrée 2026
+- **Le site internet cnc.fr** (Liferay 7.4 / PostgreSQL), vitrine institutionnelle du CNC avec 1,5 million de visiteurs et 5 millions de pages vues par an, dont la refonte V2, réalisée par le prestataire sortant, sera en production au démarrage du marché
 - **Le portail Garance** (Liferay 7.4 / PostgreSQL / Docker), portail patrimonial porté avec la Cinémathèque française, en production depuis décembre 2025
 
 ![Logo du CNC](assets/matrice-logo-20260413-132139-654.png|250px)
 
 Au-delà de la maintenance corrective et adaptative de ces trois applications, le marché prévoit la réalisation de projets de développement agile pour de nouvelles fonctionnalités et de nouvelles applications Liferay, dont un projet de site d'éducation à l'image.
 
-Le titulaire devra conjuguer réactivité opérationnelle sur la maintenance courante, rigueur méthodologique sur les projets agiles, et expertise technique approfondie de la plateforme Liferay dans ses différentes versions — de la 6.2 à la 7.4 LTS.
+Le titulaire devra conjuguer réactivité opérationnelle sur la maintenance courante, rigueur méthodologique sur les projets agiles, et expertise technique approfondie de la plateforme Liferay dans ses différentes versions, de la 6.2 à la 7.4 LTS.
 
 /newpage
 
@@ -20,12 +20,12 @@ Le titulaire devra conjuguer réactivité opérationnelle sur la maintenance cou
 
 Le présent mémoire technique suit le plan imposé par le Cadre de Mémoire Technique (Annexe 4 du RC) et détaille nos engagements sur les six chapitres d'évaluation :
 
-1. **Qualité de la maintenance** — gouvernance, initialisation, maintenance corrective, évolutive et adaptative
-2. **Qualité de la gestion de projet agile** — méthodologie Scrum et cas d'école
-3. **Qualité de l'équipe dédiée** — organisation, stabilité et expertise
-4. **Sécurité informatique** — démarche DevSecOps et formalisation (PAS)
-5. **Qualité environnementale** — Green IT, écoconception, bilan carbone
-6. **Autres** — avantages différenciants et contacts
+1. **Qualité de la maintenance** : gouvernance, initialisation, maintenance corrective, évolutive et adaptative
+2. **Qualité de la gestion de projet agile** : méthodologie Scrum et cas d'école
+3. **Qualité de l'équipe dédiée** : organisation, stabilité et expertise
+4. **Sécurité informatique** : démarche DevSecOps et formalisation (PAS)
+5. **Qualité environnementale** : Green IT, écoconception, bilan carbone
+6. **Autres** : avantages différenciants et contacts
 
 Chaque réponse formulée dans ce mémoire vaut engagement de la part de BEORN Technologies.
 
