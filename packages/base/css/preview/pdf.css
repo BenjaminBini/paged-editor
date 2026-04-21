@@ -1023,15 +1023,19 @@ ul:has(> li input[type="checkbox"]) > li input[type="checkbox"] {
 }
 
 /* ── Pagination ── */
-/* Suppress the page break for the very first section only when no cover or
-   sommaire precedes it (i.e. single-section preview, not full mémoire). */
+/* Every top-level section opens a fresh page — except the very first child of
+   .pdf-content, so the single-section preview (no cover/sommaire) doesn't
+   start with a pointless blank page. In full mémoire the preambule is NOT
+   first-child (cover + sommaire precede it), so it correctly breaks to a new
+   page. Relying on break-after: page on the sommaire alone is unreliable
+   under Paged.js when the sommaire content doesn't fill the page. */
+.pdf-content > section.level2 {
+  break-before: page;
+  page-break-before: always;
+}
 .pdf-content > section.level2:first-child {
   break-before: auto !important;
   page-break-before: auto !important;
-}
-.pdf-content > section.level2 ~ section.level2 {
-  break-before: page;
-  page-break-before: always;
 }
 h1,
 h2,
