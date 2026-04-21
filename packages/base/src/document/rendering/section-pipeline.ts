@@ -26,6 +26,7 @@ const MD_ALERT_KINDS: Set<string> = new Set(["info", "warning", "danger", "succe
 const MD_KNOWN_CONTAINERS: Set<string> = new Set([
   ...MD_ALERT_KINDS,
   "kpi",
+  "enjeux",
   "quote",
   "timeline",
 ]);
