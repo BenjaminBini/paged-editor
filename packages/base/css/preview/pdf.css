@@ -843,15 +843,28 @@ figure.md-image figcaption {
 }
 
 /* ── GFM task lists (- [ ] / - [x]) ── */
-ul:has(> li > input[type="checkbox"]) {
+/* Matches both marked's "tight" output (<li><input>) and "loose" output
+   (<li><p><input>). The input may be a direct child of li or nested in
+   a wrapping <p> when the list is surrounded by blank lines. */
+ul:has(> li input[type="checkbox"]) {
   list-style: none;
   padding-left: 0;
 }
-ul:has(> li > input[type="checkbox"]) > li {
+ul:has(> li input[type="checkbox"]) > li {
   position: relative;
   padding-left: 1.6em;
 }
-ul:has(> li > input[type="checkbox"]) > li > input[type="checkbox"] {
+/* Suppress the generic ul li::before bullet ("›") on task-list items —
+   the checkbox itself is the marker, we don't want two. */
+ul:has(> li input[type="checkbox"]) > li::before {
+  content: none;
+}
+/* Kill the margin on the <p> marked wraps loose task-list item content in,
+   so the label sits on the same baseline as the checkbox. */
+ul:has(> li input[type="checkbox"]) > li > p {
+  margin: 0;
+}
+ul:has(> li input[type="checkbox"]) > li input[type="checkbox"] {
   position: absolute;
   left: 0;
   top: 0.2em;
