@@ -1185,75 +1185,405 @@
           aria-label="Flowchart du cycle de traitement d'une anomalie"
         >
           <defs>
-            <marker id="arrow-flow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+            <marker
+              id="arrow-flow"
+              markerWidth="10"
+              markerHeight="10"
+              refX="8"
+              refY="5"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
               <path d="M0,0 L10,5 L0,10 z" fill="#94a3b8"></path>
             </marker>
-            <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+            <marker
+              id="arrow-blue"
+              markerWidth="10"
+              markerHeight="10"
+              refX="8"
+              refY="5"
+              orient="auto"
+              markerUnits="strokeWidth"
+            >
               <path d="M0,0 L10,5 L0,10 z" fill="#3373b3"></path>
             </marker>
           </defs>
 
           <!-- ── Row 1: Signalement → Prise en charge ── -->
-          <rect x="30" y="30" width="200" height="74" rx="18" fill="#f0f5fb" stroke="#3373b3" stroke-width="2.5"></rect>
-          <text x="130" y="60" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="24" font-weight="800" fill="#3373b3">1</text>
-          <text x="130" y="84" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="14" font-weight="700" fill="#334155">Signalement</text>
+          <rect
+            x="30"
+            y="30"
+            width="200"
+            height="74"
+            rx="18"
+            fill="#f0f5fb"
+            stroke="#3373b3"
+            stroke-width="2.5"
+          ></rect>
+          <text
+            x="130"
+            y="60"
+            text-anchor="middle"
+            font-family="Montserrat, sans-serif"
+            font-size="24"
+            font-weight="800"
+            fill="#3373b3"
+          >
+            1
+          </text>
+          <text
+            x="130"
+            y="84"
+            text-anchor="middle"
+            font-family="Hanken Grotesk, sans-serif"
+            font-size="14"
+            font-weight="700"
+            fill="#334155"
+          >
+            Signalement
+          </text>
 
-          <line x1="230" y1="67" x2="280" y2="67" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+          <line
+            x1="230"
+            y1="67"
+            x2="280"
+            y2="67"
+            stroke="#94a3b8"
+            stroke-width="2.5"
+            marker-end="url(#arrow-flow)"
+          ></line>
 
-          <rect x="280" y="30" width="340" height="74" rx="18" fill="#f0f5fb" stroke="#3373b3" stroke-width="2.5"></rect>
-          <text x="450" y="60" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="24" font-weight="800" fill="#3373b3">2</text>
-          <text x="450" y="84" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="14" font-weight="700" fill="#334155">Prise en charge et qualification</text>
+          <rect
+            x="280"
+            y="30"
+            width="340"
+            height="74"
+            rx="18"
+            fill="#f0f5fb"
+            stroke="#3373b3"
+            stroke-width="2.5"
+          ></rect>
+          <text
+            x="450"
+            y="60"
+            text-anchor="middle"
+            font-family="Montserrat, sans-serif"
+            font-size="24"
+            font-weight="800"
+            fill="#3373b3"
+          >
+            2
+          </text>
+          <text
+            x="450"
+            y="84"
+            text-anchor="middle"
+            font-family="Hanken Grotesk, sans-serif"
+            font-size="14"
+            font-weight="700"
+            fill="#334155"
+          >
+            Prise en charge et qualification
+          </text>
 
           <!-- ── Arrow down to diamond ── -->
-          <line x1="450" y1="104" x2="450" y2="130" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+          <line
+            x1="450"
+            y1="104"
+            x2="450"
+            y2="130"
+            stroke="#94a3b8"
+            stroke-width="2.5"
+            marker-end="url(#arrow-flow)"
+          ></line>
 
           <!-- ── Diamond: decision ── -->
-          <polygon points="450,130 550,210 450,290 350,210" fill="#fff" stroke="#3373b3" stroke-width="2.5"></polygon>
-          <text x="450" y="196" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="700" fill="#334155">Delai estime</text>
-          <text x="450" y="214" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="12" font-weight="700" fill="#334155">&#8804; SLA ?</text>
+          <polygon
+            points="450,130 550,210 450,290 350,210"
+            fill="#fff"
+            stroke="#3373b3"
+            stroke-width="2.5"
+          ></polygon>
+          <text
+            x="450"
+            y="196"
+            text-anchor="middle"
+            font-family="Montserrat, sans-serif"
+            font-size="12"
+            font-weight="700"
+            fill="#334155"
+          >
+            Delai estime
+          </text>
+          <text
+            x="450"
+            y="214"
+            text-anchor="middle"
+            font-family="Montserrat, sans-serif"
+            font-size="12"
+            font-weight="700"
+            fill="#334155"
+          >
+            &#8804; SLA ?
+          </text>
 
           <!-- ── OUI path (left): direct down to Correction ── -->
-          <line x1="350" y1="210" x2="240" y2="210" stroke="#2d8659" stroke-width="2.5"></line>
-          <line x1="240" y1="210" x2="240" y2="350" stroke="#2d8659" stroke-width="2.5"></line>
-          <line x1="240" y1="350" x2="365" y2="350" stroke="#2d8659" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
-          <rect x="178" y="196" width="48" height="22" rx="6" fill="#dcfce7"></rect>
-          <text x="202" y="212" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="13" font-weight="800" fill="#166534">OUI</text>
+          <line
+            x1="350"
+            y1="210"
+            x2="240"
+            y2="210"
+            stroke="#2d8659"
+            stroke-width="2.5"
+          ></line>
+          <line
+            x1="240"
+            y1="210"
+            x2="240"
+            y2="350"
+            stroke="#2d8659"
+            stroke-width="2.5"
+          ></line>
+          <line
+            x1="240"
+            y1="350"
+            x2="365"
+            y2="350"
+            stroke="#2d8659"
+            stroke-width="2.5"
+            marker-end="url(#arrow-flow)"
+          ></line>
+          <rect
+            x="178"
+            y="196"
+            width="48"
+            height="22"
+            rx="6"
+            fill="#dcfce7"
+          ></rect>
+          <text
+            x="202"
+            y="212"
+            text-anchor="middle"
+            font-family="Montserrat, sans-serif"
+            font-size="13"
+            font-weight="800"
+            fill="#166534"
+          >
+            OUI
+          </text>
 
           <!-- ── NON path (right): Contournement then down to Correction ── -->
-          <line x1="550" y1="210" x2="660" y2="210" stroke="#b82775" stroke-width="2.5"></line>
-          <line x1="660" y1="210" x2="660" y2="236" stroke="#b82775" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
-          <rect x="663" y="196" width="52" height="22" rx="6" fill="#fce7f3"></rect>
-          <text x="689" y="212" text-anchor="middle" font-family="Montserrat, sans-serif" font-size="13" font-weight="800" fill="#9f1239">NON</text>
+          <line
+            x1="550"
+            y1="210"
+            x2="660"
+            y2="210"
+            stroke="#b82775"
+            stroke-width="2.5"
+          ></line>
+          <line
+            x1="660"
+            y1="210"
+            x2="660"
+            y2="236"
+            stroke="#b82775"
+            stroke-width="2.5"
+            marker-end="url(#arrow-flow)"
+          ></line>
+          <rect
+            x="663"
+            y="196"
+            width="52"
+            height="22"
+            rx="6"
+            fill="#fce7f3"
+          ></rect>
+          <text
+            x="689"
+            y="212"
+            text-anchor="middle"
+            font-family="Montserrat, sans-serif"
+            font-size="13"
+            font-weight="800"
+            fill="#9f1239"
+          >
+            NON
+          </text>
 
           <!-- Contournement box -->
-          <rect x="586" y="238" width="148" height="56" rx="14" fill="#fdf2f8" stroke="#b82775" stroke-width="2.5"></rect>
-          <text x="660" y="261" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="12" font-weight="700" fill="#9f1239">Solution de</text>
-          <text x="660" y="279" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="12" font-weight="700" fill="#9f1239">contournement</text>
+          <rect
+            x="586"
+            y="238"
+            width="148"
+            height="56"
+            rx="14"
+            fill="#fdf2f8"
+            stroke="#b82775"
+            stroke-width="2.5"
+          ></rect>
+          <text
+            x="660"
+            y="261"
+            text-anchor="middle"
+            font-family="Hanken Grotesk, sans-serif"
+            font-size="12"
+            font-weight="700"
+            fill="#9f1239"
+          >
+            Solution de
+          </text>
+          <text
+            x="660"
+            y="279"
+            text-anchor="middle"
+            font-family="Hanken Grotesk, sans-serif"
+            font-size="12"
+            font-weight="700"
+            fill="#9f1239"
+          >
+            contournement
+          </text>
 
           <!-- Contournement → down to Correction -->
-          <line x1="660" y1="294" x2="660" y2="350" stroke="#b82775" stroke-width="2.5"></line>
-          <line x1="660" y1="350" x2="535" y2="350" stroke="#b82775" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+          <line
+            x1="660"
+            y1="294"
+            x2="660"
+            y2="350"
+            stroke="#b82775"
+            stroke-width="2.5"
+          ></line>
+          <line
+            x1="660"
+            y1="350"
+            x2="535"
+            y2="350"
+            stroke="#b82775"
+            stroke-width="2.5"
+            marker-end="url(#arrow-flow)"
+          ></line>
 
           <!-- ── Row 3: Single Correction (both paths merge here) ── -->
-          <rect x="365" y="325" width="170" height="50" rx="25" fill="#f0f5fb" stroke="#3373b3" stroke-width="2.5"></rect>
-          <text x="450" y="356" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="15" font-weight="700" fill="#334155">Correction</text>
+          <rect
+            x="365"
+            y="325"
+            width="170"
+            height="50"
+            rx="25"
+            fill="#f0f5fb"
+            stroke="#3373b3"
+            stroke-width="2.5"
+          ></rect>
+          <text
+            x="450"
+            y="356"
+            text-anchor="middle"
+            font-family="Hanken Grotesk, sans-serif"
+            font-size="15"
+            font-weight="700"
+            fill="#334155"
+          >
+            Correction
+          </text>
 
           <!-- Correction → Livraison -->
-          <line x1="450" y1="375" x2="450" y2="406" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+          <line
+            x1="450"
+            y1="375"
+            x2="450"
+            y2="406"
+            stroke="#94a3b8"
+            stroke-width="2.5"
+            marker-end="url(#arrow-flow)"
+          ></line>
 
           <!-- ── Row 4: Livraison → Recette → Cloture ── -->
-          <rect x="385" y="408" width="130" height="46" rx="23" fill="#f0f5fb" stroke="#3373b3" stroke-width="2.5"></rect>
-          <text x="450" y="437" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="15" font-weight="700" fill="#334155">Livraison</text>
+          <rect
+            x="385"
+            y="408"
+            width="130"
+            height="46"
+            rx="23"
+            fill="#f0f5fb"
+            stroke="#3373b3"
+            stroke-width="2.5"
+          ></rect>
+          <text
+            x="450"
+            y="437"
+            text-anchor="middle"
+            font-family="Hanken Grotesk, sans-serif"
+            font-size="15"
+            font-weight="700"
+            fill="#334155"
+          >
+            Livraison
+          </text>
 
-          <line x1="515" y1="431" x2="550" y2="431" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+          <line
+            x1="515"
+            y1="431"
+            x2="550"
+            y2="431"
+            stroke="#94a3b8"
+            stroke-width="2.5"
+            marker-end="url(#arrow-flow)"
+          ></line>
 
-          <rect x="550" y="408" width="130" height="46" rx="23" fill="#f0f5fb" stroke="#3373b3" stroke-width="2.5"></rect>
-          <text x="615" y="437" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="15" font-weight="700" fill="#334155">Recette</text>
+          <rect
+            x="550"
+            y="408"
+            width="130"
+            height="46"
+            rx="23"
+            fill="#f0f5fb"
+            stroke="#3373b3"
+            stroke-width="2.5"
+          ></rect>
+          <text
+            x="615"
+            y="437"
+            text-anchor="middle"
+            font-family="Hanken Grotesk, sans-serif"
+            font-size="15"
+            font-weight="700"
+            fill="#334155"
+          >
+            Recette
+          </text>
 
-          <line x1="680" y1="431" x2="715" y2="431" stroke="#94a3b8" stroke-width="2.5" marker-end="url(#arrow-flow)"></line>
+          <line
+            x1="680"
+            y1="431"
+            x2="715"
+            y2="431"
+            stroke="#94a3b8"
+            stroke-width="2.5"
+            marker-end="url(#arrow-flow)"
+          ></line>
 
-          <rect x="715" y="408" width="130" height="46" rx="23" fill="#e8f5fa" stroke="#0096ae" stroke-width="2.5"></rect>
-          <text x="780" y="437" text-anchor="middle" font-family="Hanken Grotesk, sans-serif" font-size="15" font-weight="700" fill="#0096ae">Cloture</text>
+          <rect
+            x="715"
+            y="408"
+            width="130"
+            height="46"
+            rx="23"
+            fill="#e8f5fa"
+            stroke="#0096ae"
+            stroke-width="2.5"
+          ></rect>
+          <text
+            x="780"
+            y="437"
+            text-anchor="middle"
+            font-family="Hanken Grotesk, sans-serif"
+            font-size="15"
+            font-weight="700"
+            fill="#0096ae"
+          >
+            Cloture
+          </text>
         </svg>
       </div>
 
@@ -1406,6 +1736,478 @@
             Validation MOM, demarrage corrective, premier COPROJ, remise PAQ +
             PAS
           </div>
+        </div>
+      </div>
+
+      <!-- Evolutive Flow -->
+      <div
+        style="
+          font-family: &quot;Montserrat&quot;, sans-serif;
+          font-size: 10.5pt;
+          font-weight: 700;
+          color: #193658;
+          margin: 20px 0 10px;
+          padding-bottom: 6px;
+          border-bottom: 2px solid #e2e8f0;
+        "
+      >
+        Processus de traitement d'une demande d'evolution
+      </div>
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 36px 1fr;
+          gap: 0;
+          margin: 14px 0;
+          position: relative;
+        "
+      >
+        <!-- Vertical line -->
+        <div
+          style="
+            grid-column: 1;
+            grid-row: 1/9;
+            display: flex;
+            justify-content: center;
+            position: relative;
+          "
+        >
+          <div
+            style="
+              width: 3px;
+              background: linear-gradient(to bottom, #0096ae, #493a8b, #3373b3);
+              border-radius: 2px;
+            "
+          ></div>
+        </div>
+        <!-- Step 1 -->
+        <div
+          style="
+            grid-column: 1;
+            grid-row: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+          "
+        >
+          <div
+            style="
+              width: 26px;
+              height: 26px;
+              border-radius: 50%;
+              background: #0096ae;
+              color: #fff;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 11px;
+              font-weight: 800;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            1
+          </div>
+        </div>
+        <div
+          style="
+            grid-column: 2;
+            grid-row: 1;
+            padding: 6px 0 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <span style="font-size: 9pt; font-weight: 700; color: #193658"
+            >Demande CNC</span
+          >
+          <span
+            style="
+              display: inline-block;
+              padding: 1px 6px;
+              border-radius: 4px;
+              font-size: 6.5pt;
+              font-weight: 700;
+              background: rgba(235, 145, 38, 0.15);
+              color: #9a5f0d;
+              letter-spacing: 0.03em;
+            "
+            >CNC</span
+          >
+          <span style="font-size: 7.5pt; color: #718096"
+            >— Emission du ticket Jira ou présentation du besoin en
+            réunion</span
+          >
+        </div>
+        <!-- Step 2 -->
+        <div
+          style="
+            grid-column: 1;
+            grid-row: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+          "
+        >
+          <div
+            style="
+              width: 26px;
+              height: 26px;
+              border-radius: 50%;
+              background: #0096ae;
+              color: #fff;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 11px;
+              font-weight: 800;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            2
+          </div>
+        </div>
+        <div
+          style="
+            grid-column: 2;
+            grid-row: 2;
+            padding: 6px 0 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <span style="font-size: 9pt; font-weight: 700; color: #193658"
+            >Analyse</span
+          >
+          <span style="font-size: 7.5pt; color: #718096"
+            >— Perimetre, complexite, dependances, impact</span
+          >
+        </div>
+        <!-- Step 3 -->
+        <div
+          style="
+            grid-column: 1;
+            grid-row: 3;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+          "
+        >
+          <div
+            style="
+              width: 26px;
+              height: 26px;
+              border-radius: 50%;
+              background: #0096ae;
+              color: #fff;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 11px;
+              font-weight: 800;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            3
+          </div>
+        </div>
+        <div
+          style="
+            grid-column: 2;
+            grid-row: 3;
+            padding: 6px 0 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <span style="font-size: 9pt; font-weight: 700; color: #193658"
+            >Devis</span
+          >
+          <span
+            style="
+              display: inline-block;
+              padding: 2px 8px;
+              border-radius: 5px;
+              font-size: 7pt;
+              font-weight: 700;
+              background: rgba(0, 150, 174, 0.1);
+              color: #0096ae;
+            "
+            >Simple &#8804; 5j</span
+          >
+          <span
+            style="
+              display: inline-block;
+              padding: 2px 8px;
+              border-radius: 5px;
+              font-size: 7pt;
+              font-weight: 700;
+              background: rgba(73, 58, 139, 0.1);
+              color: #493a8b;
+            "
+            >Complexe &#8804; 10j</span
+          >
+        </div>
+        <!-- Step 4 -->
+        <div
+          style="
+            grid-column: 1;
+            grid-row: 4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+          "
+        >
+          <div
+            style="
+              width: 26px;
+              height: 26px;
+              border-radius: 50%;
+              background: #0096ae;
+              color: #fff;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 11px;
+              font-weight: 800;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            4
+          </div>
+        </div>
+        <div
+          style="
+            grid-column: 2;
+            grid-row: 4;
+            padding: 6px 0 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <span style="font-size: 9pt; font-weight: 700; color: #193658"
+            >Validation BC</span
+          >
+          <span
+            style="
+              display: inline-block;
+              padding: 1px 6px;
+              border-radius: 4px;
+              font-size: 6.5pt;
+              font-weight: 700;
+              background: rgba(235, 145, 38, 0.15);
+              color: #9a5f0d;
+              letter-spacing: 0.03em;
+            "
+            >CNC</span
+          >
+          <span style="font-size: 7.5pt; color: #718096"
+            >— Aucune realisation sans bon de commande signe</span
+          >
+        </div>
+        <!-- Step 5 -->
+        <div
+          style="
+            grid-column: 1;
+            grid-row: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+          "
+        >
+          <div
+            style="
+              width: 26px;
+              height: 26px;
+              border-radius: 50%;
+              background: #493a8b;
+              color: #fff;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 11px;
+              font-weight: 800;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            5
+          </div>
+        </div>
+        <div
+          style="
+            grid-column: 2;
+            grid-row: 5;
+            padding: 6px 0 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <span style="font-size: 9pt; font-weight: 700; color: #493a8b"
+            >Realisation agile</span
+          >
+          <span style="font-size: 7.5pt; color: #718096"
+            >— Mini-cycle Scrum : spec, dev, tests, livraison recette</span
+          >
+        </div>
+        <!-- Step 6 -->
+        <div
+          style="
+            grid-column: 1;
+            grid-row: 6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+          "
+        >
+          <div
+            style="
+              width: 26px;
+              height: 26px;
+              border-radius: 50%;
+              background: #3373b3;
+              color: #fff;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 11px;
+              font-weight: 800;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            6
+          </div>
+        </div>
+        <div
+          style="
+            grid-column: 2;
+            grid-row: 6;
+            padding: 6px 0 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <span style="font-size: 9pt; font-weight: 700; color: #193658"
+            >Livraison & recette</span
+          >
+          <span
+            style="
+              display: inline-block;
+              padding: 1px 6px;
+              border-radius: 4px;
+              font-size: 6.5pt;
+              font-weight: 700;
+              background: rgba(235, 145, 38, 0.15);
+              color: #9a5f0d;
+              letter-spacing: 0.03em;
+            "
+            >CNC</span
+          >
+          <span style="font-size: 7.5pt; color: #718096"
+            >— Validation CNC, correction eventuelle des retours, deploiement production</span
+          >
+        </div>
+        <!-- Step 7 -->
+        <div
+          style="
+            grid-column: 1;
+            grid-row: 7;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+          "
+        >
+          <div
+            style="
+              width: 26px;
+              height: 26px;
+              border-radius: 50%;
+              background: #3373b3;
+              color: #fff;
+              font-family: &quot;Montserrat&quot;, sans-serif;
+              font-size: 11px;
+              font-weight: 800;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            7
+          </div>
+        </div>
+        <div
+          style="
+            grid-column: 2;
+            grid-row: 7;
+            padding: 6px 0 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <span style="font-size: 9pt; font-weight: 700; color: #193658"
+            >Cloture</span
+          >
+          <span style="font-size: 7.5pt; color: #718096"
+            >— Ticket Jira clos, RAD transmis sous 48h, documentation mise a jour</span
+          >
+        </div>
+        <!-- Step 8 -->
+        <div
+          style="
+            grid-column: 1;
+            grid-row: 8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+          "
+        >
+          <div
+            style="
+              width: 26px;
+              height: 26px;
+              border-radius: 50%;
+              background: #2d8659;
+              color: #fff;
+              font-family: 'Montserrat', sans-serif;
+              font-size: 11px;
+              font-weight: 800;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            "
+          >
+            8
+          </div>
+        </div>
+        <div
+          style="
+            grid-column: 2;
+            grid-row: 8;
+            padding: 6px 0 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <span style="font-size: 9pt; font-weight: 700; color: #2d8659"
+            >Garantie</span
+          >
+          <span style="font-size: 7.5pt; color: #718096"
+            >— Periode de garantie post-livraison, correction des anomalies residuelles</span
+          >
         </div>
       </div>
 
