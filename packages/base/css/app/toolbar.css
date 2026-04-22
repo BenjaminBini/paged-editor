@@ -244,6 +244,22 @@
   background: #fff;
 }
 
+/* ── Style-mode toggle (right side of top bar) ── */
+.toolbar-style-toggle {
+  margin-left: 12px;
+}
+.toolbar-style-toggle.active span {
+  color: #fff;
+}
+.toolbar-style-toggle.active .wrap-track {
+  background: #3373b3;
+  border-color: #3373b3;
+}
+.toolbar-style-toggle.active .wrap-thumb {
+  left: 14px;
+  background: #fff;
+}
+
 /* ── Backdrop to close menus on click-away ── */
 .menu-backdrop {
   display: none;

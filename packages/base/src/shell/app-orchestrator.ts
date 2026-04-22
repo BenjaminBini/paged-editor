@@ -89,6 +89,8 @@ import {
   requestWindowClose,
 } from "../workspace/files/file-operations.js";
 import { initFormattingToolbar } from "../editor/formatting-toolbar.js";
+import { bindToggleButton } from "./ui/style-mode.js";
+import { bindSidebarDom } from "./ui/sidebar-panel-manager.js";
 import {
   updateGutterMarkers as _updateGutterMarkers,
   applyPageBreakMarks,
@@ -259,6 +261,16 @@ wireSidebarCallbacks({ hideWelcome, reloadTabFromDisk });
 
 initMenubar();
 initFormattingToolbar();
+
+// ── Style-mode plumbing ────────────────────────────────────────────────────
+
+{
+  const btnStyleMode = document.getElementById("btnStyleMode");
+  if (btnStyleMode) bindToggleButton(btnStyleMode);
+  const outlineEl = document.getElementById("outlineSection");
+  const inspectorEl = document.getElementById("inspectorPanel");
+  if (outlineEl && inspectorEl) bindSidebarDom(outlineEl, inspectorEl);
+}
 
 // ── Drag & drop .md files ──────────────────────────────────────────────────
 
