@@ -805,10 +805,14 @@ export async function renderMarkdown(md: string, options: Record<string, any> = 
 
   resetMermaidQueue();
 
-  // Tokenize and add source-line info
+  // Tokenize and add source-line info.
+  // Always compute _sourceLine regardless of frontmatter so that data-source-line
+  // attributes are emitted on all rendered elements. Scroll sync and click-to-line
+  // both rely on these attributes; omitting them when startLine=0 (no frontmatter)
+  // left documents without any sync anchors.
   const tokens = marked.lexer(body);
   const sourceBlocks = buildSourceBlocks(tokens);
-  if (startLine > 0) {
+  {
     let cursor = 0;
     for (const token of tokens) {
       const idx = body.indexOf(token.raw, cursor);

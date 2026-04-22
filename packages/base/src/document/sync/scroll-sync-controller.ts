@@ -286,7 +286,9 @@ export class ScrollSyncController {
 
     for (const heading of previewPages.querySelectorAll(HEADING_SELECTOR)) {
       const sourceLine = parseInt((heading as HTMLElement).dataset.sourceLine ?? "", 10);
-      if (!Number.isFinite(sourceLine) || sourceLine < 1) continue;
+      // sourceLine is 0-based (matches CM5's cursor API). Skip invalid or
+      // first-line headings — they map to (0,0) which is already the origin.
+      if (!Number.isFinite(sourceLine) || sourceLine < 0) continue;
 
       const headingRect = heading.getBoundingClientRect();
 
@@ -297,7 +299,8 @@ export class ScrollSyncController {
 
       // Editor position: CM's heightAtLine gives pixels from the top of the
       // document (accurate for lines that have been rendered/measured).
-      const editorY = this.editorApi.heightAtLine(sourceLine - 1, "local");
+      // sourceLine is 0-based, so pass it directly (no -1 adjustment).
+      const editorY = this.editorApi.heightAtLine(sourceLine, "local");
 
       const point: RelationPoint = {
         editorScrollTop: this.clampScrollTop(
