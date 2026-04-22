@@ -2,6 +2,7 @@
 
 import { cm } from "./codemirror-editor.js";
 import { detectPartieNum } from "../document/rendering/markdown-helpers.js";
+import { computeSectionNumbers } from "./section-numbers.js";
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 
@@ -40,18 +41,18 @@ export function buildOutline(getActiveTab: () => any): void {
 
   const tab = getActiveTab();
   const partieNum = detectPartieNum(cm.getValue(), tab?.name || "");
-  const counters = [0, 0, 0]; // h2, h3, h4 counters
-  const numbers = outlineHeadings.map((h) => {
-    if (h.level === 1) {
-      counters[0] = 0; counters[1] = 0; counters[2] = 0;
-      return partieNum ? `Partie ${partieNum}` : "";
-    }
-    const lvl = h.level - 2;
-    counters[lvl]++;
-    for (let k = lvl + 1; k < counters.length; k++) counters[k] = 0;
-    const prefix = partieNum ? `${partieNum}.` : "";
-    return prefix + counters.slice(0, lvl + 1).join(".");
-  });
+  const sectionEntries = computeSectionNumbers(
+    (i) => cm.getLine(i) || "",
+    cm.lineCount(),
+    partieNum,
+  );
+  // Build a line-number → label map for fast lookup.
+  const labelByLine = new Map(sectionEntries.map((e) => [e.lineNo, e.label]));
+  const numbers = outlineHeadings.map((h) =>
+    h.level === 1
+      ? (partieNum ? `Partie ${partieNum}` : "")
+      : (labelByLine.get(h.line) ?? ""),
+  );
 
   outlineHeadings.forEach((h, idx) => {
     const el = document.createElement("div");

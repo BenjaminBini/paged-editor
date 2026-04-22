@@ -204,29 +204,46 @@
 }
 .cm-pagebreak-widget:hover .cm-pagebreak-delete { color: #585b70; }
 .cm-pagebreak-delete:hover { color: #f38ba8 !important; background: rgba(243, 139, 168, 0.12); }
-/* ── Heading number badges (inline, replacing # symbols) ── */
-.CodeMirror-line span:has(> .CodeMirror-widget .cm-heading-badge) {
+/* ── Horizontal rule widget (replaces --- / *** / ___ when cursor is elsewhere) ── */
+.cm-hr-widget {
   display: inline-flex; align-items: center;
+  width: 100%; height: 1.6em;
+  cursor: text; vertical-align: middle;
 }
+.cm-hr-line {
+  flex: 1;
+  border-top: 1.5px solid rgba(88, 91, 112, 0.6);
+  border-radius: 2px;
+}
+/* ── Heading level badges (replace ## prefix when cursor is elsewhere) ── */
 .cm-heading-badge {
   display: inline-flex; align-items: center; justify-content: center;
   font-family: "Nunito", sans-serif;
   font-weight: 700; line-height: 1;
   padding: 2px 6px; border-radius: 4px;
   margin-right: 6px; white-space: nowrap;
-  cursor: text;
+  cursor: text; vertical-align: middle;
 }
 .cm-heading-badge[data-level="1"] {
   background: rgba(240, 168, 64, 0.18); color: #f0a840;
-  font-size: 15.5px; padding: 3px 9px; border-radius: 5px;
+  font-size: 13px; padding: 3px 9px; border-radius: 5px;
 }
 .cm-heading-badge[data-level="2"] {
   background: rgba(224, 192, 112, 0.14); color: #e0c070;
-  font-size: 14px; padding: 2px 8px;
+  font-size: 12px; padding: 2px 8px;
 }
 .cm-heading-badge[data-level="3"] {
   background: rgba(200, 216, 128, 0.10); color: #c8d880;
-  font-size: 13px;
+  font-size: 11px;
+}
+.cm-heading-badge[data-level="4"] {
+  background: rgba(137, 180, 250, 0.09); color: #89b4fa;
+  font-size: 11px;
+}
+.cm-heading-badge[data-level="5"],
+.cm-heading-badge[data-level="6"] {
+  background: rgba(166, 173, 200, 0.08); color: #a6adc8;
+  font-size: 10px;
 }
 /* Hide text content of table lines; line widgets (siblings) stay visible */
 .tw-hidden-text { height: 0 !important; overflow: hidden !important; padding: 0 !important; margin: 0 !important; }

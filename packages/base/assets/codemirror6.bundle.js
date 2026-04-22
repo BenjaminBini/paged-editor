@@ -26981,11 +26981,15 @@ var searchExtensions = [
 ];
 export {
   Compartment,
+  Decoration,
   EditorSelection,
   EditorState,
   EditorView,
   HighlightStyle,
   LanguageDescription,
+  RangeSetBuilder,
+  ViewPlugin,
+  WidgetType,
   crosshairCursor,
   css,
   defaultHighlightStyle,
