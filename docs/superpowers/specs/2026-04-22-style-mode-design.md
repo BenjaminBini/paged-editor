@@ -143,10 +143,10 @@ Errors are recorded during parsing but **do not abort rendering**. The block ren
 | `orphan-directive` | Line has valid directive syntax but is not a recognized block-start line | No — directive left as content |
 
 Every error carries:
-- `line` (0-based source line),
-- `styleDirectiveRange: { from: number; to: number }` (absolute offsets within the post-frontmatter body),
-- `blockId` when applicable (for `orphan-directive`, `blockId = null`),
-- a human-readable `message`.
+- `line` — 0-based line number in the **editor buffer** (i.e. including frontmatter).
+- `styleDirectiveRange: { from: number; to: number }` — **document-absolute character offsets into the editor buffer** (frontmatter prefix already added). These offsets are consumed directly by CM6 decorations, diagnostic spans, and the `writeDirective` transaction — no further translation is needed.
+- `blockId` when applicable (for `orphan-directive`, `blockId = null`).
+- A human-readable `message`.
 
 ### 3.6 Canonical serialization (source writer contract)
 
@@ -172,15 +172,18 @@ The writer NEVER rewrites the whole directive blindly. Valid directives are repl
 
 The single source of truth for every selectable block. Built during parsing (§5.1), consumed by the inspector, preview interaction, editor decorations, and source writer.
 
+**All coordinates in the exported `BlockEntry` and `StyleError` are document-absolute — they index into the editor buffer (the raw `md` as CodeMirror sees it, frontmatter included).** The pipeline may work in body-relative coordinates internally but MUST translate to document-absolute before emitting. See §5.1 for the translation step and §5.1.1 for the one pre-existing knob that made this misleading.
+
 ```ts
 interface BlockEntry {
   blockId: string;              // stable-within-render identity (see below)
   blockType: BlockType;         // "heading" | "paragraph" | "blockquote" | "list" |
                                 // "table" | "hr" | "code" | "figure" |
                                 // "mdContainer:info" | "mdContainer:kpi" | …
-  sourceLineStart: number;      // 0-based, first line of the block's source range
-  sourceLineEnd: number;        // 0-based, last line of the block's source range (inclusive)
-  styleDirectiveRange:          // absolute document offsets (post-frontmatter body);
+  sourceLineStart: number;      // 0-based line index in the editor buffer
+                                // (frontmatter lines included)
+  sourceLineEnd: number;        // 0-based line index in the editor buffer, inclusive
+  styleDirectiveRange:          // character offsets in the editor buffer;
     | { from: number; to: number }   //   covers the leading space + full `{:style …}`
     | null;                     //   null when no directive is present
   styleValues: StyleValues;     // parsed; absent keys = undefined (NOT 0)
@@ -223,23 +226,49 @@ styleErrors:  StyleError[];   // errors not attached to any block (orphans, etc.
 
 Trying to hand-scrub the directive out of marked's token tree is unreliable — each block type exposes the directive through different fields (`token.lang` for fenced code, `token.attrs` for `:::` containers, nested `token.items[].tokens` for lists, nested `token.header[].tokens` / `token.rows[].cells[].tokens` for tables, inline children for headings/paragraphs). Instead we edit the **source text** and re-tokenize. Marked then produces already-clean tokens and every renderer consumes them without special cases.
 
+The contract uses **two regexes** — one strict (the canonical directive form), one candidate (a looser "looks like a directive" pattern) — applied in that order. The candidate path is what produces `malformed-directive` errors on block-start lines; §3.5 and §2.4's read-only policy depend on this path existing.
+
+```
+STRICT     = /(\s+)\{:style\s+([^}\n]*)\}\s*$/
+CANDIDATE  = /(\s+)\{:style\b[^\n]*$/    // {:style at EOL, does NOT close properly
+```
+
 The contract is:
 
 **Pass 1 — probe.** Run `marked.lexer(body)` once. This tells us which lines begin stylable top-level blocks. For each such token:
-  a. Compute its `sourceLineStart`, `sourceLineEnd`, and absolute source range `[tokenFrom, tokenTo)` in `body` (reusing the `_sourceLine` mechanism already used by sync anchors; `tokenFrom` is the offset into `body` where `token.raw` begins).
+  a. Compute its `sourceLineStart`, `sourceLineEnd`, and absolute source range `[tokenFrom, tokenTo)` in `body`.
   b. Extract the **first source line** of the token: `body.slice(firstLineFrom, firstLineTo)` where both bounds are clamped to the token's range.
-  c. Attempt the regex `/(\s+)\{:style\s+([^}\n]*)\}\s*$/` against that first line.
-  d. On match, record `{ blockType, tokenFrom, firstLineFrom, firstLineTo, styleDirectiveRange: { from, to }, rawDirectiveText }`, where `from`/`to` are absolute offsets in `body` covering the leading whitespace + full `{:style …}`.
+  c. Try `STRICT` against that first line.
+     - On match → record `{ blockType, firstLineFrom, firstLineTo, styleDirectiveRange: { from, to }, rawDirectiveText, malformed: false }`. The range covers the leading whitespace + full `{:style …}` in **body coordinates**.
+  d. If `STRICT` did NOT match, try `CANDIDATE` on the same line.
+     - On match → record the same shape but with `malformed: true`, `rawDirectiveText = the candidate span`, and `styleDirectiveRange` covering the candidate span. This is the ONLY path that produces a `malformed-directive` error on a block-start line.
 
-**Build `cleanedBody`.** Apply all recorded `styleDirectiveRange` strips to `body` in reverse order (to keep later offsets valid). The cleaned source now has no directive text anywhere.
+**Build `cleanedBody`.** Apply only the **non-malformed** strips to `body` in reverse order (to keep earlier offsets valid). Malformed directives are **left in source** — the user sees their broken text exactly as they wrote it, and the renderer will emit it as block content.
 
-**Pass 2 — final.** Run `marked.lexer(cleanedBody)` again. The resulting tokens are pristine — directive text is gone from `token.raw`, `token.text`, `token.lang`, `token.attrs`, and every nested structure (list items, table cells, container bodies), because marked is now parsing a source that never contained it.
+**Pass 2 — final.** Run `marked.lexer(cleanedBody)` again. The tokens are pristine — directive text is gone from `token.raw`, `token.text`, `token.lang`, `token.attrs`, and every nested structure (list items, table cells, container bodies), because marked is now parsing a source that never contained well-formed directives.
 
-**Build `BlockEntry[]`.** Walk pass-2 top-level tokens. For each stylable one, match it back to a probe record by `sourceLineStart` in the cleaned source (the line numbers shift only if a directive-strip removed a whole line; since we only strip trailing fragments the line count is preserved). Parse the recorded `rawDirectiveText` into `styleValues` + per-block `errors` (§3.5). Assign `blockId = "b" + index-in-tokens`. Emit the `BlockEntry`.
+**Build `BlockEntry[]`.** Walk pass-2 top-level tokens. For each stylable one, match it back to a probe record by `sourceLineStart` in the cleaned source (directive-strips never remove whole lines, so line counts are preserved). Then:
+- If the probe had a well-formed directive → parse `rawDirectiveText` into `styleValues`, emit per-fragment errors (`unknown-key`, `invalid-value`, `duplicate-key`).
+- If the probe had a malformed directive → `styleValues = {}`, attach a single `malformed-directive` error with the candidate span as its `styleDirectiveRange`.
+- Assign `blockId = "b" + index-in-tokens`.
+- **Translate all emitted offsets to document-absolute** before emitting (§5.1.1).
 
-**Orphan detection.** In pass 1, a line may contain a directive that looks valid but belongs to no stylable token (e.g., the directive sits inside a `token.type === "html"` block, or on a line that's not the first line of a top-level stylable block). Those matches are recorded as `orphan-directive` errors with `blockId = null` and **NOT stripped** — their text stays as content.
+**Orphan detection.** Lines that matched `STRICT` but belong to no stylable top-level token (directive sits inside an `html` block, or on a line that's not a block-start line) become `orphan-directive` errors with `blockId = null`, left un-stripped. `CANDIDATE`-only matches on non-block-start lines are **ignored** — they are almost certainly user prose that happens to contain `{:style`, not a directive attempt, and flagging them would produce noise.
 
 **Double-lex cost.** Marked's lexer is fast (<1 ms on typical BEORN section bodies). The profile shows render cost is dominated by Paged.js pagination and CSS apply, not lexing; doubling the lex pass is imperceptible.
+
+### 5.1.1 Coordinate translation (body → document)
+
+All pass-1 offsets are body-relative (`body` is `parseFrontmatter(md).body`). The editor buffer is the full `md` including frontmatter. Every exported offset in `BlockEntry` and `StyleError` is document-absolute.
+
+- `renderMarkdown` knows the frontmatter prefix length: `frontmatterCharOffset = md.length − body.length` (computed from `parseFrontmatter` which already exposes both).
+- `frontmatterLineOffset` is the existing `startLine` value, already used to translate `_sourceLine` for sync anchors.
+- Before building each `BlockEntry` or `StyleError`, the pipeline adds:
+  - `frontmatterCharOffset` to every `styleDirectiveRange.from` and `.to`.
+  - `frontmatterLineOffset` to every `sourceLineStart`, `sourceLineEnd`, and `error.line`.
+- The raw body-relative values never leave the pipeline.
+
+This means CM6 lint, `Jump to error`, and the source-writer can use `styleDirectiveRange` directly with `view.dispatch({ changes: { from, to, insert } })` — no per-consumer fix-up.
 
 **Why this is safe for every block type:**
 
