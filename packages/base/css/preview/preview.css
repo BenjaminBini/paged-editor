@@ -75,3 +75,18 @@
 .preview-surface .pagedjs_page {
   cursor: default;
 }
+
+/* ── Style mode overlays ──────────────────────────────────────────────── */
+body.style-mode [data-block-id] {
+  cursor: pointer;
+}
+body.style-mode .style-hovered {
+  outline: 1px solid #3b82f6;
+  outline-offset: -1px;
+  background: rgba(59, 130, 246, 0.05);
+}
+body.style-mode .style-selected {
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+  background: rgba(37, 99, 235, 0.08);
+}

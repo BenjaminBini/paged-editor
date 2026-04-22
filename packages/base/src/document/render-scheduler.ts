@@ -19,6 +19,7 @@ import { getProjectMetadata, isCoverTab, isTocTab } from "./model/memoire-views.
 import { lockEditorScroll, unlockEditorScroll } from "./sync/preview-sync-setup.js";
 import type { BlockEntry, StyleError } from "./rendering/block-model.js";
 import { rootsEqual } from "./rendering/element-equal.js";
+import { restoreSelection } from "../shell/ui/preview-interaction.js";
 
 const A4_WIDTH_PX: number = 794;
 const previewWrapper: HTMLElement = document.getElementById("preview-wrapper")!;
@@ -278,6 +279,7 @@ async function renderRequest(request: { markdown: string; generation: number }):
   // don't carry stylable blocks, so default to empty.
   _lastBlockEntries = ((renderResult as any).blockEntries || []) as BlockEntry[];
   _lastStyleErrors = ((renderResult as any).styleErrors || []) as StyleError[];
+  restoreSelection(_lastBlockEntries);
 
   scaleSurface();
   previewRenderer.rebuildLineMap();

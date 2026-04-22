@@ -91,6 +91,7 @@ import {
 import { initFormattingToolbar } from "../editor/formatting-toolbar.js";
 import { bindToggleButton } from "./ui/style-mode.js";
 import { bindSidebarDom } from "./ui/sidebar-panel-manager.js";
+import { install as installPreviewInteraction } from "./ui/preview-interaction.js";
 import {
   updateGutterMarkers as _updateGutterMarkers,
   applyPageBreakMarks,
@@ -270,6 +271,8 @@ initFormattingToolbar();
   const outlineEl = document.getElementById("outlineSection");
   const inspectorEl = document.getElementById("inspectorPanel");
   if (outlineEl && inspectorEl) bindSidebarDom(outlineEl, inspectorEl);
+  const previewEl = document.getElementById("preview-container");
+  if (previewEl) installPreviewInteraction(previewEl);
 }
 
 // ── Drag & drop .md files ──────────────────────────────────────────────────
