@@ -553,7 +553,12 @@ function renderTimelineContainer(body: string, sl: string): string {
 //   <any markdown>
 // Each :::col-N header (N = 1..12) opens a column spanning N/12. Columns
 // are implicitly closed by the next :::col-N or by the end of the fence.
-function renderAoGridBlock(body: string, sourceLineAttr: string): string {
+function renderAoGridBlock(
+  body: string,
+  sourceLineAttr: string,
+  blockIdAttr = "",
+  styleAttr = "",
+): string {
   AO_GRID_COL_HEADER_RE.lastIndex = 0;
   const headers: Array<{ span: number; headerStart: number; contentStart: number }> = [];
   let hm: RegExpExecArray | null;
@@ -574,7 +579,7 @@ function renderAoGridBlock(body: string, sourceLineAttr: string): string {
     const inner = marked.parse(content) as string;
     return `<div class="ao-grid-col" style="grid-column: span ${h.span}">\n${inner}</div>`;
   });
-  return `<div class="ao-grid"${sourceLineAttr}>\n${cols.join("\n")}\n</div>\n`;
+  return `<div class="ao-grid"${sourceLineAttr}${blockIdAttr}${styleAttr}>\n${cols.join("\n")}\n</div>\n`;
 }
 
 marked.use({
@@ -608,15 +613,21 @@ marked.use({
       },
       renderer(token: MarkedToken): string {
         const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+        const { blockIdAttr, styleCss } = blockAnnotations(token);
+        // Every mdContainer sub-renderer takes a single "attrs" string that
+        // is inserted into the root element after its class list. Including
+        // sl/blockIdAttr/style here keeps those in one place.
+        const styleAttr = styleCss ? ` style="${styleCss}"` : "";
+        const rootAttrs = `${sl}${blockIdAttr}${styleAttr}`;
         const name = (token.name as string) || "";
         const body = (token.text as string) || "";
-        if (MD_ALERT_KINDS.has(name)) return renderAlertContainer(name, body, sl);
-        if (name === "kpi") return renderKpiContainer(body, sl);
-        if (name === "enjeux") return renderEnjeuxContainer(body, sl);
-        if (name === "breakdown") return renderBreakdownContainer(body, sl);
-        if (name === "planning") return renderPlanningContainer(body, sl);
-        if (name === "quote") return renderQuoteContainer((token.attrs as string) || "", body, sl);
-        if (name === "timeline") return renderTimelineContainer(body, sl);
+        if (MD_ALERT_KINDS.has(name)) return renderAlertContainer(name, body, rootAttrs);
+        if (name === "kpi") return renderKpiContainer(body, rootAttrs);
+        if (name === "enjeux") return renderEnjeuxContainer(body, rootAttrs);
+        if (name === "breakdown") return renderBreakdownContainer(body, rootAttrs);
+        if (name === "planning") return renderPlanningContainer(body, rootAttrs);
+        if (name === "quote") return renderQuoteContainer((token.attrs as string) || "", body, rootAttrs);
+        if (name === "timeline") return renderTimelineContainer(body, rootAttrs);
         return "";
       },
     },
@@ -629,6 +640,7 @@ marked.use({
       const { tokens, depth } = token;
       const sl = token._sourceLine != null
         ? ` data-source-line="${token._sourceLine}"` : "";
+      const { blockIdAttr, styleCss } = blockAnnotations(token);
       const text = this.parser.parseInline(tokens);
       const pair = COLOR_PAIRS[ctx.colorIdx % COLOR_PAIRS.length];
       const [primary] = pair;
@@ -639,7 +651,7 @@ marked.use({
       const idAttr = ` id="${hid}"`;
 
       if ((depth ?? 5) >= 5)
-        return `<h${depth}${idAttr}${sl} style="color:${primary};${vars}">${text}</h${depth}>\n`;
+        return `<h${depth}${idAttr}${sl}${blockIdAttr} style="color:${primary};${vars};${styleCss}">${text}</h${depth}>\n`;
 
       if (depth === 1) {
         const clean = stripLeadingNumber(text);
@@ -655,7 +667,7 @@ marked.use({
             num: ctx.partieNum || null, colorPair: pair,
           });
         }
-        return `<h1${idAttr}${sl} data-color-index="${ctx.colorIdx % 5}" style="color:${primary};${vars}">${title}${buildUnderline(pair as [string, string])}</h1>\n`;
+        return `<h1${idAttr}${sl}${blockIdAttr} data-color-index="${ctx.colorIdx % 5}" style="color:${primary};${vars};${styleCss}">${title}${buildUnderline(pair as [string, string])}</h1>\n`;
       }
 
       if (depth === 2) { ctx.h2Count++; ctx.h3Count = 0; }
@@ -664,7 +676,7 @@ marked.use({
       const clean = stripLeadingNumber(text);
 
       if (!ctx.partieNum) {
-        return `<h${depth}${idAttr}${sl} style="color:${primary};${vars}">${clean}</h${depth}>\n`;
+        return `<h${depth}${idAttr}${sl}${blockIdAttr} style="color:${primary};${vars};${styleCss}">${clean}</h${depth}>\n`;
       }
 
       const num = depth === 2
@@ -673,16 +685,18 @@ marked.use({
       const disc = '<span class="beorn-disc">&#x25CF;</span>';
 
       if (depth === 2) {
-        return `<h2${idAttr}${sl} style="color:${primary};${vars}"><span class="beorn-num" style="background:${primary};color:#fff">${escapeHtml(num)}</span><span class="beorn-text">${clean}</span></h2>\n`;
+        return `<h2${idAttr}${sl}${blockIdAttr} style="color:${primary};${vars};${styleCss}"><span class="beorn-num" style="background:${primary};color:#fff">${escapeHtml(num)}</span><span class="beorn-text">${clean}</span></h2>\n`;
       }
       if (depth === 3) {
-        return `<h3${idAttr}${sl} style="color:${primary};padding:0.3rem 0.7rem;border-radius:4px;background:color-mix(in srgb, ${primary} 6%, transparent);width:fit-content;max-width:100%;${vars}"><span class="beorn-num" style="color:${primary}">${escapeHtml(num)}</span> ${disc} ${clean}</h3>\n`;
+        return `<h3${idAttr}${sl}${blockIdAttr} style="color:${primary};padding:0.3rem 0.7rem;border-radius:4px;background:color-mix(in srgb, ${primary} 6%, transparent);width:fit-content;max-width:100%;${vars};${styleCss}"><span class="beorn-num" style="color:${primary}">${escapeHtml(num)}</span> ${disc} ${clean}</h3>\n`;
       }
-      return `<h${depth}${idAttr}${sl} style="color:${primary};${vars}">${clean}</h${depth}>\n`;
+      return `<h${depth}${idAttr}${sl}${blockIdAttr} style="color:${primary};${vars};${styleCss}">${clean}</h${depth}>\n`;
     },
 
     paragraph(this: any, token): string {
       const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const { blockIdAttr, styleCss } = blockAnnotations(token);
+      const styleAttr = styleCss ? ` style="${styleCss}"` : "";
       const standaloneImage = token.tokens?.length === 1 && token.tokens[0]?.type === "image"
         ? token.tokens[0]
         : null;
@@ -692,24 +706,28 @@ marked.use({
           ? `\n<figcaption>${escapeHtml(image.text)}</figcaption>`
           : "";
         const alignClass = image.align ? ` md-image-align-${image.align}` : "";
-        return `<figure class="md-image${alignClass}"${sl}>${image.html}${caption}\n</figure>\n`;
+        return `<figure class="md-image${alignClass}"${sl}${blockIdAttr}${styleAttr}>${image.html}${caption}\n</figure>\n`;
       }
       const text = this.parser.parseInline(token.tokens);
       const stripped = text.replace(/<[^>]*>/g, "").trim();
       if (stripped === "\\newpage" || stripped === "/newpage") {
-        return `<div class="page-break"${sl}></div>\n`;
+        return `<div class="page-break"${sl}${blockIdAttr}${styleAttr}></div>\n`;
       }
-      return `<p${sl}>${text}</p>\n`;
+      return `<p${sl}${blockIdAttr}${styleAttr}>${text}</p>\n`;
     },
 
     blockquote(this: any, token): string {
       const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const { blockIdAttr, styleCss } = blockAnnotations(token);
+      const styleAttr = styleCss ? ` style="${styleCss}"` : "";
       const body = this.parser.parse(token.tokens);
-      return `<blockquote${sl}>\n${body}</blockquote>\n`;
+      return `<blockquote${sl}${blockIdAttr}${styleAttr}>\n${body}</blockquote>\n`;
     },
 
     list(this: any, token): string {
       const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const { blockIdAttr, styleCss } = blockAnnotations(token);
+      const styleAttr = styleCss ? ` style="${styleCss}"` : "";
       const tag = token.ordered ? "ol" : "ul";
       const startAttr = token.ordered && token.start !== 1 ? ` start="${token.start}"` : "";
       const trailingPageBreakLine = extractTrailingListPageBreak(token);
@@ -721,11 +739,13 @@ marked.use({
       const pageBreakHtml = trailingPageBreakLine != null
         ? `<div class="page-break"${pbSl}></div>\n`
         : "";
-      return `<${tag}${startAttr}${sl}>\n${body}</${tag}>\n${pageBreakHtml}`;
+      return `<${tag}${startAttr}${sl}${blockIdAttr}${styleAttr}>\n${body}</${tag}>\n${pageBreakHtml}`;
     },
 
     table(this: any, token): string {
       const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const { blockIdAttr, styleCss } = blockAnnotations(token);
+      const styleAttr = styleCss ? ` style="${styleCss}"` : "";
       let header = "";
       for (const cell of (token.header ?? [])) {
         const align = cell.align ? ` align="${cell.align}"` : "";
@@ -741,26 +761,30 @@ marked.use({
         }
         body += `<tr>\n${rowContent}</tr>\n`;
       }
-      return `<table${sl}>\n<thead>\n${header}</thead>\n<tbody>\n${body}</tbody>\n</table>\n`;
+      return `<table${sl}${blockIdAttr}${styleAttr}>\n<thead>\n${header}</thead>\n<tbody>\n${body}</tbody>\n</table>\n`;
     },
 
     hr(token): string {
       const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
-      return `<hr${sl} />\n`;
+      const { blockIdAttr, styleCss } = blockAnnotations(token);
+      const styleAttr = styleCss ? ` style="${styleCss}"` : "";
+      return `<hr${sl}${blockIdAttr}${styleAttr} />\n`;
     },
 
     code(token): string {
       const { text, lang } = token;
       const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const { blockIdAttr, styleCss } = blockAnnotations(token);
+      const styleAttr = styleCss ? ` style="${styleCss}"` : "";
       if (lang === "mermaid") {
         const idx = pushToMermaidQueue(text || "");
-        return `<div class="mermaid-diagram"${sl} data-mermaid-idx="${idx}"></div>\n`;
+        return `<div class="mermaid-diagram"${sl}${blockIdAttr}${styleAttr} data-mermaid-idx="${idx}"></div>\n`;
       }
       if (lang === "ao-grid") {
-        return renderAoGridBlock(text || "", sl);
+        return renderAoGridBlock(text || "", sl, blockIdAttr, styleAttr);
       }
       const langClass = lang ? ` class="language-${escapeHtml(lang)}"` : "";
-      return `<pre${sl}><code${langClass}>${escapeHtml(text || "")}</code></pre>\n`;
+      return `<pre${sl}${blockIdAttr}${styleAttr}><code${langClass}>${escapeHtml(text || "")}</code></pre>\n`;
     },
 
     image(this: any, token): string {
