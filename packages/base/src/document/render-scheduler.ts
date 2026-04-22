@@ -17,6 +17,7 @@ import { buildCoverRenderResult, buildCoverErrorRenderResult } from "./rendering
 import { buildTocRenderResult } from "./rendering/toc-pipeline.js";
 import { getProjectMetadata, isCoverTab, isTocTab } from "./model/memoire-views.js";
 import { lockEditorScroll, unlockEditorScroll } from "./sync/preview-sync-setup.js";
+import type { BlockEntry, StyleError } from "./rendering/block-model.js";
 
 const A4_WIDTH_PX: number = 794;
 const previewWrapper: HTMLElement = document.getElementById("preview-wrapper")!;
@@ -50,6 +51,8 @@ let _cachedCoverAssetBaseHref: string | null = null;
 let _lastRenderedHtml: string | null = null;
 let _patchTimeout: ReturnType<typeof setTimeout> | null = null;
 let _lastSourceBlocks: Array<{ start: number; end: number; kind: string; text: string }> = [];
+let _lastBlockEntries: BlockEntry[] = [];
+let _lastStyleErrors: StyleError[] = [];
 let _isPatching: boolean = false;
 
 function capturePreviewScrollState(): { scrollTop: number; ratio: number } {
@@ -266,6 +269,10 @@ async function renderRequest(request: { markdown: string; generation: number }):
 
   _lastRenderedHtml = html ?? null;
   _lastSourceBlocks = (renderResult.sourceBlocks || []) as typeof _lastSourceBlocks;
+  // Only renderMarkdown emits blockEntries/styleErrors; cover/TOC pipelines
+  // don't carry stylable blocks, so default to empty.
+  _lastBlockEntries = ((renderResult as any).blockEntries || []) as BlockEntry[];
+  _lastStyleErrors = ((renderResult as any).styleErrors || []) as StyleError[];
 
   scaleSurface();
   previewRenderer.rebuildLineMap();
@@ -369,6 +376,14 @@ export function scheduleRender(_ms?: number): void {
 
 export function getPreviewFrame(): HTMLDivElement {
   return previewSurface();
+}
+
+export function getBlockEntries(): BlockEntry[] {
+  return _lastBlockEntries;
+}
+
+export function getStyleErrors(): StyleError[] {
+  return _lastStyleErrors;
 }
 
 export function getPreviewScale(): number {
