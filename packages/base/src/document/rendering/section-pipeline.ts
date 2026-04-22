@@ -28,6 +28,7 @@ const MD_KNOWN_CONTAINERS: Set<string> = new Set([
   "kpi",
   "enjeux",
   "breakdown",
+  "planning",
   "quote",
   "timeline",
 ]);
@@ -346,6 +347,147 @@ function renderBreakdownContainer(body: string, sl: string): string {
   return `<div class="md-breakdown"${sl}>\n${items}\n</div>\n`;
 }
 
+// `:::planning` — contract-lifecycle heat-matrix with milestones on top.
+// Syntax (config block + `---` + data rows):
+//   columns: LABEL[:phase], LABEL[:phase], …   (phase = mise|expl|fin, optional)
+//   milestones: LABEL@POS[:SUB], …             (POS = 0…N column-index; SUB = optional subtitle)
+//   ---
+//   Row title | T T T T T T T                   (T: X/■ = on, o/• = event, any else = off)
+// Rows are auto-numbered 01…N and assigned a rotating BEORN palette colour.
+function renderPlanningContainer(body: string, sl: string): string {
+  const parts = body.split(/\n---\s*\n/);
+  const configRaw = parts[0] || "";
+  const rowsRaw = parts.slice(1).join("\n---\n") || "";
+
+  // Parse `key: value` config directives
+  const cfg: Record<string, string> = {};
+  for (const line of configRaw.split("\n")) {
+    const m = line.trim().match(/^(\w+)\s*:\s*(.+)$/);
+    if (m) cfg[m[1].toLowerCase()] = m[2].trim();
+  }
+
+  // Columns — each segment is `label` or `label:phase`
+  type Col = { label: string; phase: string };
+  const columns: Col[] = (cfg.columns || "")
+    .split(",")
+    .map((s) => {
+      const t = s.trim();
+      if (!t) return null;
+      const colonIdx = t.indexOf(":");
+      const label = colonIdx >= 0 ? t.slice(0, colonIdx).trim() : t;
+      const phase = colonIdx >= 0 ? t.slice(colonIdx + 1).trim() : "";
+      return { label, phase };
+    })
+    .filter((c): c is Col => c !== null && !!c.label);
+  const ncols = columns.length;
+  if (!ncols) return "";
+
+  // Milestones — `label@POS` or `label@POS:subtitle`
+  type Milestone = { label: string; pos: number; sub: string };
+  const milestones: Milestone[] = (cfg.milestones || "")
+    .split(",")
+    .map((seg) => {
+      const t = seg.trim();
+      const atIdx = t.indexOf("@");
+      if (atIdx < 0) return null;
+      const label = t.slice(0, atIdx).trim();
+      const rest = t.slice(atIdx + 1);
+      const subIdx = rest.indexOf(":");
+      const posStr = subIdx >= 0 ? rest.slice(0, subIdx).trim() : rest.trim();
+      const sub = subIdx >= 0 ? rest.slice(subIdx + 1).trim() : "";
+      const posNum = parseFloat(posStr);
+      if (!Number.isFinite(posNum)) return null;
+      const pos = (Math.max(0, Math.min(ncols, posNum)) / ncols) * 100;
+      return { label, pos, sub };
+    })
+    .filter((m): m is Milestone => m !== null);
+
+  // Data rows — `Title | T T T T …`
+  type Row = { title: string; cells: string[] };
+  const rows: Row[] = rowsRaw
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const pipe = line.indexOf("|");
+      if (pipe < 0) return null;
+      const title = line.slice(0, pipe).trim();
+      const tokens = line.slice(pipe + 1).trim().split(/\s+/);
+      const cells: string[] = [];
+      for (let i = 0; i < ncols; i++) {
+        const tok = tokens[i] || ".";
+        if (tok === "X" || tok === "x" || tok === "■") cells.push("on");
+        else if (tok === "o" || tok === "O" || tok === "•") cells.push("event");
+        else cells.push("off");
+      }
+      return { title, cells };
+    })
+    .filter((r): r is Row => r !== null);
+  if (!rows.length) return "";
+
+  const palette = [
+    "var(--navy)",
+    "var(--blue)",
+    "var(--teal)",
+    "var(--purple)",
+    "var(--green)",
+    "var(--orange)",
+    "var(--magenta)",
+  ];
+
+  const milestonesHtml = milestones
+    .map((m) => {
+      let posClass = "";
+      if (m.pos <= 0.01) posClass = " start";
+      else if (m.pos >= 99.99) posClass = " end";
+      const subHtml = m.sub
+        ? `<span class="md-planning-milestone-sub">${marked.parseInline(m.sub)}</span>`
+        : "";
+      return (
+        `<div class="md-planning-milestone${posClass}" style="left:${m.pos}%">` +
+        `<span class="md-planning-milestone-label">${marked.parseInline(m.label)}</span>` +
+        subHtml +
+        `<span class="md-planning-milestone-arrow">▼</span>` +
+        `</div>`
+      );
+    })
+    .join("");
+
+  const colsHtml = columns
+    .map((c) => {
+      const phaseClass = c.phase ? ` md-planning-col-${c.phase}` : "";
+      return `<div class="md-planning-col${phaseClass}">${marked.parseInline(c.label)}</div>`;
+    })
+    .join("");
+
+  const rowsHtml = rows
+    .map((r, i) => {
+      const num = String(i + 1).padStart(2, "0");
+      const color = palette[i % palette.length];
+      const cellsHtml = r.cells
+        .map((c) => `<div class="md-planning-cell ${c}"></div>`)
+        .join("");
+      return (
+        `<div class="md-planning-row" style="color:${color}">` +
+        `<div class="md-planning-row-label">` +
+        `<span class="md-planning-row-num">${num}</span>` +
+        `<span class="md-planning-row-name">${marked.parseInline(r.title)}</span>` +
+        `</div>` +
+        cellsHtml +
+        `</div>`
+      );
+    })
+    .join("");
+
+  return (
+    `<div class="md-planning" style="--md-planning-cols:${ncols}"${sl}>\n` +
+    `<div class="md-planning-milestones"><div></div><div class="md-planning-milestones-track">${milestonesHtml}</div></div>\n` +
+    `<div class="md-planning-head"><div></div>${colsHtml}</div>\n` +
+    rowsHtml +
+    `\n</div>\n`
+  );
+}
+
 // `:::quote author="…" role="…"` — blockquote with attribution footer.
 function renderQuoteContainer(attrsRaw: string, body: string, sl: string): string {
   const attrs = parseContainerAttrs(attrsRaw);
@@ -454,6 +596,7 @@ marked.use({
         if (name === "kpi") return renderKpiContainer(body, sl);
         if (name === "enjeux") return renderEnjeuxContainer(body, sl);
         if (name === "breakdown") return renderBreakdownContainer(body, sl);
+        if (name === "planning") return renderPlanningContainer(body, sl);
         if (name === "quote") return renderQuoteContainer((token.attrs as string) || "", body, sl);
         if (name === "timeline") return renderTimelineContainer(body, sl);
         return "";

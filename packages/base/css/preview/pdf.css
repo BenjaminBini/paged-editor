@@ -865,7 +865,7 @@ figure.md-image figcaption {
   grid-template-columns: repeat(4, 1fr);
   column-gap: var(--space-lg);
   row-gap: 1.75rem;
-  margin: var(--space-md) 0;
+  margin: var(--space-xl) 0;
   break-inside: avoid;
   page-break-inside: avoid;
 }
@@ -951,13 +951,27 @@ figure.md-image figcaption {
   break-inside: avoid;
   page-break-inside: avoid;
 }
-.md-breakdown-item:nth-child(1) { color: var(--navy); }
-.md-breakdown-item:nth-child(2) { color: var(--blue); }
-.md-breakdown-item:nth-child(3) { color: var(--teal); }
-.md-breakdown-item:nth-child(4) { color: var(--purple); }
-.md-breakdown-item:nth-child(5) { color: var(--green); }
-.md-breakdown-item:nth-child(6) { color: var(--orange); }
-.md-breakdown-item:nth-child(7) { color: var(--magenta); }
+.md-breakdown-item:nth-child(1) {
+  color: var(--navy);
+}
+.md-breakdown-item:nth-child(2) {
+  color: var(--blue);
+}
+.md-breakdown-item:nth-child(3) {
+  color: var(--teal);
+}
+.md-breakdown-item:nth-child(4) {
+  color: var(--purple);
+}
+.md-breakdown-item:nth-child(5) {
+  color: var(--green);
+}
+.md-breakdown-item:nth-child(6) {
+  color: var(--orange);
+}
+.md-breakdown-item:nth-child(7) {
+  color: var(--magenta);
+}
 .md-breakdown-left {
   display: flex;
   flex-direction: column;
@@ -1022,6 +1036,148 @@ figure.md-image figcaption {
   height: 5px;
   border-radius: 50%;
   background: currentColor;
+}
+
+/* ── Planning heat-matrix (:::planning) ──
+   Contract-lifecycle grid: 1 row per prestation, 1 column per period,
+   milestone row (▼ arrows) on top. Column count is dynamic via the
+   custom property `--md-planning-cols` set on the wrapper.
+   - cell.on    → filled in the row's palette colour
+   - cell.event → grey background + coloured dot (punctual event)
+   - cell.off   → grey background (inactive)
+   - milestones → absolute-positioned on a fractional track */
+.md-planning {
+  font-family: "Nunito", sans-serif;
+  margin: var(--space-md) 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.md-planning-milestones {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.md-planning-milestones-track {
+  position: relative;
+  height: 42px;
+}
+.md-planning-milestone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  transform: translateX(-50%);
+}
+/* Edge milestones anchor to their edge so the label doesn't clip. */
+.md-planning-milestone.start {
+  transform: translateX(0);
+  align-items: flex-start;
+}
+.md-planning-milestone.end {
+  transform: translateX(-100%);
+  align-items: flex-end;
+}
+.md-planning-milestone-label {
+  font-size: 7pt;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--navy);
+  white-space: nowrap;
+  line-height: 1;
+}
+.md-planning-milestone-sub {
+  font-size: 6.5pt;
+  font-weight: 600;
+  color: var(--text-light);
+  white-space: nowrap;
+  line-height: 1;
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+.md-planning-milestone-arrow {
+  font-size: 11pt;
+  line-height: 1;
+  color: var(--slate);
+}
+
+.md-planning-head,
+.md-planning-row {
+  display: grid;
+  grid-template-columns: 180px repeat(var(--md-planning-cols, 7), 1fr);
+  gap: 4px;
+}
+.md-planning-head {
+  margin-bottom: 6px;
+}
+.md-planning-col {
+  font-size: 7pt;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-light);
+  text-align: center;
+  padding: 5px 0 6px;
+  border-radius: 3px 3px 0 0;
+}
+.md-planning-col-mise {
+  color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 10%, transparent);
+}
+.md-planning-col-expl {
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+}
+.md-planning-col-fin {
+  color: var(--magenta);
+  background: color-mix(in srgb, var(--magenta) 10%, transparent);
+}
+.md-planning-row {
+  align-items: center;
+  padding: 3px 0;
+}
+.md-planning-row-label {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+.md-planning-row-num {
+  font-size: 9pt;
+  font-weight: 800;
+  color: currentColor;
+  font-variant-numeric: tabular-nums;
+}
+.md-planning-row-name {
+  font-size: 9pt;
+  font-weight: 700;
+  color: var(--navy);
+}
+.md-planning-cell {
+  height: 14px;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.md-planning-cell.on {
+  background: currentColor;
+}
+.md-planning-cell.off,
+.md-planning-cell.event {
+  background: var(--light-bg);
+}
+.md-planning-cell.event::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  background: currentColor;
+  border-radius: 50%;
+  border: 1.5px solid #fff;
+  box-shadow: 0 0 0 1px currentColor;
 }
 
 /* ── Quote / testimonial (:::quote author="…" role="…") ──
