@@ -1,0 +1,24 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Demo (web server)",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["demo/start.sh"],
+      "port": 3000
+    },
+    {
+      "name": "Web server (standalone)",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["index.js"],
+      "cwd": "server",
+      "port": 3000
+    },
+    {
+      "name": "Electron app",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["start"],
+      "port": null
+    }
+  ]
+}
