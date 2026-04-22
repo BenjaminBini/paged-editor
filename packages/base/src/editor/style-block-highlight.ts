@@ -9,7 +9,7 @@ import {
   ViewPlugin,
 } from "../../assets/codemirror6.bundle.js";
 import { effect } from "../infrastructure/signal.js";
-import { getBlockEntries } from "../document/render-scheduler.js";
+import { getBlockEntries } from "../document/rendering/block-entries-store.js";
 import {
   hoveredBlockId,
   selectedBlockId,

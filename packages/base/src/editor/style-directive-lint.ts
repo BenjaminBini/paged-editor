@@ -11,7 +11,7 @@ import {
 import {
   getBlockEntries,
   getStyleErrors,
-} from "../document/render-scheduler.js";
+} from "../document/rendering/block-entries-store.js";
 import { on as busOn, off as busOff } from "../infrastructure/event-bus.js";
 
 const errorMark = Decoration.mark({ class: "cm-style-directive-error" });

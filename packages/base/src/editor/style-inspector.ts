@@ -12,7 +12,7 @@ import {
 import {
   getBlockEntries,
   getStyleErrors,
-} from "../document/render-scheduler.js";
+} from "../document/rendering/block-entries-store.js";
 import {
   onSelectionChange,
   rememberSelectedSourceLine,
@@ -50,7 +50,14 @@ export function mountInspector(root: HTMLElement): void {
   const bodyEl = root.querySelector<HTMLElement>("#inspectorBody")!;
   const errorsEl = root.querySelector<HTMLElement>("#inspectorErrors")!;
 
-  function commit(entry: { sourceLineStart: number; styleDirectiveRange: { from: number; to: number } | null }, nextValues: StyleValues): void {
+  function commit(
+    entry: {
+      sourceLineStart: number;
+      styleDirectiveRange: { from: number; to: number } | null;
+      styleValues: StyleValues;
+    },
+    nextValues: StyleValues,
+  ): void {
     const doc = cm.getValue();
     const change = computeDirectiveChange({
       doc,
@@ -58,10 +65,16 @@ export function mountInspector(root: HTMLElement): void {
       existingRange: entry.styleDirectiveRange,
       newValues: nextValues,
     });
-    // cm.replaceRange takes {line, ch} positions — translate via posFromIndex.
     const fromPos = cm.getDoc().posFromIndex(change.from);
     const toPos = cm.getDoc().posFromIndex(change.to);
     cm.replaceRange(change.insert, fromPos, toPos);
+    // Optimistically update the entry closure so successive stepper clicks
+    // (fired before the debounced re-render lands) replace the freshly-
+    // written directive instead of appending another one.
+    entry.styleValues = nextValues;
+    entry.styleDirectiveRange = change.insert
+      ? { from: change.from, to: change.from + change.insert.length }
+      : null;
   }
 
   function renderDocErrors(): void {
