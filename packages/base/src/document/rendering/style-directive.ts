@@ -106,3 +106,44 @@ export function parseDirectiveFragment(fragment: string): ParsedFragment {
   }
   return { values, errors };
 }
+
+// ── Directive regexes + extractor ──────────────────────────────────────────
+// Two regexes applied per block-start line:
+//   STRICT — canonical well-formed directive at end of line.
+//   CANDIDATE — "looks like a directive at EOL but didn't close" — drives
+//               malformed-directive emission without stripping the text.
+
+export const STRICT_DIRECTIVE_RE =
+  /(\s+)\{:style\s+([^}\n]*)\}\s*$/;
+// CANDIDATE: `{:style` near EOL with NO closing `}` anywhere after it on the
+// same line. If a `}` exists after `{:style`, the user has a closed
+// directive-looking structure (even if malformed per STRICT, e.g. `{:style
+// mt=3}broken`) — but that's content, not a malformed-directive attempt.
+// Only unclosed openers get flagged as malformed.
+export const CANDIDATE_DIRECTIVE_RE = /(\s+)\{:style\b[^}\n]*$/;
+
+export type DirectiveMatch =
+  | { kind: "none" }
+  | {
+      kind: "wellFormed";
+      spanStart: number;
+      spanEnd: number;
+      fragment: string;
+    }
+  | { kind: "malformed"; spanStart: number; spanEnd: number };
+
+export function extractDirective(line: string): DirectiveMatch {
+  const strict = STRICT_DIRECTIVE_RE.exec(line);
+  if (strict) {
+    const spanStart = strict.index;
+    const spanEnd = spanStart + strict[0].length;
+    return { kind: "wellFormed", spanStart, spanEnd, fragment: strict[2] };
+  }
+  const candidate = CANDIDATE_DIRECTIVE_RE.exec(line);
+  if (candidate) {
+    const spanStart = candidate.index;
+    const spanEnd = spanStart + candidate[0].length;
+    return { kind: "malformed", spanStart, spanEnd };
+  }
+  return { kind: "none" };
+}

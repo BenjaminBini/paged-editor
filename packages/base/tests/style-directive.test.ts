@@ -3,6 +3,7 @@ import {
   SPACING_SCALE,
   renderStyleAttr,
   parseDirectiveFragment,
+  extractDirective,
 } from "../src/document/rendering/style-directive.js";
 
 describe("SPACING_SCALE", () => {
@@ -65,5 +66,42 @@ describe("parseDirectiveFragment", () => {
 
   test("empty string → no values, no errors", () => {
     expect(parseDirectiveFragment("")).toEqual({ values: {}, errors: [] });
+  });
+});
+
+describe("extractDirective", () => {
+  test("strict match returns well-formed result", () => {
+    const r = extractDirective("## Heading {:style mt=3 pb=2}");
+    expect(r).toEqual({
+      kind: "wellFormed",
+      spanStart: 10,
+      spanEnd: 29,
+      fragment: "mt=3 pb=2",
+    });
+  });
+
+  test("no directive → none", () => {
+    expect(extractDirective("## Heading").kind).toBe("none");
+  });
+
+  test("inline mid-line {:style} is not a directive", () => {
+    // The directive must be at end-of-line. Text continues after `}`, so no match.
+    expect(extractDirective("Text with {:style mt=3} inside").kind).toBe(
+      "none",
+    );
+  });
+
+  test("malformed (missing closing brace) → candidate", () => {
+    const r = extractDirective("## Heading {:style mt=3");
+    expect(r.kind).toBe("malformed");
+    if (r.kind === "malformed") {
+      expect(r.spanStart).toBe(10);
+      expect(r.spanEnd).toBe(23);
+    }
+  });
+
+  test("trailing whitespace after } still strict", () => {
+    const r = extractDirective("## Heading {:style mt=3}   ");
+    expect(r.kind).toBe("wellFormed");
   });
 });
