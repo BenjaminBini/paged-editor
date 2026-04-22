@@ -55,3 +55,54 @@ export function renderStyleAttr(values: StyleValues | undefined): string {
   }
   return out;
 }
+
+// ── Directive fragment parser ──────────────────────────────────────────────
+// The "fragment" is the text between `{:style ` and `}`, e.g. "mt=3 pb=2".
+// Used once per well-formed directive extraction.
+
+export type FragmentErrorCode =
+  | "unknown-key"
+  | "invalid-value"
+  | "duplicate-key";
+
+export interface FragmentError {
+  code: FragmentErrorCode;
+  token: string;
+}
+
+export interface ParsedFragment {
+  values: StyleValues;
+  errors: FragmentError[];
+}
+
+const KEY_RE = /^(mt|mr|mb|ml|pt|pr|pb|pl)$/;
+
+export function parseDirectiveFragment(fragment: string): ParsedFragment {
+  const values: StyleValues = {};
+  const errors: FragmentError[] = [];
+  const tokens = fragment.trim().split(/\s+/).filter(Boolean);
+  for (const token of tokens) {
+    const eq = token.indexOf("=");
+    if (eq < 0) {
+      errors.push({ code: "unknown-key", token });
+      continue;
+    }
+    const key = token.slice(0, eq);
+    const raw = token.slice(eq + 1);
+    if (!KEY_RE.test(key)) {
+      errors.push({ code: "unknown-key", token });
+      continue;
+    }
+    const num = Number(raw);
+    if (!Number.isInteger(num) || num < MIN_STEP || num > MAX_STEP) {
+      errors.push({ code: "invalid-value", token });
+      continue;
+    }
+    if (key in values) {
+      errors.push({ code: "duplicate-key", token });
+      continue;
+    }
+    values[key as SpacingKey] = num;
+  }
+  return { values, errors };
+}
