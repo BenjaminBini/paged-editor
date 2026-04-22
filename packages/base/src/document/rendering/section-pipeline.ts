@@ -4,6 +4,12 @@
 
 import { parseFrontmatter, escapeHtml } from "../../infrastructure/text-utils.js";
 import {
+  buildBlockEntries,
+  type BlockEntry,
+  type StyleError,
+} from "./block-model.js";
+import { renderStyleAttr, type StyleValues } from "./style-directive.js";
+import {
   COLOR_PAIRS, detectPartieNum, getColorIndex, wrapSection,
   stripLeadingNumber, slugify, decodeEntities, buildUnderline,
 } from "./markdown-helpers.js";
@@ -227,6 +233,18 @@ function extractTrailingListPageBreak(listToken: MarkedToken): number | null {
   if (typeof listToken.raw === "string") listToken.raw = stripTrailingPageBreakRaw(listToken.raw);
 
   return sourceLine;
+}
+
+// ── Style directive helper (shared by every stylable renderer) ────────────
+// Reads token._blockId / token._style attached by renderMarkdown and returns
+// the `data-block-id` attribute fragment + an inline CSS string. The CSS is
+// appended to whatever `style=""` the renderer already builds.
+function blockAnnotations(token: any): { blockIdAttr: string; styleCss: string } {
+  const blockIdAttr = token?._blockId
+    ? ` data-block-id="${token._blockId}"`
+    : "";
+  const styleCss = renderStyleAttr(token?._style as StyleValues | undefined);
+  return { blockIdAttr, styleCss };
 }
 
 // ── Configure marked once at module load ───────────────────────────────────
@@ -775,7 +793,7 @@ marked.use({
  * @param {string} [options.headerText="Document — Memoire technique"] - Running header text
  * @param {string} [options.language="fr"] - Output language
  */
-export async function renderMarkdown(md: string, options: Record<string, any> = {}): Promise<{ sectionHtml: string; headerText: string; language: string; headingIdCounter: number; lineNumberOffset: number; lineStarts: number[]; sourceBlocks: Array<{ start: number; end: number; kind: string; text: string }> }> {
+export async function renderMarkdown(md: string, options: Record<string, any> = {}): Promise<{ sectionHtml: string; headerText: string; language: string; headingIdCounter: number; lineNumberOffset: number; lineStarts: number[]; sourceBlocks: Array<{ start: number; end: number; kind: string; text: string }>; blockEntries: BlockEntry[]; styleErrors: StyleError[] }> {
   const {
     assetBaseHref = "",
     fileName = "",
@@ -787,9 +805,20 @@ export async function renderMarkdown(md: string, options: Record<string, any> = 
   } = options;
 
   const { body } = parseFrontmatter(md);
-  const lineStarts = getLineStarts(body);
 
-  const partieNum = detectPartieNum(body, fileName);
+  // Extract directives via two-pass tokenization (spec §5.1). The cleaned
+  // body feeds marked.lexer; BlockEntry[] indexes every stylable block with
+  // its directive-derived styleValues and document-absolute offsets.
+  const frontmatterCharOffset = md.length - body.length;
+  const { blockEntries, styleErrors, cleanedBody } = buildBlockEntries(body, {
+    frontmatterCharOffset,
+    frontmatterLineOffset: startLine,
+    lex: (src: string) => marked.lexer(src) as any,
+  });
+
+  const lineStarts = getLineStarts(cleanedBody);
+
+  const partieNum = detectPartieNum(cleanedBody, fileName);
   const colorIdx = getColorIndex(partieNum);
 
   // Set per-render context (read by the renderer registered above)
@@ -805,21 +834,31 @@ export async function renderMarkdown(md: string, options: Record<string, any> = 
 
   resetMermaidQueue();
 
-  // Tokenize and add source-line info.
-  // Always compute _sourceLine regardless of frontmatter so that data-source-line
-  // attributes are emitted on all rendered elements. Scroll sync and click-to-line
-  // both rely on these attributes; omitting them when startLine=0 (no frontmatter)
-  // left documents without any sync anchors.
-  const tokens = marked.lexer(body);
+  // Tokenize cleaned body. Attach _sourceLine (editor-absolute) for sync,
+  // and attach _blockId + _style so each stylable renderer can emit the
+  // data-block-id attribute and inline spacing CSS.
+  const tokens = marked.lexer(cleanedBody);
   const sourceBlocks = buildSourceBlocks(tokens);
+
+  const entriesByLine = new Map<number, BlockEntry>();
+  for (const entry of blockEntries) {
+    entriesByLine.set(entry.sourceLineStart, entry);
+  }
+
   {
     let cursor = 0;
     for (const token of tokens) {
-      const idx = body.indexOf(token.raw, cursor);
+      const idx = cleanedBody.indexOf(token.raw, cursor);
       if (idx >= 0) {
-        const lineInSection = body.substring(0, idx).split("\n").length - 1;
-        token._sourceLine = startLine + lineInSection;
+        const lineInSection = cleanedBody.substring(0, idx).split("\n").length - 1;
+        const editorLine = startLine + lineInSection;
+        token._sourceLine = editorLine;
         cursor = idx + token.raw.length;
+        const entry = entriesByLine.get(editorLine);
+        if (entry) {
+          token._blockId = entry.blockId;
+          token._style = entry.styleValues as StyleValues;
+        }
       }
     }
   }
@@ -842,5 +881,7 @@ export async function renderMarkdown(md: string, options: Record<string, any> = 
     lineNumberOffset: startLine,
     lineStarts,
     sourceBlocks,
+    blockEntries,
+    styleErrors,
   };
 }
