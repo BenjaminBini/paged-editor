@@ -77,3 +77,44 @@ describe("buildBlockEntries — well-formed directives", () => {
     expect(blockEntries[0].styleValues).toEqual({ mt: 4 });
   });
 });
+
+describe("buildBlockEntries — directive stripping (pass 2)", () => {
+  test("fenced code block retains clean token.lang", () => {
+    const body = "```js {:style mt=3}\nconst x = 1;\n```\n";
+    const { blockEntries, cleanedBody } = buildBlockEntries(body, {
+      frontmatterCharOffset: 0,
+      frontmatterLineOffset: 0,
+      lex,
+    });
+    expect(blockEntries[0].styleValues).toEqual({ mt: 3 });
+    expect(cleanedBody).toBe("```js\nconst x = 1;\n```\n");
+    const tokens = marked.lexer(cleanedBody) as Array<Record<string, unknown>>;
+    expect(tokens[0].type).toBe("code");
+    expect(tokens[0].lang).toBe("js");
+  });
+
+  test("paragraph continuation line is not scanned", () => {
+    // {:style} on line 2 is mid-paragraph prose, not a directive.
+    const body =
+      "First line. {:style mt=2}\nSecond {:style looks} weird.\n";
+    const { blockEntries, cleanedBody } = buildBlockEntries(body, {
+      frontmatterCharOffset: 0,
+      frontmatterLineOffset: 0,
+      lex,
+    });
+    expect(blockEntries[0].styleValues).toEqual({ mt: 2 });
+    expect(cleanedBody).toContain("Second {:style looks} weird.");
+  });
+
+  test("hr directive stripped, produces clean ---", () => {
+    const body = "--- {:style mt=5}\n";
+    const { blockEntries, cleanedBody } = buildBlockEntries(body, {
+      frontmatterCharOffset: 0,
+      frontmatterLineOffset: 0,
+      lex,
+    });
+    expect(blockEntries[0].blockType).toBe("hr");
+    expect(blockEntries[0].styleValues).toEqual({ mt: 5 });
+    expect(cleanedBody).toBe("---\n");
+  });
+});
