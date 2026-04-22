@@ -1,4 +1,3 @@
-import { buildLineMap } from "./line-map-builder.js";
 import {
   GOOGLE_FONTS_URL,
   SECTION_ENTRY_CSS,
@@ -117,7 +116,7 @@ export class PreviewRenderer {
   previewPages: Element;
   currentPreviewer: any;
   lineMap: any[];
-  pendingLineMapData: any;
+  pendingLineMapData: boolean | null;
 
   constructor({ previewFrame, previewPages }: { previewFrame: Element; previewPages: Element }) {
     this.previewFrame = previewFrame;
@@ -162,7 +161,6 @@ export class PreviewRenderer {
     changedLines: Set<string>,
     visibleRange: { first: number; last: number },
   ): number {
-    const startedAt = performance.now();
     if (changedLines.size === 0) return 0;
 
     // Parse the new section HTML to get fresh elements.
@@ -245,14 +243,7 @@ export class PreviewRenderer {
 
     await new Promise((resolve) => globalThis.requestAnimationFrame(resolve));
 
-    // Store render result data for deferred line map build — the line map must
-    // be built AFTER scaleSurface() so getBoundingClientRect() reflects the
-    // scaled layout.  render.js calls rebuildLineMap() at the right moment.
-    this.pendingLineMapData = {
-      sourceBlocks: renderResult.sourceBlocks || [],
-      lineStarts: renderResult.lineStarts || [0],
-      lineNumberOffset: renderResult.lineNumberOffset || 0,
-    };
+    this.pendingLineMapData = true;
     this.lineMap = [];
 
     return {
@@ -264,16 +255,10 @@ export class PreviewRenderer {
     };
   }
 
+  // Called after scaleSurface() so getBoundingClientRect() reflects the scaled
+  // layout. Heading anchors are now read directly from the live DOM in
+  // ScrollSyncController.refreshRelation() — no pre-built map needed here.
   rebuildLineMap(): void {
-    const data = this.pendingLineMapData;
-    if (!data) return;
     this.pendingLineMapData = null;
-    this.lineMap = buildLineMap(
-      data.sourceBlocks,
-      data.lineStarts,
-      data.lineNumberOffset,
-      this.previewFrame,
-      this.previewPages,
-    );
   }
 }

@@ -1,4 +1,10 @@
-// scroll-sync.js — Bidirectional scroll mapping and smooth-follow animation between editor and preview.
+// scroll-sync-controller.ts — Bidirectional scroll mapping between editor and preview.
+//
+// Anchor strategy: heading positions (h1–h4 with data-source-line) are used as
+// fixed sync points. Between headings, scroll position is interpolated linearly.
+// This is simpler and more reliable than full line-map matching because headings
+// are never split across pages by Paged.js, their data-source-line is exact, and
+// linear interpolation within a section is accurate enough in practice.
 
 const EDGE_SYNC_THRESHOLD: number = 0.015;
 const MINIMUM_SCROLL_DELTA: number = 8;
@@ -9,14 +15,20 @@ const MINIMUM_FOLLOW_STEP: number = 10;
 const BASE_FOLLOW_SPEED: number = 2400;
 const DISTANCE_FOLLOW_GAIN: number = 6;
 const MAX_FOLLOW_SPEED: number = 9600;
+const HEADING_SELECTOR: string = "h1, h2, h3, h4";
+
+interface RelationPoint {
+  editorScrollTop: number;
+  previewScrollTop: number;
+}
 
 export class ScrollSyncController {
   editorApi: any;
-  getLineMap: () => any[];
+  getPreviewPages: () => Element;
   previewFrame: Element;
   ignoredScrollUntil: Record<string, number>;
   lastScrollSource: string;
-  relationPoints: Array<{ editorScrollTop: number; previewScrollTop: number }>;
+  relationPoints: RelationPoint[];
   followTarget: Record<string, number>;
   followAnimationFrame: Record<string, number>;
   followLastTimestamp: Record<string, number>;
@@ -25,9 +37,17 @@ export class ScrollSyncController {
   // never jumps while the preview is being rebuilt.
   editorScrollLocked: boolean;
 
-  constructor({ editorApi, getLineMap, previewFrame }: { editorApi: any; getLineMap: () => any[]; previewFrame: Element }) {
+  constructor({
+    editorApi,
+    getPreviewPages,
+    previewFrame,
+  }: {
+    editorApi: any;
+    getPreviewPages: () => Element;
+    previewFrame: Element;
+  }) {
     this.editorApi = editorApi;
-    this.getLineMap = getLineMap;
+    this.getPreviewPages = getPreviewPages;
     this.previewFrame = previewFrame;
     this.ignoredScrollUntil = { editor: 0, preview: 0 };
     this.lastScrollSource = "editor";
@@ -59,33 +79,10 @@ export class ScrollSyncController {
       return;
     }
 
-    // Compute preview scroll position by finding which editor line is at the
-    // viewport anchor point, then looking up that line's preview position.
-    // This avoids relying on pre-computed heightAtLine values which are
-    // inaccurate for off-screen lines when word wrap is enabled (CM6 estimates
-    // heights for off-screen lines using averages).
-    const scroller = this.getEditorScroller();
-    const anchorY = scroller.scrollTop + scroller.clientHeight * VIEWPORT_ANCHOR_RATIO;
-    const anchorLine = this.editorApi.lineAtHeight(anchorY, "local");
-    const lineMap = this.getLineMap();
-
-    // Find the line map entry closest to the anchor line.
-    let bestEntry = lineMap[0];
-    let bestDist = Number.MAX_SAFE_INTEGER;
-    for (const entry of lineMap) {
-      const dist = Math.abs(entry.lineNumber - 1 - anchorLine);
-      if (dist < bestDist) { bestDist = dist; bestEntry = entry; }
-    }
-
-    if (bestEntry) {
-      const previewTarget = this.clampScrollTop(
-        this.previewFrame,
-        bestEntry.previewOffsetTop - this.previewFrame.clientHeight * VIEWPORT_ANCHOR_RATIO,
-      );
-      this.followScrollTop("preview", previewTarget);
-    } else {
-      this.followScrollTop("preview", this.mapEditorToPreview(scroller.scrollTop));
-    }
+    this.followScrollTop(
+      "preview",
+      this.mapEditorToPreview(this.getEditorScroller().scrollTop),
+    );
   }
 
   handlePreviewScroll(): void {
@@ -105,29 +102,10 @@ export class ScrollSyncController {
       return;
     }
 
-    // Find which line map entry is closest to the preview anchor point,
-    // then scroll the editor to that line using heightAtLine (accurate
-    // because we'll scroll there, making it visible and measured).
-    const anchorY = this.previewFrame.scrollTop + this.previewFrame.clientHeight * VIEWPORT_ANCHOR_RATIO;
-    const lineMap = this.getLineMap();
-
-    let bestEntry = lineMap[0];
-    let bestDist = Number.MAX_SAFE_INTEGER;
-    for (const entry of lineMap) {
-      const dist = Math.abs(entry.previewOffsetTop - anchorY);
-      if (dist < bestDist) { bestDist = dist; bestEntry = entry; }
-    }
-
-    if (bestEntry) {
-      const editorLineTop = this.editorApi.heightAtLine(bestEntry.lineNumber - 1, "local");
-      const editorTarget = this.clampScrollTop(
-        this.getEditorScroller(),
-        editorLineTop - this.getEditorScroller().clientHeight * VIEWPORT_ANCHOR_RATIO,
-      );
-      this.followScrollTop("editor", editorTarget);
-    } else {
-      this.followScrollTop("editor", this.mapPreviewToEditor(this.previewFrame.scrollTop));
-    }
+    this.followScrollTop(
+      "editor",
+      this.mapPreviewToEditor(this.previewFrame.scrollTop),
+    );
   }
 
   restoreAfterRender(): void {
@@ -293,29 +271,51 @@ export class ScrollSyncController {
     }
   }
 
+  // Build anchor pairs from h1–h4 headings in the preview.
+  // Each heading with a valid data-source-line gives one (editorScrollTop,
+  // previewScrollTop) pair. Between anchors, interpolation is linear.
+  // The (0,0) origin and (maxEditor, maxPreview) terminal are always included.
   refreshRelation(): void {
-    const lineMap = this.getLineMap();
+    const previewPages = this.getPreviewPages();
+    const frameRect = this.previewFrame.getBoundingClientRect();
+    const editorScroller = this.getEditorScroller();
     const editorMaxScroll = this.getMaxScroll("editor");
     const previewMaxScroll = this.getMaxScroll("preview");
-    const points = [{ editorScrollTop: 0, previewScrollTop: 0 }];
 
-    for (const entry of lineMap) {
-      const point = {
+    const points: RelationPoint[] = [{ editorScrollTop: 0, previewScrollTop: 0 }];
+
+    for (const heading of previewPages.querySelectorAll(HEADING_SELECTOR)) {
+      const sourceLine = parseInt((heading as HTMLElement).dataset.sourceLine ?? "", 10);
+      if (!Number.isFinite(sourceLine) || sourceLine < 1) continue;
+
+      const headingRect = heading.getBoundingClientRect();
+
+      // Preview position: distance from top of scrollable content.
+      // getBoundingClientRect() + scrollTop are both in the scaled viewport
+      // coordinate space, so no scale conversion is needed.
+      const previewY = this.previewFrame.scrollTop + headingRect.top - frameRect.top;
+
+      // Editor position: CM's heightAtLine gives pixels from the top of the
+      // document (accurate for lines that have been rendered/measured).
+      const editorY = this.editorApi.heightAtLine(sourceLine - 1, "local");
+
+      const point: RelationPoint = {
         editorScrollTop: this.clampScrollTop(
-          this.getEditorScroller(),
-          this.editorApi.heightAtLine(entry.lineNumber - 1, "local") -
-            this.getEditorScroller().clientHeight * VIEWPORT_ANCHOR_RATIO,
+          editorScroller,
+          editorY - editorScroller.clientHeight * VIEWPORT_ANCHOR_RATIO,
         ),
         previewScrollTop: this.clampScrollTop(
           this.previewFrame,
-          entry.previewOffsetTop - this.previewFrame.clientHeight * VIEWPORT_ANCHOR_RATIO,
+          previewY - this.previewFrame.clientHeight * VIEWPORT_ANCHOR_RATIO,
         ),
       };
 
+      // Preserve monotonicity: each point must be >= the previous.
       const lastPoint = points[points.length - 1];
       point.editorScrollTop = Math.max(lastPoint.editorScrollTop, point.editorScrollTop);
       point.previewScrollTop = Math.max(lastPoint.previewScrollTop, point.previewScrollTop);
 
+      // Skip duplicate points (e.g. heading at very top of both panes).
       if (
         point.editorScrollTop === lastPoint.editorScrollTop &&
         point.previewScrollTop === lastPoint.previewScrollTop
@@ -326,6 +326,7 @@ export class ScrollSyncController {
       points.push(point);
     }
 
+    // Terminal point: ensures the end of both panes maps to each other.
     const lastPoint = points[points.length - 1];
     points.push({
       editorScrollTop: Math.max(lastPoint.editorScrollTop, editorMaxScroll),
@@ -335,7 +336,10 @@ export class ScrollSyncController {
     this.relationPoints = points;
   }
 
-  findSegment(value: number, sourceKey: keyof { editorScrollTop: number; previewScrollTop: number }): { lower: { editorScrollTop: number; previewScrollTop: number }; upper: { editorScrollTop: number; previewScrollTop: number } } {
+  findSegment(
+    value: number,
+    sourceKey: keyof RelationPoint,
+  ): { lower: RelationPoint; upper: RelationPoint } {
     const points = this.relationPoints;
     let low = 0;
     let high = points.length - 1;
@@ -355,7 +359,11 @@ export class ScrollSyncController {
     };
   }
 
-  interpolate(value: number, sourceKey: keyof { editorScrollTop: number; previewScrollTop: number }, targetKey: keyof { editorScrollTop: number; previewScrollTop: number }): number {
+  interpolate(
+    value: number,
+    sourceKey: keyof RelationPoint,
+    targetKey: keyof RelationPoint,
+  ): number {
     if (this.relationPoints.length === 0) return 0;
 
     const clampedValue = this.clampScrollTop(

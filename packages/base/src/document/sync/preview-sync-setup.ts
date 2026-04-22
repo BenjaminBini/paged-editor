@@ -2,7 +2,7 @@
 
 import { cm, previewContainer as _previewContainer } from "../../editor/codemirror-editor.js";
 const previewContainer: HTMLElement = _previewContainer!;
-import { getLineMap, handlePreviewLayoutChange } from "../render-scheduler.js";
+import { getPreviewFrame, handlePreviewLayoutChange } from "../render-scheduler.js";
 import { ScrollSyncController } from "./scroll-sync-controller.js";
 
 let controller: ScrollSyncController | null = null;
@@ -14,7 +14,7 @@ function ensureController(): ScrollSyncController {
 
   controller = new ScrollSyncController({
     editorApi: cm,
-    getLineMap,
+    getPreviewPages: getPreviewFrame,
     previewFrame: previewContainer,
   });
 

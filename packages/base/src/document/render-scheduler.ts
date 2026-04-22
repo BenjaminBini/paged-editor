@@ -377,10 +377,6 @@ export function getPreviewScale(): number {
   return contentWidth > 0 ? Math.min(1, containerW / contentWidth) * _userZoom : _userZoom;
 }
 
-export function getLineMap(): any[] {
-  return previewRenderer.getLineMap();
-}
-
 export function handlePreviewLayoutChange(): void {
   scaleSurface();
 }
