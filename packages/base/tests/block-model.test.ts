@@ -135,3 +135,29 @@ describe("buildBlockEntries — malformed directives", () => {
     expect(blockEntries[0].styleDirectiveRange).toEqual({ from: 10, to: 23 });
   });
 });
+
+describe("buildBlockEntries — orphan directives", () => {
+  test("directive on a line that's not a block-start → orphan error", () => {
+    // Blank-line content with a valid-looking directive — no stylable block starts here.
+    const body = "## Heading\n\n   {:style mt=3}\n";
+    const { styleErrors, cleanedBody } = buildBlockEntries(body, {
+      frontmatterCharOffset: 0,
+      frontmatterLineOffset: 0,
+      lex,
+    });
+    expect(cleanedBody).toBe(body);
+    expect(styleErrors).toHaveLength(1);
+    expect(styleErrors[0].code).toBe("orphan-directive");
+    expect(styleErrors[0].blockId).toBeNull();
+  });
+
+  test("well-formed directive inside a fenced code block content is NOT orphan", () => {
+    const body = "```\nsome code {:style mt=3}\nmore\n```\n";
+    const { styleErrors } = buildBlockEntries(body, {
+      frontmatterCharOffset: 0,
+      frontmatterLineOffset: 0,
+      lex,
+    });
+    expect(styleErrors).toEqual([]);
+  });
+});

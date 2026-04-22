@@ -105,6 +105,27 @@ export function buildBlockEntries(
   body: string,
   opts: BuildOptions,
 ): { blockEntries: BlockEntry[]; styleErrors: StyleError[]; cleanedBody: string } {
+  // Pre-declare the orphan accumulator so both pass 1 (whitespace-only probe
+  // skip) and the post-pass scan can contribute.
+  const styleErrors: StyleError[] = [];
+
+  const emitOrphan = (
+    sourceLineStart: number,
+    bodyFrom: number,
+    bodyTo: number,
+  ): void => {
+    styleErrors.push({
+      code: "orphan-directive",
+      line: opts.frontmatterLineOffset + sourceLineStart,
+      styleDirectiveRange: {
+        from: opts.frontmatterCharOffset + bodyFrom,
+        to: opts.frontmatterCharOffset + bodyTo,
+      },
+      blockId: null,
+      message: "Directive is not attached to any stylable block.",
+    });
+  };
+
   // Pass 1 — probe. Walk top-level tokens and record directive spans.
   // We don't trust pass 1's blockType: stripping the directive can change
   // how marked tokenizes the line (e.g. `--- {:style mt=3}` is a paragraph
@@ -116,16 +137,28 @@ export function buildBlockEntries(
     const raw = (token.raw as string) ?? "";
     const tokenFrom = offset;
     offset += raw.length;
-    // Scan every top-level token's first line — both stylable and not —
-    // because stripping can promote a paragraph to hr/code/heading in pass 2.
-    // Non-stylable spans (html, blank space) are checked too; the first-line
-    // regex rarely matches on those and any false positives become orphans.
     const lineStart = countLines(body.slice(0, tokenFrom)) - 1;
     const firstNewline = raw.indexOf("\n");
     const firstLine = firstNewline >= 0 ? raw.slice(0, firstNewline) : raw;
 
     const match = extractDirective(firstLine);
     if (match.kind === "none") continue;
+
+    // If the line's non-directive prefix is whitespace-only, the directive is
+    // the entire content of the block — stripping would make the block vanish.
+    // Record it as orphan (don't strip, don't attach to a block).
+    const prefix = firstLine.slice(0, match.spanStart);
+    if (/^\s*$/.test(prefix) && match.kind === "wellFormed") {
+      emitOrphan(
+        lineStart,
+        tokenFrom + match.spanStart,
+        tokenFrom + match.spanEnd,
+      );
+      continue;
+    }
+    // Malformed fragments with whitespace-only prefix are also orphans —
+    // but malformed-directive error needs to attach to a block; for now skip.
+    if (/^\s*$/.test(prefix)) continue;
 
     probes.push({
       sourceLineStart: lineStart,
@@ -158,7 +191,6 @@ export function buildBlockEntries(
   );
 
   const blockEntries: BlockEntry[] = [];
-  const styleErrors: StyleError[] = [];
   let blockIndex = 0;
   let offset2 = 0;
   for (const token of pass2) {
@@ -217,6 +249,55 @@ export function buildBlockEntries(
       errors,
       parentBlockId: null,
     });
+  }
+
+  // Orphan scan — lines outside every stylable pass-2 block that still hold a
+  // STRICT match. These are directive-like lines that will never attach to
+  // any BlockEntry (directive inside an html block, trailing blank line, etc).
+  // CANDIDATE-only matches on non-block-start lines are ignored (noisy).
+  const claimedLines = new Set<number>();
+  for (const entry of blockEntries) {
+    // Claim every line of every stylable top-level block in the ORIGINAL body
+    // so orphan scan only looks at gaps. Pass-2 line numbers align with body
+    // line numbers when offset by the well-formed strips... but strips never
+    // remove newlines, so they align exactly.
+    const start = entry.sourceLineStart - opts.frontmatterLineOffset;
+    const end = entry.sourceLineEnd - opts.frontmatterLineOffset;
+    for (let l = start; l <= end; l++) claimedLines.add(l);
+  }
+  // Also claim every line of non-stylable pass-1 tokens (html, space) so
+  // content inside those isn't flagged.
+  {
+    let scan = 0;
+    for (const token of pass1) {
+      const raw = (token.raw as string) ?? "";
+      const tokenStartLine = countLines(body.slice(0, scan)) - 1;
+      const tokenLineCount = countLines(raw) - (raw.endsWith("\n") ? 1 : 0);
+      if (!isStylableToken(token)) {
+        for (let l = tokenStartLine; l < tokenStartLine + tokenLineCount; l++) {
+          claimedLines.add(l);
+        }
+      }
+      scan += raw.length;
+    }
+  }
+
+  const bodyLines = body.split("\n");
+  let bodyLineOffset = 0;
+  const alreadyEmitted = new Set(styleErrors.map((e) => e.line));
+  for (let li = 0; li < bodyLines.length; li++) {
+    const lineText = bodyLines[li];
+    const lineStartOffset = bodyLineOffset;
+    bodyLineOffset += lineText.length + 1; // +1 for '\n'
+    if (claimedLines.has(li)) continue;
+    if (alreadyEmitted.has(opts.frontmatterLineOffset + li)) continue;
+    const m = extractDirective(lineText);
+    if (m.kind !== "wellFormed") continue;
+    emitOrphan(
+      li,
+      lineStartOffset + m.spanStart,
+      lineStartOffset + m.spanEnd,
+    );
   }
 
   return { blockEntries, styleErrors, cleanedBody };
