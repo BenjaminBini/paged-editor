@@ -18,6 +18,7 @@ import { buildTocRenderResult } from "./rendering/toc-pipeline.js";
 import { getProjectMetadata, isCoverTab, isTocTab } from "./model/memoire-views.js";
 import { lockEditorScroll, unlockEditorScroll } from "./sync/preview-sync-setup.js";
 import type { BlockEntry, StyleError } from "./rendering/block-model.js";
+import { rootsEqual } from "./rendering/element-equal.js";
 
 const A4_WIDTH_PX: number = 794;
 const previewWrapper: HTMLElement = document.getElementById("preview-wrapper")!;
@@ -153,13 +154,17 @@ function diffSourceBlocks(
     const oldEl = tmpOld.querySelector(`[data-source-line="${line}"]`);
     const newEl = tmpNew.querySelector(`[data-source-line="${line}"]`);
     if (!oldEl || !newEl) { return null; }
-    if (oldEl.innerHTML !== newEl.innerHTML) {
+    // Use rootsEqual instead of raw innerHTML so style-only edits on the
+    // root element (e.g. `{:style mt=3}` changes) enter changedLines and
+    // reach patchVisiblePages.
+    if (!rootsEqual(oldEl, newEl)) {
       changed.add(line);
     }
   }
 
   return changed;
 }
+
 
 const PATCH_DEBOUNCE_MS = 300;
 const PAGED_DEBOUNCE_MS = 800;
