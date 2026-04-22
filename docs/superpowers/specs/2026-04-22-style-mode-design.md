@@ -27,16 +27,16 @@ Entering **Style Mode** turns the preview into an interactive surface: hovering 
 
 The preview is a **scaled, re-rendered DOM** (Paged.js rewrites `.preview-surface` on each full render). All interaction is delegated, stateless between events, and semantic rather than visual.
 
-- **Hover resolution** — on each `pointermove`/`pointerover` in the preview, resolve the **deepest selectable block** under the cursor by walking ancestors from the event target until a `data-block-id` element is found. If none, clear hover.
-- **Selection resolution** — on `click`, use the same deepest-selectable-block rule.
-- **Ancestor picker** — holding `Alt` (or `Option`) while hovering or clicking resolves the **parent selectable block** instead of the deepest one; repeated `Alt+click` walks upward one level at a time. The currently hovered/selected block's `data-block-id` is the reference point for the walk.
+- **Hover resolution** — on each `pointermove`/`pointerover` in the preview, resolve the **nearest selectable block** under the cursor by walking ancestors from the event target until a `data-block-id` element is found. If none, clear hover. In v1 all selectable blocks are top-level (§6), so "nearest" equals "containing"; this contract stays correct when nested blocks are added in v2.
+- **Selection resolution** — on `click`, use the same resolution rule.
 - **State classes** (applied via JS, NOT CSS `:hover`):
   - `.style-hovered` — on the currently hovered selectable block.
   - `.style-selected` — on the currently selected selectable block.
   - Both classes are driven by `data-block-id` so they survive Paged.js DOM rewrites (see §4 Canonical model and §5.4 Patch contract).
 - **Event delegation** — a single handler on `#preview-container` (the stable outer element). Handlers are installed once and gated by the style-mode signal.
 - **Passive during edits** — while the user is actively typing in the editor (debounced render pending), hover resolution is suspended to avoid flicker when the preview patch lands.
-- **Raw `:hover` is NOT used** — semantic hover is decoupled from physical pointer-over so we can (a) match the `data-block-id` currently under the pointer after a re-render without a fresh pointermove, and (b) support the Alt-key ancestor picker.
+- **Raw `:hover` is NOT used** — semantic hover is decoupled from physical pointer-over so we can match the `data-block-id` currently under the pointer after a re-render without waiting for a fresh pointermove.
+- **Ancestor navigation (`Alt+click`, ancestor chip) is deferred to v2** — it requires a non-null `parentBlockId` chain, which v1 does not produce (§6). Until nested extraction lands, there is nothing to walk.
 
 ### 2.3 Editor highlight contract
 
@@ -57,7 +57,7 @@ Editor hover/selection decorations are driven by **block identity**, not by reco
 
 Layout, top-to-bottom inside `#inspectorPanel`:
 
-1. **Header** — `blockType — "first 40 chars of block text"`. Includes a chip for the selected block's ancestor (if any) so the user can jump up with one click (equivalent to `Alt+click`).
+1. **Header** — `blockType — "first 40 chars of block text"`, truncated to one line. (An ancestor-chip is deferred to v2 — no ancestors exist in the v1 model.)
 2. **Errors banner** (only when the selected block has errors) — per §2.4.
 3. **Box-model visualization** — a nested-box graphic with 8 stepper fields:
    - Outer ring: `margin-top`, `margin-right`, `margin-bottom`, `margin-left`.
@@ -219,25 +219,48 @@ styleErrors:  StyleError[];   // errors not attached to any block (orphans, etc.
 
 ## 5. Parsing, rendering, patching
 
-### 5.1 Parsing contract (token-aware, NOT line-scan)
+### 5.1 Parsing contract (two-pass tokenization)
 
-The raw line-by-line pre-pass from the earlier draft is **removed**. Extraction is token-aware:
+Trying to hand-scrub the directive out of marked's token tree is unreliable — each block type exposes the directive through different fields (`token.lang` for fenced code, `token.attrs` for `:::` containers, nested `token.items[].tokens` for lists, nested `token.header[].tokens` / `token.rows[].cells[].tokens` for tables, inline children for headings/paragraphs). Instead we edit the **source text** and re-tokenize. Marked then produces already-clean tokens and every renderer consumes them without special cases.
 
-1. `marked.lexer(body)` tokenizes normally (the directive stays inside token text).
-2. A single pass walks the top-level token stream. For each token whose type is one of the stylable kinds (see §3.4), we:
-   a. Compute its source range (reusing `_sourceLine` logic that's already in place for sync anchors), giving `sourceLineStart` and `sourceLineEnd`.
-   b. Extract the **first source line** of the token from `body` using line offsets.
-   c. Try to match `/\s+\{:style\s+([^}]*)\}\s*$/` against that line.
-   d. On match: record `styleDirectiveRange` (absolute offsets inside `body`), parse the key-value fragments (§3.5 error rules), build `styleValues`, and strip the directive + its leading whitespace from the token's `raw` and from any child inline tokens whose text contains it.
-   e. Emit a `BlockEntry` either way (directive present or not).
-3. After walking: any `{:style …}` fragments that survived in non-stylable tokens (code, html, or mid-block) are inspected once more; if a suspicious fragment exists on what would be a block-start line for a **missing** block type, record an `orphan-directive` error against the body.
-4. Renderer emits HTML normally from the cleaned tokens.
+The contract is:
 
-**Why this is safe:**
-- Code block content (`token.type === 'code'`) is only inspected at its opener line, not its body — content lines are never scanned.
-- Raw HTML blocks (`token.type === 'html'`) are not stylable, so their content is never scanned.
-- Paragraph continuation lines are inside a single paragraph token; we only look at the token's first source line.
-- Inline-looking `{:style …}` text (mid-paragraph, mid-sentence) never matches the end-of-line anchor and is left alone.
+**Pass 1 — probe.** Run `marked.lexer(body)` once. This tells us which lines begin stylable top-level blocks. For each such token:
+  a. Compute its `sourceLineStart`, `sourceLineEnd`, and absolute source range `[tokenFrom, tokenTo)` in `body` (reusing the `_sourceLine` mechanism already used by sync anchors; `tokenFrom` is the offset into `body` where `token.raw` begins).
+  b. Extract the **first source line** of the token: `body.slice(firstLineFrom, firstLineTo)` where both bounds are clamped to the token's range.
+  c. Attempt the regex `/(\s+)\{:style\s+([^}\n]*)\}\s*$/` against that first line.
+  d. On match, record `{ blockType, tokenFrom, firstLineFrom, firstLineTo, styleDirectiveRange: { from, to }, rawDirectiveText }`, where `from`/`to` are absolute offsets in `body` covering the leading whitespace + full `{:style …}`.
+
+**Build `cleanedBody`.** Apply all recorded `styleDirectiveRange` strips to `body` in reverse order (to keep later offsets valid). The cleaned source now has no directive text anywhere.
+
+**Pass 2 — final.** Run `marked.lexer(cleanedBody)` again. The resulting tokens are pristine — directive text is gone from `token.raw`, `token.text`, `token.lang`, `token.attrs`, and every nested structure (list items, table cells, container bodies), because marked is now parsing a source that never contained it.
+
+**Build `BlockEntry[]`.** Walk pass-2 top-level tokens. For each stylable one, match it back to a probe record by `sourceLineStart` in the cleaned source (the line numbers shift only if a directive-strip removed a whole line; since we only strip trailing fragments the line count is preserved). Parse the recorded `rawDirectiveText` into `styleValues` + per-block `errors` (§3.5). Assign `blockId = "b" + index-in-tokens`. Emit the `BlockEntry`.
+
+**Orphan detection.** In pass 1, a line may contain a directive that looks valid but belongs to no stylable token (e.g., the directive sits inside a `token.type === "html"` block, or on a line that's not the first line of a top-level stylable block). Those matches are recorded as `orphan-directive` errors with `blockId = null` and **NOT stripped** — their text stays as content.
+
+**Double-lex cost.** Marked's lexer is fast (<1 ms on typical BEORN section bodies). The profile shows render cost is dominated by Paged.js pagination and CSS apply, not lexing; doubling the lex pass is imperceptible.
+
+**Why this is safe for every block type:**
+
+| Token kind | Why double-lex handles it without per-type cleanup |
+|------------|----------------------------------------------------|
+| `heading` | Directive stripped from source; pass 2 parses clean inline children |
+| `paragraph` | Directive stripped from first line only; continuation lines untouched |
+| `blockquote` | Body re-lexed after strip; inner blockquote tokens have no leaked directive |
+| `list` | `list.items[].text/.raw/.tokens` all derive from pass-2 source |
+| `table` | Pipe-splitting of the header row happens on already-cleaned source — no stray cell |
+| `hr` | Directive stripped; pass 2 sees bare `---` |
+| `code` | `token.lang` is computed from the fence opener in pass 2 — directive gone |
+| `mdContainer` | `token.attrs` is computed from the opener line in pass 2 — directive gone |
+| `paragraph → figure` (standalone image) | Cleaned source produces a clean image token |
+
+No renderer needs to know about the directive. The single change to every renderer is emitting `data-block-id` + the merged `style=""` attribute (§5.2).
+
+**What we explicitly do NOT do:**
+- Mutate marked's token trees in place.
+- Re-implement any of marked's tokenizers.
+- Scan source lines without knowing their block context.
 
 ### 5.2 Renderer updates
 
@@ -259,15 +282,46 @@ const blockIdAttr = ` data-block-id="${blockId}"`;
 - For paragraph-wrapped standalone images, style applies to `<figure>`, not to `<img>`.
 - `data-block-id` is emitted alongside `data-source-line` on the same root element.
 
-### 5.4 Patch contract
+### 5.4 Patch contract (diff + apply)
 
-The existing fast path in `PreviewRenderer.patchVisiblePages` replaces **only** `innerHTML`. Style-only edits change the **outer attributes** of a block, not its inner content, so the current fast path misses them. Fix:
+The fast path has **two** halves today, both of which must understand root-attribute changes for style-only edits to patch instead of forcing a full re-render.
 
-1. Replace the existing `el.innerHTML = newEl.innerHTML` body of the patch loop with a **root-node replacement** that preserves Paged.js internal wrapping:
-   - If the element has no Paged.js ref attributes (`data-ref`, `data-split-from`, `data-split-to`), use `el.replaceWith(newEl)`.
-   - Otherwise, **sync the attributes** (copy all attributes from `newEl` to `el`, removing attributes on `el` that aren't on `newEl`, except `data-source-line` and Paged.js attrs), then replace `innerHTML`.
-2. `patchVisiblePages` matches by `data-source-line` today; it also matches by `data-block-id` for redundancy, which becomes important when a line is shared by multiple blocks after an insertion.
-3. Changing `style`, `data-block-id`, or any other root attribute now correctly triggers patching without a full paginated re-render.
+#### 5.4.1 Diff contract (in `render-scheduler.diffSourceBlocks`)
+
+Today, `diffSourceBlocks` flags an element as changed iff `oldEl.innerHTML !== newEl.innerHTML`. Style-only edits change the element's **attributes** (specifically `style=""`), leaving `innerHTML` untouched — so they never enter `changedLines`, the patch path never runs, and the 800 ms full-render timer ends up firing instead.
+
+The diff is updated to a **root-signature** comparison:
+
+```ts
+function rootsEqual(a: Element, b: Element): boolean {
+  if (a.innerHTML !== b.innerHTML) return false;
+  if (a.tagName !== b.tagName) return false;
+  const aAttrs = a.attributes;
+  const bAttrs = b.attributes;
+  if (aAttrs.length !== bAttrs.length) return false;
+  for (let i = 0; i < aAttrs.length; i++) {
+    const name = aAttrs[i].name;
+    if (b.getAttribute(name) !== aAttrs[i].value) return false;
+  }
+  return true;
+}
+
+// in diffSourceBlocks: if (!rootsEqual(oldEl, newEl)) changed.add(line);
+```
+
+This is O(attrs + innerHTML size), same order as today's check, and correctly flags `style=""` changes, `data-block-id` changes, class changes, and any other future root-attribute edits.
+
+`diffSourceBlocks` also starts keying by `data-block-id` in addition to `data-source-line`, because after a block insertion two blocks may briefly share the same line (§4.1 re-match logic) and we want the diff to stay stable.
+
+#### 5.4.2 Apply contract (in `PreviewRenderer.patchVisiblePages`)
+
+Once the diff flags an element, the apply path must update both `innerHTML` and root attributes — today it does only the former. The updated loop:
+
+1. Locate the live element by `data-block-id` first, falling back to `data-source-line` for pre-id rendered content.
+2. If the live element has no Paged.js ref attributes (`data-ref`, `data-split-from`, `data-split-to`, and any `data-split-*` family member) → `liveEl.replaceWith(newEl.cloneNode(true))`. This is the clean path.
+3. Otherwise → **attribute sync**: for every attribute on `newEl`, `setAttribute` on `liveEl`; for every attribute on `liveEl` not in `newEl`, `removeAttribute` — EXCEPT `data-source-line`, `data-block-id`, and the Paged.js `data-ref` / `data-split-*` family, which are preserved. Then `liveEl.innerHTML = newEl.innerHTML`. This preserves Paged.js chunker state on split elements.
+
+With both halves updated, style-only edits correctly hit the fast path and repaint in the incremental window rather than queuing a full paginated render.
 
 ### 5.5 Export / print
 
@@ -281,10 +335,9 @@ Because styles remain inline on the elements, PDF export (which reuses `renderMa
 
 Rationale:
 - `renderAlertContainer` and friends call `marked.parse(body)` on inner content, which does NOT propagate `_sourceLine` through nested parsing. Fixing that requires recursive source mapping — out of scope for v1.
-- The ancestor picker (`Alt+click`) and parent-chip in the inspector header still work because top-level nesting (e.g. `:::info` itself) is the only level we track.
-- `parentBlockId` exists in the model for forward compatibility but is always `null` in v1.
+- With only top-level blocks in the model, every block's `parentBlockId` is `null`, so there is no ancestor chain to walk. All ancestor-navigation UX (`Alt+click`, header ancestor-chip) is therefore **deferred to v2** — it would be unreachable in v1 anyway.
 
-**v2 (future)**: a recursive extraction pass on container bodies would populate child `BlockEntry`s with `parentBlockId` set, and the ancestor picker would walk up the chain naturally.
+**v2 (future)**: a recursive extraction pass on container bodies would populate child `BlockEntry`s with `parentBlockId` set. Ancestor navigation (`Alt+click`, header chip) lands alongside that recursion so the UX matches the model.
 
 ---
 
@@ -314,7 +367,7 @@ This keeps outline behavior fully intact when Style Mode is off, and gives Style
 | `packages/base/src/document/rendering/block-model.ts` | `BlockEntry` type, `buildBlockEntries` (walks tokens per §5.1), stylable-type predicate |
 | `packages/base/src/shell/ui/style-mode.ts` | Mode signal, toggle wiring, keyboard shortcut, body-class application, suspension during editor typing |
 | `packages/base/src/shell/ui/sidebar-panel-manager.ts` | `activeSidebarPanel` signal and mutator (§7) |
-| `packages/base/src/shell/ui/preview-interaction.ts` | Delegated pointer handling on `#preview-container`; resolves deepest-or-ancestor block; applies `.style-hovered`/`.style-selected`; gated on style-mode signal |
+| `packages/base/src/shell/ui/preview-interaction.ts` | Delegated pointer handling on `#preview-container`; resolves nearest `data-block-id` ancestor; applies `.style-hovered`/`.style-selected`; gated on style-mode signal |
 | `packages/base/src/editor/style-inspector.ts` | Inspector UI (box-model), source-writer, selection state, read-only mode for invalid directives |
 | `packages/base/src/editor/style-directive-lint.ts` | CM6 diagnostic source driven from `styleErrors[].styleDirectiveRange` |
 | `packages/base/src/editor/style-block-highlight.ts` | CM6 ViewPlugin: hovered/selected line decorations driven by block signal |
@@ -363,7 +416,7 @@ This keeps outline behavior fully intact when Style Mode is off, and gives Style
 
 ## 10. Open questions resolved
 
-- **Ancestor vs deepest selection** — pointer resolves deepest by default; `Alt+click` walks up; header chip in inspector also jumps up one level.
+- **Ancestor vs deepest selection** — deferred to v2 with the rest of the nested-block work. In v1, pointer resolution always lands on a top-level block (there is no deeper selectable layer), so no disambiguation is needed.
 - **Is `blockId` stable?** — No. Runtime identity only, valid within one render. Selection survives re-renders via `sourceLineStart` re-match.
 - **Malformed directive + partially valid values** — inspector is read-only; shows parsed values but disables edits; provides a `Jump to error` link. The user must fix the source to re-enable editing.
 
@@ -374,6 +427,7 @@ This keeps outline behavior fully intact when Style Mode is off, and gives Style
 - Inline-element styling (span, strong, em).
 - Per-list-item and per-table-cell styling.
 - Nested selection inside `:::containers` (§6).
+- Ancestor navigation (`Alt+click`, inspector ancestor-chip) — lands with v2 nesting.
 - Non-spacing properties (color, font, borders, etc.).
 - Negative spacing values.
 - Unit selection (px-only via the preset scale).
