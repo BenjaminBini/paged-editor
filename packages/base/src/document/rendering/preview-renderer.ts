@@ -167,21 +167,67 @@ export class PreviewRenderer {
     const tmp = document.createElement("div");
     tmp.innerHTML = newHtml;
 
+    // Attributes that are owned by Paged.js or our source/block mapping
+    // and must survive an attribute-sync. data-block-id is preserved because
+    // we sync it explicitly from newEl below (it may change legitimately).
+    const PRESERVED_ATTRS = new Set([
+      "data-source-line",
+      "data-ref",
+      "data-split-from",
+      "data-split-to",
+    ]);
+
     let patched = 0;
     for (const line of changedLines) {
-      const newEl = tmp.querySelector(`[data-source-line="${line}"]`);
+      const newEl = tmp.querySelector(`[data-source-line="${line}"]`) as HTMLElement | null;
       if (!newEl) continue;
 
-      // Find all occurrences in the live Paged.js DOM (element may be split across pages).
-      const liveEls = this.previewPages.querySelectorAll(`[data-source-line="${line}"]`);
-      for (const el of liveEls) {
-        // Check if this element is on a visible page.
+      // Match live elements by data-block-id first (stable even when the
+      // data-source-line shifts due to an insertion). Fall back to
+      // data-source-line otherwise.
+      const newBlockId = newEl.getAttribute("data-block-id");
+      const liveByBlockId = newBlockId
+        ? this.previewPages.querySelectorAll(`[data-block-id="${newBlockId}"]`)
+        : null;
+      const liveEls =
+        liveByBlockId && liveByBlockId.length > 0
+          ? liveByBlockId
+          : this.previewPages.querySelectorAll(`[data-source-line="${line}"]`);
+
+      for (const rawEl of Array.from(liveEls)) {
+        const el = rawEl as HTMLElement;
         const page = el.closest(".pagedjs_page") as HTMLElement | null;
         if (!page) continue;
         const pageNum = parseInt(page.dataset.pageNumber || "0", 10);
         if (pageNum < visibleRange.first || pageNum > visibleRange.last) continue;
 
-        // Patch: replace inner content, preserving the outer element and Paged.js wrappers.
+        // If the element has no Paged.js ref state, a clean replace is safe
+        // and cheapest.
+        const hasPagedRef =
+          el.hasAttribute("data-ref") ||
+          el.hasAttribute("data-split-from") ||
+          el.hasAttribute("data-split-to");
+
+        if (!hasPagedRef) {
+          const fresh = newEl.cloneNode(true) as HTMLElement;
+          el.replaceWith(fresh);
+          patched++;
+          continue;
+        }
+
+        // Otherwise sync attributes while keeping Paged.js's chunker state
+        // on this wrapper intact.
+        for (const attr of Array.from(newEl.attributes)) {
+          if (PRESERVED_ATTRS.has(attr.name)) continue;
+          el.setAttribute(attr.name, attr.value);
+        }
+        for (const attr of Array.from(el.attributes)) {
+          if (PRESERVED_ATTRS.has(attr.name)) continue;
+          if (!newEl.hasAttribute(attr.name)) el.removeAttribute(attr.name);
+        }
+        // data-block-id tracks the fresh render (not preserved).
+        if (newBlockId !== null) el.setAttribute("data-block-id", newBlockId);
+
         el.innerHTML = newEl.innerHTML;
         patched++;
       }
