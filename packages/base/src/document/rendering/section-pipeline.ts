@@ -27,10 +27,12 @@ const MD_KNOWN_CONTAINERS: Set<string> = new Set([
   ...MD_ALERT_KINDS,
   "kpi",
   "enjeux",
+  "breakdown",
   "quote",
   "timeline",
 ]);
 const MD_STEP_HEADER_RE: RegExp = /^:::step[ \t]+([^\n]+)\r?\n/gm;
+const MD_ITEM_HEADER_RE: RegExp = /^:::item[ \t]+([^\n]+)\r?\n/gm;
 const MD_ATTR_RE: RegExp = /(\w+)="([^"]*)"/g;
 const IMAGE_ALIGNMENT_VALUES: Set<string> = new Set(["left", "center", "right"]);
 const IMAGE_MAX_WIDTH_RE: RegExp = /^\d+(?:\.\d+)?(?:px|%|em|rem|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cm|mm|in|pt|pc|ch|ex)$/i;
@@ -309,6 +311,41 @@ function renderEnjeuxContainer(body: string, sl: string): string {
   return `<div class="md-enjeux"${sl}>\n${tiles}\n</div>\n`;
 }
 
+// `:::breakdown` with inner `:::item TITLE | PHASE` headers.
+// Each item is a card with auto-numbered display digit (01…07), title, optional
+// phase tag, and a markdown list (parsed as the item's content). Renders as a
+// 4-column grid with rotating BEORN palette — designed for "prestations detail"
+// or similar "N deliverables with sub-bullets" views.
+function renderBreakdownContainer(body: string, sl: string): string {
+  MD_ITEM_HEADER_RE.lastIndex = 0;
+  const headers: Array<{ title: string; phase: string; at: number; end: number }> = [];
+  let hm: RegExpExecArray | null;
+  while ((hm = MD_ITEM_HEADER_RE.exec(body)) !== null) {
+    const parts = hm[1].split("|").map((p) => p.trim());
+    headers.push({
+      title: parts[0] || "",
+      phase: parts[1] || "",
+      at: hm.index,
+      end: hm.index + hm[0].length,
+    });
+  }
+  if (!headers.length) return "";
+  const items = headers
+    .map((h, i) => {
+      const start = h.end;
+      const end = i + 1 < headers.length ? headers[i + 1].at : body.length;
+      const content = body.slice(start, end).replace(/\n+$/, "");
+      const inner = marked.parse(content) as string;
+      const num = String(i + 1).padStart(2, "0");
+      const phase = h.phase
+        ? `<span class="md-breakdown-phase">${marked.parseInline(h.phase)}</span>`
+        : "";
+      return `<div class="md-breakdown-item">\n<div class="md-breakdown-left"><span class="md-breakdown-num">${num}</span><span class="md-breakdown-title">${marked.parseInline(h.title)}</span>${phase}</div>\n${inner}</div>`;
+    })
+    .join("\n");
+  return `<div class="md-breakdown"${sl}>\n${items}\n</div>\n`;
+}
+
 // `:::quote author="…" role="…"` — blockquote with attribution footer.
 function renderQuoteContainer(attrsRaw: string, body: string, sl: string): string {
   const attrs = parseContainerAttrs(attrsRaw);
@@ -416,6 +453,7 @@ marked.use({
         if (MD_ALERT_KINDS.has(name)) return renderAlertContainer(name, body, sl);
         if (name === "kpi") return renderKpiContainer(body, sl);
         if (name === "enjeux") return renderEnjeuxContainer(body, sl);
+        if (name === "breakdown") return renderBreakdownContainer(body, sl);
         if (name === "quote") return renderQuoteContainer((token.attrs as string) || "", body, sl);
         if (name === "timeline") return renderTimelineContainer(body, sl);
         return "";

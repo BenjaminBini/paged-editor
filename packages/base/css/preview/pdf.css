@@ -930,6 +930,100 @@ figure.md-image figcaption {
   margin: 0;
 }
 
+/* ── Breakdown grid (:::breakdown + inner :::item TITRE | PHASE) ──
+   7 auto-numbered cards laid out in a 4-column grid (4 + 3 wrap for 7
+   items). Each card holds a big palette number, a coloured hairline,
+   title, optional phase tag, then the markdown list the author wrote
+   inside the item. Bullets inherit the card's palette colour. */
+.md-breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  column-gap: var(--space-md);
+  row-gap: 1.5rem;
+  margin: var(--space-md) 0;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.md-breakdown-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.md-breakdown-item:nth-child(1) { color: var(--navy); }
+.md-breakdown-item:nth-child(2) { color: var(--blue); }
+.md-breakdown-item:nth-child(3) { color: var(--teal); }
+.md-breakdown-item:nth-child(4) { color: var(--purple); }
+.md-breakdown-item:nth-child(5) { color: var(--green); }
+.md-breakdown-item:nth-child(6) { color: var(--orange); }
+.md-breakdown-item:nth-child(7) { color: var(--magenta); }
+.md-breakdown-left {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.md-breakdown-num {
+  font-family: "Nunito", sans-serif;
+  font-size: 28pt;
+  font-weight: 900;
+  line-height: 0.85;
+  color: currentColor;
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum", "lnum";
+}
+.md-breakdown-title {
+  font-family: "Nunito", sans-serif;
+  font-size: 10.5pt;
+  font-weight: 800;
+  color: currentColor;
+  line-height: 1.2;
+  padding-top: 4px;
+  border-top: 1.5px solid currentColor;
+  letter-spacing: -0.005em;
+}
+.md-breakdown-phase {
+  font-family: "Nunito", sans-serif;
+  font-size: 6pt;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: currentColor;
+  opacity: 0.7;
+  margin-top: 2px;
+  line-height: 1.3;
+}
+/* Markdown-parsed <ul> sits as a direct child of .md-breakdown-item.
+   Override global list styles for compact bullets in a narrow card. */
+.md-breakdown-item > ul {
+  list-style: none !important;
+  margin: 2px 0 0 !important;
+  padding: 0 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.md-breakdown-item > ul > li {
+  position: relative;
+  padding-left: 12px !important;
+  margin: 0 !important;
+  font-family: "Source Serif 4", serif;
+  font-size: 8.75pt;
+  line-height: 1.38;
+  color: var(--text);
+}
+.md-breakdown-item > ul > li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.5em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
 /* ── Quote / testimonial (:::quote author="…" role="…") ──
    A hanging "❝" mark sits in the margin so the quote reads as a testimonial
    rather than another call-out. Body stays italic; footer gets its own

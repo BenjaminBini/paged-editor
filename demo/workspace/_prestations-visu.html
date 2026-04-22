@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <title>Prestations du marché — planning trimestriel</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="../../packages/base/css/preview/pdf.css" />
+    <style>
+      /* ═══════════════════════════════════════════════════════════
+         Preview chrome — not shipped in the PDF render
+         ═══════════════════════════════════════════════════════════ */
+      body {
+        margin: 0;
+        padding: 40px 24px 96px;
+        background: #eef1f5;
+        font-family: "Nunito", sans-serif;
+        color: #2d3748;
+      }
+      .preview-shell {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+      .preview-legend {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin: 0 0 24px;
+        color: #193658;
+      }
+      .preview-legend h1 {
+        font-size: 22pt;
+        font-weight: 800;
+        margin: 0;
+      }
+      .preview-legend span {
+        font-size: 9pt;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #64748b;
+      }
+      .preview-intro {
+        background: color-mix(in srgb, #3373b3 6%, #fff);
+        padding: 18px 24px;
+        margin: 0 0 32px;
+        border-radius: 4px;
+        font-size: 10.5pt;
+        line-height: 1.55;
+        color: #1a3758;
+      }
+      .a4-page {
+        width: 210mm;
+        min-height: 148mm;
+        background: #fff;
+        margin: 0 auto 48px;
+        padding: 18mm;
+        box-shadow: 0 4px 24px rgba(25, 54, 88, 0.12);
+        border-radius: 6px;
+        box-sizing: border-box;
+        position: relative;
+      }
+      .a4-page::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #3373b3 0%, #0096ae 55%, #493a8b 100%);
+        border-top-left-radius: 6px;
+        border-top-right-radius: 6px;
+      }
+      .a4-page h2 {
+        font-family: "Nunito", sans-serif;
+        font-size: 14pt;
+        font-weight: 800;
+        color: #193658;
+        margin: 0 0 4px;
+        letter-spacing: -0.01em;
+      }
+      .a4-page .kicker {
+        margin: 0 0 20px;
+        font-size: 10pt;
+        color: #718096;
+        font-weight: 500;
+      }
+
+      /* ═══════════════════════════════════════════════════════════
+         Planning trimestriel (heat-matrix)
+         X = 7 périodes contractuelles (+3m, +6m, Y1-Y4, F-6m)
+         Y = 7 prestations
+         + ligne de jalons en haut (T0 · Mise en production · Fin)
+
+         Case pleine = prestation active sur la période
+         Pastille    = événement ponctuel (rappel formation)
+         Jalon (▼)   = point fixe dans le temps, pas une période
+         ═══════════════════════════════════════════════════════════ */
+      .matrix {
+        margin-top: 18px;
+        font-family: "Nunito", sans-serif;
+      }
+
+      /* Milestones row — 3 indicateurs alignés sur la piste des 7 colonnes.
+         Le premier col track (gouttière de labels, 180px) reste vide.
+         Les jalons sont positionnés en absolute sur la piste droite.
+         Positions fractionnaires (0 / 1-sur-7 / 7-sur-7) = 0% / 14.28% / 100%. */
+      .matrix-milestones {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 4px;
+        margin-bottom: 8px;
+      }
+      .matrix-milestones-track {
+        position: relative;
+        height: 42px;
+      }
+      .matrix-milestone {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        transform: translateX(-50%);
+      }
+      .matrix-milestone-label {
+        font-size: 7pt;
+        font-weight: 800;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: #193658;
+        white-space: nowrap;
+        line-height: 1;
+      }
+      .matrix-milestone-sub {
+        font-family: "Nunito", sans-serif;
+        font-size: 6.5pt;
+        font-weight: 600;
+        color: #718096;
+        white-space: nowrap;
+        line-height: 1;
+        margin-top: 2px;
+        font-variant-numeric: tabular-nums;
+      }
+      .matrix-milestone-arrow {
+        font-size: 11pt;
+        line-height: 1;
+        color: #64748b;
+      }
+      /* T0 and Fin are at track edges — nudge them inward so the label
+         doesn't clip when transform: translateX(-50%) is applied. */
+      .matrix-milestone.start {
+        transform: translateX(0);
+        align-items: flex-start;
+      }
+      .matrix-milestone.end {
+        transform: translateX(-100%);
+        align-items: flex-end;
+      }
+
+      /* Header row — column labels, coloured per phase */
+      .matrix-head {
+        display: grid;
+        grid-template-columns: 180px repeat(7, 1fr);
+        gap: 4px;
+        margin-bottom: 6px;
+      }
+      .matrix-head-cell {
+        font-size: 7pt;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #64748b;
+        text-align: center;
+        padding: 5px 0 6px;
+        border-radius: 3px 3px 0 0;
+      }
+      .matrix-head-cell.phase-mise {
+        color: #3373b3;
+        background: color-mix(in srgb, #3373b3 10%, transparent);
+      }
+      .matrix-head-cell.phase-expl {
+        color: #27ae60;
+        background: color-mix(in srgb, #27ae60 10%, transparent);
+      }
+      .matrix-head-cell.phase-fin {
+        color: #b82775;
+        background: color-mix(in srgb, #b82775 10%, transparent);
+      }
+
+      /* Data rows */
+      .matrix-row {
+        display: grid;
+        grid-template-columns: 180px repeat(7, 1fr);
+        gap: 4px;
+        align-items: center;
+        padding: 3px 0;
+      }
+      .matrix-row-label {
+        display: flex;
+        align-items: baseline;
+        gap: 7px;
+      }
+      .matrix-row-num {
+        font-size: 9pt;
+        font-weight: 800;
+        color: currentColor;
+        font-variant-numeric: tabular-nums;
+      }
+      .matrix-row-name {
+        font-size: 9pt;
+        font-weight: 700;
+        color: #193658;
+      }
+      .matrix-cell {
+        height: 14px;
+        border-radius: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .matrix-cell.on {
+        background: currentColor;
+      }
+      .matrix-cell.off {
+        background: #f1f5f9;
+      }
+      /* Punctual event (formation refresher) — dot inside an otherwise-empty cell */
+      .matrix-cell.event {
+        background: #f1f5f9;
+      }
+      .matrix-cell.event::after {
+        content: "";
+        width: 7px;
+        height: 7px;
+        background: currentColor;
+        border-radius: 50%;
+        border: 1.5px solid #fff;
+        box-shadow: 0 0 0 1px currentColor;
+      }
+
+      /* Legend */
+      .matrix-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px;
+        margin-top: 16px;
+        font-size: 8pt;
+        color: #64748b;
+      }
+      .matrix-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .matrix-legend-swatch {
+        width: 16px;
+        height: 10px;
+        background: #64748b;
+        border-radius: 2px;
+      }
+      .matrix-legend-dot {
+        width: 10px;
+        height: 10px;
+        background: #64748b;
+        border-radius: 50%;
+        border: 1.5px solid #fff;
+        box-shadow: 0 0 0 1px #64748b;
+      }
+      .matrix-legend-arrow {
+        font-size: 11pt;
+        color: #64748b;
+        line-height: 1;
+      }
+
+      /* .md-breakdown / .md-breakdown-* classes ship in pdf.css (loaded
+         above) — this preview eats its own dogfood so what's rendered
+         here is exactly what `:::breakdown` produces in a real .md file. */
+    </style>
+  </head>
+  <body>
+    <div class="preview-shell">
+      <header class="preview-legend">
+        <h1>Prestations prévues par le marché</h1>
+        <span>Mémoire technique · Paged.js preview</span>
+      </header>
+
+      <div class="preview-intro">
+        <p>
+          Matrice <strong>7&nbsp;prestations × 7&nbsp;périodes</strong>,
+          surmontée de trois jalons fixes (<strong>T0</strong> au démarrage,
+          <strong>Mise en production</strong> à la fin des 3&nbsp;mois
+          d'implémentation, <strong>Fin</strong> au terme du marché). Cases
+          pleines&nbsp;= prestation active sur la période&nbsp;; pastilles
+          &nbsp;= événement ponctuel (rappel de formation).
+        </p>
+      </div>
+
+      <div class="a4-page">
+        <h2>Planning des prestations sur la durée du marché</h2>
+        <p class="kicker">
+          §2.1.3.2, §2.2.1, §2.3.1 et §3.18 du CSC
+        </p>
+
+        <div class="matrix">
+          <!-- Milestone row — T0, Mise en production, Fin -->
+          <div class="matrix-milestones">
+            <div></div>
+            <div class="matrix-milestones-track">
+              <div class="matrix-milestone start" style="left: 0%">
+                <span class="matrix-milestone-label">T0</span>
+                <span class="matrix-milestone-arrow">▼</span>
+              </div>
+              <div class="matrix-milestone" style="left: 14.285%">
+                <span class="matrix-milestone-label">MEP</span>
+                <span class="matrix-milestone-sub">T0 + 6 semaines</span>
+                <span class="matrix-milestone-arrow">▼</span>
+              </div>
+              <div class="matrix-milestone end" style="left: 100%">
+                <span class="matrix-milestone-label">Fin</span>
+                <span class="matrix-milestone-arrow">▼</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column headers — 7 periods, coloured per phase -->
+          <div class="matrix-head">
+            <div></div>
+            <div class="matrix-head-cell phase-mise">+3m</div>
+            <div class="matrix-head-cell phase-expl">+6m</div>
+            <div class="matrix-head-cell phase-expl">Y1</div>
+            <div class="matrix-head-cell phase-expl">Y2</div>
+            <div class="matrix-head-cell phase-expl">Y3</div>
+            <div class="matrix-head-cell phase-expl">Y4</div>
+            <div class="matrix-head-cell phase-fin">F−6m</div>
+          </div>
+
+          <!-- 01 SaaS — actif toute la durée -->
+          <div class="matrix-row" style="color: #193658">
+            <div class="matrix-row-label">
+              <span class="matrix-row-num">01</span>
+              <span class="matrix-row-name">Fourniture SaaS</span>
+            </div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+          </div>
+
+          <!-- 02 Implémentation — uniquement les 3 premiers mois -->
+          <div class="matrix-row" style="color: #3373b3">
+            <div class="matrix-row-label">
+              <span class="matrix-row-num">02</span>
+              <span class="matrix-row-name">Implémentation</span>
+            </div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+          </div>
+
+          <!-- 03 Formation — session initiale + rappels ponctuels -->
+          <div class="matrix-row" style="color: #0096ae">
+            <div class="matrix-row-label">
+              <span class="matrix-row-num">03</span>
+              <span class="matrix-row-name">Formation</span>
+            </div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell event"></div>
+            <div class="matrix-cell event"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell event"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+          </div>
+
+          <!-- 04 Documentation — actif toute la durée -->
+          <div class="matrix-row" style="color: #7b52c9">
+            <div class="matrix-row-label">
+              <span class="matrix-row-num">04</span>
+              <span class="matrix-row-name">Documentation</span>
+            </div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+          </div>
+
+          <!-- 05 Maintenance & support — à partir de la mise en production -->
+          <div class="matrix-row" style="color: #27ae60">
+            <div class="matrix-row-label">
+              <span class="matrix-row-num">05</span>
+              <span class="matrix-row-name">Maintenance &amp; support</span>
+            </div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+          </div>
+
+          <!-- 06 Customer Success — toute la durée -->
+          <div class="matrix-row" style="color: #eb9126">
+            <div class="matrix-row-label">
+              <span class="matrix-row-num">06</span>
+              <span class="matrix-row-name">Customer Success</span>
+            </div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+            <div class="matrix-cell on"></div>
+          </div>
+
+          <!-- 07 Transition — dernière période -->
+          <div class="matrix-row" style="color: #b82775">
+            <div class="matrix-row-label">
+              <span class="matrix-row-num">07</span>
+              <span class="matrix-row-name">Transition</span>
+            </div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell off"></div>
+            <div class="matrix-cell on"></div>
+          </div>
+
+          <!-- Legend -->
+          <div class="matrix-legend">
+            <div class="matrix-legend-item">
+              <span class="matrix-legend-swatch"></span>
+              Prestation active sur la période
+            </div>
+            <div class="matrix-legend-item">
+              <span class="matrix-legend-dot"></span>
+              Événement ponctuel (rappel formation)
+            </div>
+            <div class="matrix-legend-item">
+              <span class="matrix-legend-arrow">▼</span>
+              Jalon contractuel
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════
+           Détail des 7 prestations (rows + bullet lists)
+           ═══════════════════════════════════════════════════════════ -->
+      <div class="a4-page">
+        <h2>Détail des 7 prestations</h2>
+        <p class="kicker">
+          Ce que couvre chaque prestation, référencé au CSC
+        </p>
+
+        <div class="md-breakdown">
+          <!-- 01 — Fourniture SaaS -->
+          <div class="md-breakdown-item">
+            <div class="md-breakdown-left">
+              <span class="md-breakdown-num">01</span>
+              <span class="md-breakdown-title">Fourniture SaaS</span>
+              <span class="md-breakdown-phase">Phase · Mise en place</span>
+            </div>
+            <ul class="md-breakdown-items">
+              <li>Licences pour l'ensemble des collaborateurs</li>
+              <li>Hébergement conforme à la Convention RGPD (annexe&nbsp;3)</li>
+              <li>Disponibilité garantie toute la durée du marché</li>
+              <li>Accès partout, à tout moment</li>
+            </ul>
+          </div>
+
+          <!-- 02 — Implémentation -->
+          <div class="md-breakdown-item">
+            <div class="md-breakdown-left">
+              <span class="md-breakdown-num">02</span>
+              <span class="md-breakdown-title">Implémentation</span>
+              <span class="md-breakdown-phase">Phase · Mise en place</span>
+            </div>
+            <ul class="md-breakdown-items">
+              <li>Installation de la plateforme</li>
+              <li>Configuration &amp; paramétrisation</li>
+              <li>Tests d'acceptation</li>
+              <li>Intégration à l'infrastructure VIVAQUA</li>
+              <li>Migration des contenus de l'intranet existant</li>
+              <li>Hypercare jusqu'à la réception provisoire</li>
+            </ul>
+          </div>
+
+          <!-- 03 — Formation -->
+          <div class="md-breakdown-item">
+            <div class="md-breakdown-left">
+              <span class="md-breakdown-num">03</span>
+              <span class="md-breakdown-title">Formation</span>
+              <span class="md-breakdown-phase">Phase · Mise en place + rappels</span>
+            </div>
+            <ul class="md-breakdown-items">
+              <li>Admins Communication&nbsp;: 6&nbsp;personnes</li>
+              <li>Admins Technique&nbsp;: 3&nbsp;personnes</li>
+              <li>Gestionnaires d'espace&nbsp;: 3 à 5 à la mise en place</li>
+              <li>Gestionnaires d'espace&nbsp;: 7 à 12 en exploitation</li>
+              <li>Dispensée en FR et en NL</li>
+              <li>Supports bilingues FR / NL</li>
+              <li>Sessions de rappel à chaque évolution fonctionnelle</li>
+              <li>Mise à jour des supports associée</li>
+            </ul>
+          </div>
+
+          <!-- 04 — Documentation -->
+          <div class="md-breakdown-item">
+            <div class="md-breakdown-left">
+              <span class="md-breakdown-num">04</span>
+              <span class="md-breakdown-title">Documentation</span>
+              <span class="md-breakdown-phase">Phase · Mise en place + mises à jour</span>
+            </div>
+            <ul class="md-breakdown-items">
+              <li>Procédure de support FR / NL</li>
+              <li>Documentation technique&nbsp;— sécurité</li>
+              <li>Documentation technique&nbsp;— synchronisation</li>
+              <li>Documentation technique&nbsp;— API</li>
+              <li>Recommandations techniques</li>
+              <li>Documentation sauvegardes &amp; récupération</li>
+              <li>Manuel utilisateur FR / NL</li>
+              <li>Tenue à jour <strong>gratuite</strong> (incluse en maintenance)</li>
+            </ul>
+          </div>
+
+          <!-- 05 — Maintenance & support -->
+          <div class="md-breakdown-item">
+            <div class="md-breakdown-left">
+              <span class="md-breakdown-num">05</span>
+              <span class="md-breakdown-title">Maintenance &amp; support</span>
+              <span class="md-breakdown-phase">Phase · Exploitation</span>
+            </div>
+            <ul class="md-breakdown-items">
+              <li>Maintenance corrective</li>
+              <li>Maintenance évolutive</li>
+              <li>Maintenance adaptative (régie plafonnée via RFC)</li>
+              <li>Helpdesk &amp; assistance aux SLA de l'annexe&nbsp;6</li>
+              <li>Rapports de service trimestriels minimum</li>
+            </ul>
+          </div>
+
+          <!-- 06 — Accompagnement Customer Success -->
+          <div class="md-breakdown-item">
+            <div class="md-breakdown-left">
+              <span class="md-breakdown-num">06</span>
+              <span class="md-breakdown-title">Customer Success</span>
+              <span class="md-breakdown-phase">Phase · Toute la durée</span>
+            </div>
+            <ul class="md-breakdown-items">
+              <li>Chef de projet en posture <em>Customer Success Consultant</em></li>
+              <li>Conseils de lancement</li>
+              <li>Conseils de dynamisation</li>
+              <li>Veille sur les mises à jour</li>
+              <li>Veille sur les nouvelles fonctionnalités</li>
+              <li>Présent toute la durée du marché</li>
+            </ul>
+          </div>
+
+          <!-- 07 — Transition fin de marché -->
+          <div class="md-breakdown-item">
+            <div class="md-breakdown-left">
+              <span class="md-breakdown-num">07</span>
+              <span class="md-breakdown-title">Transition</span>
+              <span class="md-breakdown-phase">Phase · Fin de marché</span>
+            </div>
+            <ul class="md-breakdown-items">
+              <li>Plan détaillé de transition</li>
+              <li>Transfert de connaissances</li>
+              <li>Remis ≥&nbsp;6&nbsp;mois avant la fin du marché</li>
+              <li>Prestations associées en régie plafonnée</li>
+              <li>Tarifs contractuels</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

@@ -3165,7 +3165,7 @@
            ═══════════════════════════════════════════════════════════════ -->
       <h2 class="preview-group-title">
         Partie 1 — Fragments implémentés
-        <span class="count">11 conteneurs</span>
+        <span class="count">12 conteneurs</span>
       </h2>
 
       <!-- 1. Alert blocks -->
@@ -3894,6 +3894,88 @@ Accompagnement Communication | Chef de projet en posture *Customer Success Consu
           Pas de chrome de carte&nbsp;: chiffre 36&nbsp;pt, hairline coloré,
           titre dans la même couleur, pitch en Source&nbsp;Serif. Palette
           rotative&nbsp;: navy → blue → teal → purple → magenta → orange → green.
+        </div>
+      </article>
+
+      <!-- 12. Breakdown grid -->
+      <article class="ex">
+        <h3>:::breakdown + :::item TITRE | PHASE</h3>
+        <p class="ex-desc">
+          Grille 4&nbsp;colonnes de cartes détaillées. Chaque
+          <code>:::item</code> prend un <code>TITRE</code> et une
+          <code>PHASE</code> optionnelle après <code>|</code>, suivi d'une
+          liste markdown qui décrit ce que contient la prestation. Numérotation
+          automatique 01→07, palette rotative BEORN. 7&nbsp;items max par
+          bloc.
+        </p>
+        <div class="ex-split">
+          <pre class="ex-md"><code>:::breakdown
+:::item Fourniture SaaS | Mise en place
+- Licences pour tous les collaborateurs
+- Hébergement conforme Convention RGPD
+- Disponibilité toute la durée du marché
+
+:::item Implémentation | Mise en place
+- Installation &amp; configuration
+- Intégration à l'infrastructure
+- Migration des contenus existants
+- Hypercare jusqu'à la réception
+
+:::item Formation | Mise en place + rappels
+- Admins Com : 6 personnes
+- Admins IT : 3 personnes
+- Dispensée en FR et en NL
+- Rappels à chaque évolution
+:::</code></pre>
+          <div class="ex-render">
+            <div class="md-breakdown">
+              <div class="md-breakdown-item">
+                <div class="md-breakdown-left">
+                  <span class="md-breakdown-num">01</span>
+                  <span class="md-breakdown-title">Fourniture SaaS</span>
+                  <span class="md-breakdown-phase">Mise en place</span>
+                </div>
+                <ul>
+                  <li>Licences pour tous les collaborateurs</li>
+                  <li>Hébergement conforme Convention RGPD</li>
+                  <li>Disponibilité toute la durée du marché</li>
+                </ul>
+              </div>
+              <div class="md-breakdown-item">
+                <div class="md-breakdown-left">
+                  <span class="md-breakdown-num">02</span>
+                  <span class="md-breakdown-title">Implémentation</span>
+                  <span class="md-breakdown-phase">Mise en place</span>
+                </div>
+                <ul>
+                  <li>Installation &amp; configuration</li>
+                  <li>Intégration à l'infrastructure</li>
+                  <li>Migration des contenus existants</li>
+                  <li>Hypercare jusqu'à la réception</li>
+                </ul>
+              </div>
+              <div class="md-breakdown-item">
+                <div class="md-breakdown-left">
+                  <span class="md-breakdown-num">03</span>
+                  <span class="md-breakdown-title">Formation</span>
+                  <span class="md-breakdown-phase">Mise en place + rappels</span>
+                </div>
+                <ul>
+                  <li>Admins Com&nbsp;: 6 personnes</li>
+                  <li>Admins IT&nbsp;: 3 personnes</li>
+                  <li>Dispensée en FR et en NL</li>
+                  <li>Rappels à chaque évolution</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ex-note">
+          <strong>Cartes détaillées pour prestations à sous-items.</strong>
+          Idéal pour présenter 4 à 7 prestations, livrables ou chapitres
+          d'un marché avec leur contenu précis en bullets. La palette rotative
+          identifie chaque carte visuellement, la numérotation auto garde
+          l'ordre d'apparition.
         </div>
       </article>
 
