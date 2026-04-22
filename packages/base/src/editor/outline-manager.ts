@@ -3,11 +3,13 @@
 import { cm } from "./codemirror-editor.js";
 import { detectPartieNum } from "../document/rendering/markdown-helpers.js";
 import { computeSectionNumbers } from "./section-numbers.js";
+import { requestOutline } from "../shell/ui/sidebar-panel-manager.js";
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 
 const outlineList: HTMLElement | null = document.getElementById("outlineList");
-const outlineSection: HTMLElement | null = document.getElementById("outlineSection");
+// #outlineSection visibility is now owned by sidebar-panel-manager; this
+// module only populates and clears the inner list.
 
 // ── State ───────────────────────────────────────────────────────────────────
 
@@ -23,7 +25,7 @@ export function clearOutline(): void {
     stuckObserver = null;
   }
   if (outlineList) outlineList.innerHTML = "";
-  if (outlineSection) outlineSection.style.display = "none";
+  requestOutline(false);
 }
 
 // ── Build outline ───────────────────────────────────────────────────────────
@@ -86,9 +88,7 @@ export function buildOutline(getActiveTab: () => any): void {
     stickyItems.forEach((el) => stuckObserver!.observe(el));
   }
 
-  if (outlineSection && outlineHeadings.length > 0) {
-    outlineSection.style.display = "";
-  }
+  requestOutline(outlineHeadings.length > 0);
   updateOutlineHighlight();
 }
 
