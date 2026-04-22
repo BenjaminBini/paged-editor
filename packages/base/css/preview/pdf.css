@@ -75,7 +75,7 @@
   color-adjust: exact !important;
 }
 .pdf-preview-root {
-  font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
+  font-family: "Nunito", sans-serif;
   font-size: 10.5pt;
   line-height: 1.5;
   color: var(--text);
@@ -530,7 +530,7 @@ h3 + h4 {
 }
 .pdf-preview-root ul,
 .pdf-preview-root ol {
-  font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
+  font-family: "Nunito", sans-serif;
 }
 ol {
   margin: var(--space-md) 0 var(--space-md) 1.35rem;
@@ -923,7 +923,7 @@ figure.md-image figcaption {
   margin: 0;
 }
 .md-enjeux-pitch {
-  font-family: "Source Serif 4", serif;
+  font-family: "Nunito", sans-serif;
   font-size: 9.5pt;
   line-height: 1.5;
   color: var(--text);
@@ -1008,7 +1008,7 @@ figure.md-image figcaption {
   position: relative;
   padding-left: 12px !important;
   margin: 0 !important;
-  font-family: "Source Serif 4", serif;
+  font-family: "Nunito", sans-serif;
   font-size: 8.75pt;
   line-height: 1.38;
   color: var(--text);
