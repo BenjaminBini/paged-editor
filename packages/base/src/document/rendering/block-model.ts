@@ -177,7 +177,19 @@ export function buildBlockEntries(
     const errors: StyleError[] = [];
     let styleDirectiveRange: BlockEntry["styleDirectiveRange"] = null;
 
-    if (probe?.fragment != null) {
+    if (probe?.malformed) {
+      styleDirectiveRange = {
+        from: opts.frontmatterCharOffset + probe.bodySpanFrom,
+        to: opts.frontmatterCharOffset + probe.bodySpanTo,
+      };
+      errors.push({
+        code: "malformed-directive",
+        line: opts.frontmatterLineOffset + probe.sourceLineStart,
+        styleDirectiveRange,
+        blockId,
+        message: "Directive is not closed properly (missing `}`).",
+      });
+    } else if (probe?.fragment != null) {
       const parsed = parseDirectiveFragment(probe.fragment);
       styleValues = parsed.values;
       styleDirectiveRange = {

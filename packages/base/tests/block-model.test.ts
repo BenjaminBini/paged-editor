@@ -118,3 +118,20 @@ describe("buildBlockEntries — directive stripping (pass 2)", () => {
     expect(cleanedBody).toBe("---\n");
   });
 });
+
+describe("buildBlockEntries — malformed directives", () => {
+  test("missing closing brace → malformed-directive, not stripped", () => {
+    const body = "## Heading {:style mt=3\n";
+    const { blockEntries, cleanedBody } = buildBlockEntries(body, {
+      frontmatterCharOffset: 0,
+      frontmatterLineOffset: 0,
+      lex,
+    });
+    expect(cleanedBody).toBe(body); // NOT stripped
+    expect(blockEntries[0].styleValues).toEqual({});
+    expect(blockEntries[0].errors).toHaveLength(1);
+    expect(blockEntries[0].errors[0].code).toBe("malformed-directive");
+    expect(blockEntries[0].errors[0].blockId).toBe("b0");
+    expect(blockEntries[0].styleDirectiveRange).toEqual({ from: 10, to: 23 });
+  });
+});
