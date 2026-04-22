@@ -161,3 +161,21 @@ describe("buildBlockEntries — orphan directives", () => {
     expect(styleErrors).toEqual([]);
   });
 });
+
+describe("buildBlockEntries — coordinate translation", () => {
+  test("frontmatter offsets are added to every exported range", () => {
+    const body = "## Heading {:style mt=3 pb=2}\n";
+    const frontmatterCharOffset = 20;
+    const frontmatterLineOffset = 3;
+    const { blockEntries, styleErrors } = buildBlockEntries(body, {
+      frontmatterCharOffset,
+      frontmatterLineOffset,
+      lex,
+    });
+    const e = blockEntries[0];
+    expect(e.sourceLineStart).toBe(3);
+    expect(e.sourceLineEnd).toBe(3);
+    expect(e.styleDirectiveRange).toEqual({ from: 30, to: 49 });
+    expect(styleErrors).toEqual([]);
+  });
+});
