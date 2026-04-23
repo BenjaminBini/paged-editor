@@ -1,6 +1,6 @@
 {
   "name": "@benjaminbini/paged-editor-base",
-  "version": "1.8.7",
+  "version": "1.9.0",
   "description": "Shared static assets for paged-editor (index.html, js/**, css/**, assets/) with Node.js server helper",
   "repository": {
     "type": "git",
@@ -33,10 +33,10 @@
     "assets/"
   ],
   "devDependencies": {
-    "vitest": "^1.6.0",
-    "jsdom": "^24.1.0",
-    "typescript": "^5.4.5",
     "@codemirror/lint": "^6.8.0",
-    "marked": "^15.0.7"
+    "jsdom": "^24.1.0",
+    "marked": "^15.0.7",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
   }
 }
