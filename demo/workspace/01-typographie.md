@@ -2,7 +2,7 @@
 
 ## Titres et hiérarchie
 
-Les titres H1 et H2 reçoivent automatiquement la couleur de section BEORN, calculée à partir du numéro de fichier. Le numéroteur et le trait de couleur sous H1 s'affichent uniquement si un numéro de partie est détecté dans le nom de fichier.
+Les titres H1 et H2 reçoivent automatiquement la couleur de section BEORN, calculée à partir du numéro de fichier. Le numéroteur et le trait de couleur sous H1 s'affichent uniquement si un numéro de partie est détecté dans le nom de fichier. {:style mt=4}
 
 ### Niveau 3 — Sous-section
 

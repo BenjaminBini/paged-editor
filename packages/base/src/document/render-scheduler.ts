@@ -17,6 +17,13 @@ import { buildCoverRenderResult, buildCoverErrorRenderResult } from "./rendering
 import { buildTocRenderResult } from "./rendering/toc-pipeline.js";
 import { getProjectMetadata, isCoverTab, isTocTab } from "./model/memoire-views.js";
 import { lockEditorScroll, unlockEditorScroll } from "./sync/preview-sync-setup.js";
+import type { BlockEntry, StyleError } from "./rendering/block-model.js";
+import { rootsEqual } from "./rendering/element-equal.js";
+import { restoreSelection } from "../shell/ui/preview-interaction.js";
+import {
+  setBlockEntries,
+  setStyleErrors,
+} from "./rendering/block-entries-store.js";
 
 const A4_WIDTH_PX: number = 794;
 const previewWrapper: HTMLElement = document.getElementById("preview-wrapper")!;
@@ -50,6 +57,8 @@ let _cachedCoverAssetBaseHref: string | null = null;
 let _lastRenderedHtml: string | null = null;
 let _patchTimeout: ReturnType<typeof setTimeout> | null = null;
 let _lastSourceBlocks: Array<{ start: number; end: number; kind: string; text: string }> = [];
+let _lastBlockEntries: BlockEntry[] = [];
+let _lastStyleErrors: StyleError[] = [];
 let _isPatching: boolean = false;
 
 function capturePreviewScrollState(): { scrollTop: number; ratio: number } {
@@ -150,13 +159,17 @@ function diffSourceBlocks(
     const oldEl = tmpOld.querySelector(`[data-source-line="${line}"]`);
     const newEl = tmpNew.querySelector(`[data-source-line="${line}"]`);
     if (!oldEl || !newEl) { return null; }
-    if (oldEl.innerHTML !== newEl.innerHTML) {
+    // Use rootsEqual instead of raw innerHTML so style-only edits on the
+    // root element (e.g. `{:style mt=3}` changes) enter changedLines and
+    // reach patchVisiblePages.
+    if (!rootsEqual(oldEl, newEl)) {
       changed.add(line);
     }
   }
 
   return changed;
 }
+
 
 const PATCH_DEBOUNCE_MS = 300;
 const PAGED_DEBOUNCE_MS = 800;
@@ -206,6 +219,24 @@ async function patchRequest(): Promise<void> {
     if (patched > 0) {
       const elapsed = Math.round(performance.now() - startedAt);
       status.textContent = `Patched ${patched} — ${elapsed}ms`;
+
+      // The patch covered all visible changes. Advance the cached baseline
+      // (HTML, sourceBlocks, blockEntries, styleErrors) so the next diff
+      // starts from the patched state, and CANCEL the pending full-render
+      // timer — the preview is already correct; firing triggerRender would
+      // cause a visible flicker from the Paged.js re-layout.
+      _lastRenderedHtml = newHtml;
+      _lastSourceBlocks = newBlocks as typeof _lastSourceBlocks;
+      _lastBlockEntries = ((renderResult as any).blockEntries || []) as BlockEntry[];
+      _lastStyleErrors = ((renderResult as any).styleErrors || []) as StyleError[];
+      setBlockEntries(_lastBlockEntries);
+      setStyleErrors(_lastStyleErrors);
+      restoreSelection(_lastBlockEntries);
+      // Notify listeners so editor decorations + inspector reflect the new
+      // blockEntries without waiting for a full render.
+      emit("section-ready");
+      clearTimeout(renderTimeout ?? undefined);
+      renderTimeout = null;
     }
   } finally {
     _isPatching = false;
@@ -266,6 +297,13 @@ async function renderRequest(request: { markdown: string; generation: number }):
 
   _lastRenderedHtml = html ?? null;
   _lastSourceBlocks = (renderResult.sourceBlocks || []) as typeof _lastSourceBlocks;
+  // Only renderMarkdown emits blockEntries/styleErrors; cover/TOC pipelines
+  // don't carry stylable blocks, so default to empty.
+  _lastBlockEntries = ((renderResult as any).blockEntries || []) as BlockEntry[];
+  _lastStyleErrors = ((renderResult as any).styleErrors || []) as StyleError[];
+  setBlockEntries(_lastBlockEntries);
+  setStyleErrors(_lastStyleErrors);
+  restoreSelection(_lastBlockEntries);
 
   scaleSurface();
   previewRenderer.rebuildLineMap();
@@ -369,6 +407,14 @@ export function scheduleRender(_ms?: number): void {
 
 export function getPreviewFrame(): HTMLDivElement {
   return previewSurface();
+}
+
+export function getBlockEntries(): BlockEntry[] {
+  return _lastBlockEntries;
+}
+
+export function getStyleErrors(): StyleError[] {
+  return _lastStyleErrors;
 }
 
 export function getPreviewScale(): number {

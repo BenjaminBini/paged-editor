@@ -31,6 +31,8 @@ import {
 } from "../../assets/codemirror6.bundle.js";
 import { emit } from "../infrastructure/event-bus.js";
 import { mdDecorations } from "./editor-decorations.js";
+import { styleBlockHighlight } from "./style-block-highlight.js";
+import { styleDirectiveLint } from "./style-directive-lint.js";
 
 export const markdownMode = {
   name: "markdown",
@@ -185,6 +187,8 @@ function createExtensions(): any[] {
     syntaxHighlighting(editorHighlightStyle),
     markdown({ codeLanguages }),
     mdDecorations,
+    styleBlockHighlight,
+    styleDirectiveLint,
     lineWrappingCompartment.of(options.lineWrapping ? EditorView.lineWrapping : []),
     editableCompartment.of(EditorView.editable.of(!options.readOnly)),
     readOnlyCompartment.of(EditorState.readOnly.of(options.readOnly)),

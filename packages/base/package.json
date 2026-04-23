@@ -10,6 +10,12 @@
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
+  "scripts": {
+    "build": "tsc",
+    "build:check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "exports": {
     "./server": {
       "require": "./server.cjs",
@@ -25,5 +31,12 @@
     "dist/",
     "css/",
     "assets/"
-  ]
+  ],
+  "devDependencies": {
+    "vitest": "^1.6.0",
+    "jsdom": "^24.1.0",
+    "typescript": "^5.4.5",
+    "@codemirror/lint": "^6.8.0",
+    "marked": "^15.0.7"
+  }
 }

@@ -89,6 +89,10 @@ import {
   requestWindowClose,
 } from "../workspace/files/file-operations.js";
 import { initFormattingToolbar } from "../editor/formatting-toolbar.js";
+import { bindToggleButton } from "./ui/style-mode.js";
+import { bindSidebarDom } from "./ui/sidebar-panel-manager.js";
+import { install as installPreviewInteraction } from "./ui/preview-interaction.js";
+import { mountInspector } from "../editor/style-inspector.js";
 import {
   updateGutterMarkers as _updateGutterMarkers,
   applyPageBreakMarks,
@@ -260,6 +264,19 @@ wireSidebarCallbacks({ hideWelcome, reloadTabFromDisk });
 initMenubar();
 initFormattingToolbar();
 
+// ── Style-mode plumbing ────────────────────────────────────────────────────
+
+{
+  const btnStyleMode = document.getElementById("btnStyleMode");
+  if (btnStyleMode) bindToggleButton(btnStyleMode);
+  const outlineEl = document.getElementById("outlineSection");
+  const inspectorEl = document.getElementById("inspectorPanel");
+  if (outlineEl && inspectorEl) bindSidebarDom(outlineEl, inspectorEl);
+  const previewEl = document.getElementById("preview-container");
+  if (previewEl) installPreviewInteraction(previewEl);
+  if (inspectorEl) mountInspector(inspectorEl);
+}
+
 // ── Drag & drop .md files ──────────────────────────────────────────────────
 
 const cmEl: HTMLElement = cm.getWrapperElement();
@@ -411,17 +428,10 @@ function updateMenuState(): void {
   _updateMenuState(getActiveTab, hasOpenTabs, getFolderPath);
 }
 
-const BLANK_FRONTMATTER: string = `---
-title: ""
-doctype: ""
----
-
-`;
-
 function newDocument(): void {
   hideWelcome();
-  openTab("", "Untitled", BLANK_FRONTMATTER, 0);
-  cm.setCursor({ line: 1, ch: 8 });
+  openTab("", "Untitled", "", 0);
+  cm.setCursor({ line: 0, ch: 0 });
   cm.focus();
 }
 

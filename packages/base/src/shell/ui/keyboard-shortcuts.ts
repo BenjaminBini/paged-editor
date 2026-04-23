@@ -1,11 +1,18 @@
 // keyboard-shortcuts.js — Keyboard bindings and Electron menu event wiring.
 
+import { toggle as toggleStyleMode } from "./style-mode.js";
+
 export function setupKeyboardShortcuts(actions: Record<string, any>): void {
   const { doSave, doSaveAs, openLocalFile, newDocument, closeCurrentTab, hasOpenTabs } = actions;
 
   document.addEventListener("keydown", (e) => {
     const key = e.key?.toLowerCase();
 
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && key === "y") {
+      e.preventDefault();
+      toggleStyleMode();
+      return;
+    }
     if ((e.ctrlKey || e.metaKey) && e.shiftKey && key === "s") {
       e.preventDefault();
       doSaveAs();

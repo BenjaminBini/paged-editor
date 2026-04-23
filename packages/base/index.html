@@ -130,6 +130,15 @@
       </nav>
 
       <span class="status" id="status">Ready</span>
+
+      <div
+        id="btnStyleMode"
+        class="wrap-toggle toolbar-style-toggle"
+        title="Toggle style mode (Ctrl/Cmd+Shift+Y)"
+      >
+        <span>Style</span>
+        <div class="wrap-track"><div class="wrap-thumb"></div></div>
+      </div>
     </div>
 
     <div class="modal-overlay" id="diffModal">
@@ -287,6 +296,15 @@
         <div class="outline-section" id="outlineSection">
           <div class="outline-header">Outline</div>
           <div class="outline-list" id="outlineList"></div>
+        </div>
+
+        <div class="inspector-section" id="inspectorPanel" style="display:none">
+          <div class="inspector-header" id="inspectorHeader">Style Inspector</div>
+          <div class="inspector-empty" id="inspectorEmpty">
+            Click a block in the preview to edit its spacing.
+          </div>
+          <div class="inspector-body" id="inspectorBody" style="display:none"></div>
+          <div class="inspector-errors" id="inspectorErrors" style="display:none"></div>
         </div>
 
         <div class="agent-section" id="agentSection">
