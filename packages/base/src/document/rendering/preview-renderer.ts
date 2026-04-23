@@ -40,12 +40,18 @@ function buildPreviewDocument({ bodyHtml, headerText, rootPageName = "" }: { bod
   const includeRunningElements = !isCover;
 
   // Running elements use `position: running(...)` — Paged.js moves them into
-  // margin boxes.  They must appear before the content.
+  // margin boxes. They are wrapped in a single container because Paged.js's
+  // chunker produces one extra (duplicated) first-page per running element
+  // when they sit as direct siblings of the section root. Wrapping them
+  // collapses the chunker loop to a single pass. See preview-renderer.test
+  // scenarios M1..M5 for the exact N-running -> N+1 duplicate pattern.
   const runningHtml: string = includeRunningElements ? `
-    <div class="pdf-page-gradient"></div>
-    <div class="pdf-running-header">${headerText || ""}</div>
-    <div class="pdf-footer-logo"><img src="assets/beorn-logo.png" alt="BEORN"></div>
-    <div class="pdf-footer-confidential">Document confidentiel — Reproduction interdite</div>
+    <div class="pdf-running-elements">
+      <div class="pdf-page-gradient"></div>
+      <div class="pdf-running-header">${headerText || ""}</div>
+      <div class="pdf-footer-logo"><img src="assets/beorn-logo.png" alt="BEORN"></div>
+      <div class="pdf-footer-confidential">Document confidentiel — Reproduction interdite</div>
+    </div>
   ` : "";
 
   // Cover and sommaire HTML already declare their own `page:` via CSS class

@@ -74,11 +74,17 @@ export function wrapInDocument(bodyHtml: string, opts: Record<string, any>): str
 
   // Build running-element markup.  These have `position: running(…)` in CSS
   // so Paged.js removes them from flow and places them in margin boxes.
+  // They are wrapped in a single container to avoid a Paged.js chunker bug
+  // that emits one duplicated first-page per running element when they sit
+  // as direct siblings of the section root. See preview-renderer.ts for the
+  // same wrapping in the editor preview path.
   const runningHtml: string = includeRunningElements ? [
-    '<div class="pdf-page-gradient"></div>',
-    runningHeader,
-    `<div class="pdf-footer-logo"><img src="${appPrefix}assets/beorn-logo.png" alt="BEORN"></div>`,
-    '<div class="pdf-footer-confidential">Document confidentiel — Reproduction interdite</div>',
+    '<div class="pdf-running-elements">',
+    '  <div class="pdf-page-gradient"></div>',
+    runningHeader ? `  ${runningHeader}` : "",
+    `  <div class="pdf-footer-logo"><img src="${appPrefix}assets/beorn-logo.png" alt="BEORN"></div>`,
+    '  <div class="pdf-footer-confidential">Document confidentiel — Reproduction interdite</div>',
+    '</div>',
   ].filter(Boolean).join("\n  ") : "";
 
   // Inject running elements inside the sommaire container (if present) so they
