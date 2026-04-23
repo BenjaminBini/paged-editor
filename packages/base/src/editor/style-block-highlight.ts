@@ -21,22 +21,37 @@ const hoverLine = Decoration.line({ class: "cm-style-hovered" });
 const selectedLine = Decoration.line({ class: "cm-style-selected" });
 
 function buildDecorations(view: any): any {
-  const builder = new RangeSetBuilder();
   const entries = getBlockEntries();
   const hoveredId = hoveredBlockId();
   const selectedId = selectedBlockId();
   const hovered = entries.find((e) => e.blockId === hoveredId);
   const selected = entries.find((e) => e.blockId === selectedId);
   const docLines = view.state.doc.lines;
-  const addRange = (startLine: number, endLine: number, deco: any): void => {
+
+  // RangeSetBuilder requires adds in ascending (from, startSide) order.
+  // The selected block can be at any source line relative to the hovered
+  // block, and a line can be both selected and hovered — we must sort
+  // and de-duplicate before feeding the builder.
+  const pending: Array<{ from: number; deco: any }> = [];
+  const collect = (startLine: number, endLine: number, deco: any): void => {
     for (let l = startLine; l <= endLine; l++) {
       if (l < 0 || l >= docLines) continue;
-      const line = view.state.doc.line(l + 1); // CM6 is 1-based
-      builder.add(line.from, line.from, deco);
+      const from = view.state.doc.line(l + 1).from; // CM6 is 1-based
+      pending.push({ from, deco });
     }
   };
-  if (hovered) addRange(hovered.sourceLineStart, hovered.sourceLineEnd, hoverLine);
-  if (selected) addRange(selected.sourceLineStart, selected.sourceLineEnd, selectedLine);
+  // Selected first so it wins on same-line de-dup (stable sort keeps order).
+  if (selected) collect(selected.sourceLineStart, selected.sourceLineEnd, selectedLine);
+  if (hovered) collect(hovered.sourceLineStart, hovered.sourceLineEnd, hoverLine);
+
+  pending.sort((a, b) => a.from - b.from);
+  const builder = new RangeSetBuilder();
+  let lastFrom = -1;
+  for (const p of pending) {
+    if (p.from === lastFrom) continue; // drop same-line duplicates
+    builder.add(p.from, p.from, p.deco);
+    lastFrom = p.from;
+  }
   return builder.finish();
 }
 
