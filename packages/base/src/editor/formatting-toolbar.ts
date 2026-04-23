@@ -389,118 +389,71 @@ function insertBlockSnippet(snippet: string, selectionStartOffset?: number, sele
   refreshToolbarState();
 }
 
+function blockItem(label: string, action: () => void): { label: string; action: () => void; preview?: string } {
+  return { label, action, preview: BLOCK_PREVIEWS[label] };
+}
+
 function openBlocksMenu(button: HTMLElement): void {
   showButtonMenu(button, [
-    {
-      label: "Bullet list",
-      action: () => insertBlockSnippet("- Item 1\n- Item 2\n- Item 3", 2, 8),
-    },
-    {
-      label: "Numbered list",
-      action: () => insertBlockSnippet("1. First\n2. Second\n3. Third", 3, 8),
-    },
-    {
-      label: "Blockquote",
-      action: () => insertBlockSnippet("> Quote text.", 2, 13),
-    },
+    blockItem("Bullet list", () => insertBlockSnippet("- Item 1\n- Item 2\n- Item 3", 2, 8)),
+    blockItem("Numbered list", () => insertBlockSnippet("1. First\n2. Second\n3. Third", 3, 8)),
+    blockItem("Blockquote", () => insertBlockSnippet("> Quote text.", 2, 13)),
     { separator: true },
-    {
-      label: "Code block",
-      action: () => insertBlockSnippet("```\ncode\n```", 4, 8),
-    },
-    {
-      label: "Horizontal rule",
-      action: () => insertBlockSnippet("---"),
-    },
+    blockItem("Code block", () => insertBlockSnippet("```\ncode\n```", 4, 8)),
+    blockItem("Horizontal rule", () => insertBlockSnippet("---")),
     { separator: true },
-    {
-      label: "Page break  (\\newpage)",
-      action: () => insertBlockSnippet("\\newpage"),
-    },
-    {
-      label: "Spacer  (\\spacer[20px])",
-      action: () => insertBlockSnippet("\\spacer[20px]"),
-    },
+    blockItem("Page break  (\\newpage)", () => insertBlockSnippet("\\newpage")),
+    blockItem("Spacer  (\\spacer[20px])", () => insertBlockSnippet("\\spacer[20px]")),
   ]);
+}
+
+function compItem(label: string, action: () => void): { label: string; action: () => void; preview?: string } {
+  return { label, action, preview: COMPONENT_PREVIEWS[label] };
 }
 
 function openComponentsMenu(button: HTMLElement): void {
   showButtonMenu(button, [
-    {
-      label: "Alert — Info",
-      action: () => insertBlockSnippet(":::info\nInformation message.\n:::", 7, 26),
-    },
-    {
-      label: "Alert — Warning",
-      action: () => insertBlockSnippet(":::warning\nWarning message.\n:::", 11, 27),
-    },
-    {
-      label: "Alert — Danger",
-      action: () => insertBlockSnippet(":::danger\nCritical message.\n:::", 10, 27),
-    },
-    {
-      label: "Alert — Success",
-      action: () => insertBlockSnippet(":::success\nSuccess message.\n:::", 11, 27),
-    },
-    {
-      label: "Alert — Note",
-      action: () => insertBlockSnippet(":::note\nEditorial note.\n:::", 8, 22),
-    },
-    {
-      label: "Alert — Tip",
-      action: () => insertBlockSnippet(":::tip\nHelpful tip.\n:::", 7, 18),
-    },
+    compItem("Alert — Info", () => insertBlockSnippet(":::info\nInformation message.\n:::", 7, 26)),
+    compItem("Alert — Warning", () => insertBlockSnippet(":::warning\nWarning message.\n:::", 11, 27)),
+    compItem("Alert — Danger", () => insertBlockSnippet(":::danger\nCritical message.\n:::", 10, 27)),
+    compItem("Alert — Success", () => insertBlockSnippet(":::success\nSuccess message.\n:::", 11, 27)),
+    compItem("Alert — Note", () => insertBlockSnippet(":::note\nEditorial note.\n:::", 8, 22)),
+    compItem("Alert — Tip", () => insertBlockSnippet(":::tip\nHelpful tip.\n:::", 7, 18)),
     { separator: true },
-    {
-      label: "KPI tiles",
-      action: () =>
-        insertBlockSnippet(
-          ":::kpi\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse garanti | SLA P1\n99,9 % | Disponibilité cible\n:::",
-        ),
-    },
-    {
-      label: "Enjeux / pillars",
-      action: () =>
-        insertBlockSnippet(
-          ":::enjeux\nQualité | Zéro régression, revue systématique\nRéactivité | SLA < 4 h, astreinte 24/7\nSécurité | DevSecOps intégré, audits\n:::",
-        ),
-    },
-    {
-      label: "Breakdown",
-      action: () =>
-        insertBlockSnippet(
-          ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture cible\n:::item Implémentation | Phase 2\n- Dev itératif\n- Tests automatisés\n:::",
-        ),
-    },
-    {
-      label: "Planning heat-matrix",
-      action: () =>
-        insertBlockSnippet(
-          ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:expl, S6:fin\nmilestones: Kick-off@0, Go-live@3:Prod, Clôture@6\n---\nAnalyse | X X o . . .\nDéveloppement | . X X X . .\nTests | . . X X X .\nProduction | . . . o X X\n:::",
-        ),
-    },
-    {
-      label: "Quote",
-      action: () =>
-        insertBlockSnippet(
-          ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::',
-        ),
-    },
-    {
-      label: "Timeline",
-      action: () =>
-        insertBlockSnippet(
-          ":::timeline\n:::step Étape 1 | J+0\nDescription de l'étape 1.\n:::step Étape 2 | J+5\nDescription de l'étape 2.\n:::step Étape 3 | J+10\nDescription de l'étape 3.\n:::",
-        ),
-    },
+    compItem("KPI tiles", () =>
+      insertBlockSnippet(
+        ":::kpi\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse garanti | SLA P1\n99,9 % | Disponibilité cible\n:::",
+      ),
+    ),
+    compItem("Enjeux / pillars", () =>
+      insertBlockSnippet(
+        ":::enjeux\nQualité | Zéro régression, revue systématique\nRéactivité | SLA < 4 h, astreinte 24/7\nSécurité | DevSecOps intégré, audits\n:::",
+      ),
+    ),
+    compItem("Breakdown", () =>
+      insertBlockSnippet(
+        ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture cible\n:::item Implémentation | Phase 2\n- Dev itératif\n- Tests automatisés\n:::",
+      ),
+    ),
+    compItem("Planning heat-matrix", () =>
+      insertBlockSnippet(
+        ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:expl, S6:fin\nmilestones: Kick-off@0, Go-live@3:Prod, Clôture@6\n---\nAnalyse | X X o . . .\nDéveloppement | . X X X . .\nTests | . . X X X .\nProduction | . . . o X X\n:::",
+      ),
+    ),
+    compItem("Quote", () =>
+      insertBlockSnippet(':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::'),
+    ),
+    compItem("Timeline", () =>
+      insertBlockSnippet(
+        ":::timeline\n:::step Étape 1 | J+0\nDescription de l'étape 1.\n:::step Étape 2 | J+5\nDescription de l'étape 2.\n:::step Étape 3 | J+10\nDescription de l'étape 3.\n:::",
+      ),
+    ),
     { separator: true },
-    {
-      label: "12-col grid  (ao-grid)",
-      action: () =>
-        insertBlockSnippet(
-          "```ao-grid\n:::col-8\nColonne principale (8/12)\n:::col-4\nColonne latérale (4/12)\n```",
-        ),
-    },
+    compItem("12-col grid  (ao-grid)", () =>
+      insertBlockSnippet(
+        "```ao-grid\n:::col-8\nColonne principale (8/12)\n:::col-4\nColonne latérale (4/12)\n```",
+      ),
+    ),
   ]);
 }
 
@@ -510,77 +463,200 @@ interface HelpItem {
   name: string;
   desc: string;
   syntax: string;
+  preview?: string; // raw HTML with inline styles (sandboxed rendering isn't
+                    // practical for 30+ items; inline styles sidestep CSS
+                    // collisions while still giving authors a visual hint)
 }
 interface HelpCategory {
   title: string;
   items: HelpItem[];
 }
 
+// ── Inline-styled preview mockups ──────────────────────────────────────────
+// Fonts, colours and box styles chosen to match the real preview roughly —
+// not pixel-perfect, but enough to recognise a component at a glance.
+
+const PV_FONT = "font-family:Nunito,sans-serif";
+const alertMock = (label: string, body: string, color: string, bg: string): string => `
+  <div style="${PV_FONT};border-left:3px solid ${color};background:${bg};padding:10px 12px;border-radius:4px;color:#1f2937;">
+    <div style="display:inline-block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:${color};margin-bottom:4px;">${label}</div>
+    <div style="font-size:12px;">${body}</div>
+  </div>`;
+
+const previewBold = `<span style="${PV_FONT};font-weight:700;color:#1f2937;">bold text</span>`;
+const previewItalic = `<span style="${PV_FONT};font-style:italic;color:#1f2937;">italic text</span>`;
+const previewUnderline = `<span style="${PV_FONT};text-decoration:underline;color:#1f2937;">underlined</span>`;
+const previewCode = `<code style="background:#1e293b;color:#a6e3a1;padding:2px 6px;border-radius:3px;font-family:JetBrains Mono,monospace;font-size:11px;">code</code>`;
+const previewLink = `<a href="#" style="${PV_FONT};color:#3373b3;text-decoration:underline;">label</a>`;
+
+const previewHeadings = `
+  <div style="${PV_FONT};color:#1f2937;">
+    <div style="font-size:20px;font-weight:800;color:#193658;margin-bottom:4px;">H1 Title</div>
+    <div style="font-size:16px;font-weight:700;color:#3373b3;margin-bottom:4px;"><span style="background:#3373b3;color:#fff;padding:1px 6px;border-radius:3px;font-size:11px;margin-right:6px;">1.1</span>H2 Subtitle</div>
+    <div style="font-size:14px;font-weight:600;color:#493a8b;"><span style="color:#493a8b;font-size:11px;margin-right:6px;">1.1.1</span>● H3 Section</div>
+  </div>`;
+
+const previewList = `
+  <ul style="${PV_FONT};color:#1f2937;font-size:12px;margin:0;padding-left:20px;line-height:1.6;">
+    <li>Item 1</li><li>Item 2</li><li>Item 3</li>
+  </ul>`;
+const previewOrderedList = `
+  <ol style="${PV_FONT};color:#1f2937;font-size:12px;margin:0;padding-left:20px;line-height:1.6;">
+    <li>First</li><li>Second</li><li>Third</li>
+  </ol>`;
+const previewBlockquote = `
+  <blockquote style="${PV_FONT};margin:0;padding:8px 12px;border-left:3px solid #3373b3;background:#f1f5f9;color:#334155;font-style:italic;font-size:12px;">
+    Quote text.
+  </blockquote>`;
+const previewHr = `<hr style="border:none;border-top:1px solid #cbd5e1;margin:10px 0;" />`;
+const previewPageBreak = `
+  <div style="${PV_FONT};display:flex;align-items:center;gap:8px;color:#94a3b8;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;">
+    <span style="flex:1;border-top:1.5px dashed #94a3b8;"></span>
+    <span>Page break</span>
+    <span style="flex:1;border-top:1.5px dashed #94a3b8;"></span>
+  </div>`;
+const previewSpacer = `
+  <div style="${PV_FONT};color:#64748b;font-size:10px;font-style:italic;border:1px dashed #cbd5e1;border-radius:3px;padding:10px;text-align:center;">
+    ↕ 40px vertical spacer (invisible)
+  </div>`;
+const previewCodeBlock = `
+  <pre style="background:#0f172a;color:#a6e3a1;padding:10px 12px;border-radius:4px;font-family:JetBrains Mono,monospace;font-size:11px;margin:0;overflow-x:auto;"><span style="color:#cba6f7;">const</span> x <span style="color:#e2e8f0;">=</span> <span style="color:#f9e2af;">1</span>;</pre>`;
+
+const previewTable = `
+  <table style="${PV_FONT};border-collapse:collapse;font-size:11px;color:#1f2937;width:100%;">
+    <thead><tr><th style="background:#193658;color:#fff;padding:6px 10px;text-align:left;">Header</th><th style="background:#193658;color:#fff;padding:6px 10px;text-align:left;">Cell</th></tr></thead>
+    <tbody><tr><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;">A</td><td style="padding:6px 10px;border-bottom:1px solid #e2e8f0;">B</td></tr><tr><td style="padding:6px 10px;">C</td><td style="padding:6px 10px;">D</td></tr></tbody>
+  </table>`;
+const previewImage = `
+  <figure style="${PV_FONT};margin:0;text-align:center;">
+    <div style="background:#cbd5e1;height:80px;border-radius:4px;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:11px;">image</div>
+    <figcaption style="color:#64748b;font-size:10px;margin-top:4px;">Caption</figcaption>
+  </figure>`;
+const previewMermaid = `
+  <div style="${PV_FONT};background:#f8f9fc;border:1px dashed #cbd5e1;border-radius:4px;padding:16px;text-align:center;color:#64748b;font-size:11px;">
+    <span style="display:inline-block;background:#3373b3;color:#fff;padding:2px 10px;border-radius:3px;">A</span>
+    <span style="margin:0 8px;">→</span>
+    <span style="display:inline-block;background:#3373b3;color:#fff;padding:2px 10px;border-radius:3px;">B</span>
+  </div>`;
+
+const previewKpi = `
+  <div style="${PV_FONT};display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+    <div style="background:#f1f5f9;padding:12px;border-radius:4px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#193658;">18 ans</div><div style="font-size:10px;color:#64748b;margin-top:2px;">Expertise</div></div>
+    <div style="background:#f1f5f9;padding:12px;border-radius:4px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#193658;">100+</div><div style="font-size:10px;color:#64748b;margin-top:2px;">Projets</div></div>
+    <div style="background:#f1f5f9;padding:12px;border-radius:4px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#193658;">&lt; 4 h</div><div style="font-size:10px;color:#64748b;margin-top:2px;">Temps</div></div>
+    <div style="background:#f1f5f9;padding:12px;border-radius:4px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#193658;">99,9 %</div><div style="font-size:10px;color:#64748b;margin-top:2px;">Dispo</div></div>
+  </div>`;
+const previewEnjeux = `
+  <div style="${PV_FONT};display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
+    <div style="border-top:3px solid #193658;padding:10px 8px;background:#f8f9fc;"><div style="font-size:14px;font-weight:800;color:#193658;">01</div><div style="font-size:11px;font-weight:700;color:#193658;margin-top:4px;">Qualité</div><div style="font-size:10px;color:#64748b;margin-top:2px;">Zéro régression</div></div>
+    <div style="border-top:3px solid #3373b3;padding:10px 8px;background:#f8f9fc;"><div style="font-size:14px;font-weight:800;color:#3373b3;">02</div><div style="font-size:11px;font-weight:700;color:#3373b3;margin-top:4px;">Réactivité</div><div style="font-size:10px;color:#64748b;margin-top:2px;">SLA &lt; 4 h</div></div>
+    <div style="border-top:3px solid #0096ae;padding:10px 8px;background:#f8f9fc;"><div style="font-size:14px;font-weight:800;color:#0096ae;">03</div><div style="font-size:11px;font-weight:700;color:#0096ae;margin-top:4px;">Sécurité</div><div style="font-size:10px;color:#64748b;margin-top:2px;">DevSecOps</div></div>
+  </div>`;
+const previewBreakdown = `
+  <div style="${PV_FONT};display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:11px;color:#1f2937;">
+    <div style="background:#f8f9fc;padding:8px 10px;border-left:3px solid #193658;"><div style="font-weight:700;"><span style="color:#193658;">01</span> Cadrage · <em style="color:#64748b;">Phase 1</em></div><ul style="margin:4px 0 0 16px;padding:0;font-size:10px;color:#334155;"><li>Atelier besoins</li><li>Architecture</li></ul></div>
+    <div style="background:#f8f9fc;padding:8px 10px;border-left:3px solid #3373b3;"><div style="font-weight:700;"><span style="color:#3373b3;">02</span> Implémentation · <em style="color:#64748b;">Phase 2</em></div><ul style="margin:4px 0 0 16px;padding:0;font-size:10px;color:#334155;"><li>Dev itératif</li><li>Tests</li></ul></div>
+  </div>`;
+const previewPlanning = `
+  <div style="${PV_FONT};font-size:10px;color:#1f2937;">
+    <div style="display:grid;grid-template-columns:80px repeat(6,1fr);gap:2px;color:#64748b;font-size:9px;text-align:center;margin-bottom:4px;">
+      <div></div><div>S1</div><div>S2</div><div>S3</div><div>S4</div><div>S5</div><div>S6</div>
+    </div>
+    <div style="display:grid;grid-template-columns:80px repeat(6,1fr);gap:2px;margin-bottom:2px;color:#193658;">
+      <div style="font-weight:700;">Analyse</div><div style="background:#193658;height:10px;border-radius:2px;"></div><div style="background:#193658;height:10px;border-radius:2px;"></div><div style="background:#193658;opacity:0.3;height:10px;border-radius:2px;"></div><div></div><div></div><div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:80px repeat(6,1fr);gap:2px;margin-bottom:2px;color:#3373b3;">
+      <div style="font-weight:700;">Dev</div><div></div><div style="background:#3373b3;height:10px;border-radius:2px;"></div><div style="background:#3373b3;height:10px;border-radius:2px;"></div><div style="background:#3373b3;height:10px;border-radius:2px;"></div><div></div><div></div>
+    </div>
+  </div>`;
+const previewQuote = `
+  <blockquote style="${PV_FONT};margin:0;padding:12px 16px;background:#f1f5f9;border-left:4px solid #193658;color:#1f2937;font-size:12px;">
+    <div style="font-style:italic;">"Texte de la citation."</div>
+    <footer style="margin-top:6px;font-size:10px;color:#64748b;">— <cite style="font-style:normal;font-weight:700;">Nom Prénom</cite> <span>· Rôle</span></footer>
+  </blockquote>`;
+const previewTimeline = `
+  <div style="${PV_FONT};font-size:11px;color:#1f2937;position:relative;padding-left:22px;">
+    <div style="position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:#cbd5e1;"></div>
+    <div style="position:relative;margin-bottom:10px;"><span style="position:absolute;left:-19px;top:3px;width:10px;height:10px;border-radius:50%;background:#193658;"></span><div style="font-weight:700;">Étape 1 <span style="color:#64748b;font-size:10px;">· J+0</span></div></div>
+    <div style="position:relative;margin-bottom:10px;"><span style="position:absolute;left:-19px;top:3px;width:10px;height:10px;border-radius:50%;background:#3373b3;"></span><div style="font-weight:700;">Étape 2 <span style="color:#64748b;font-size:10px;">· J+5</span></div></div>
+    <div style="position:relative;"><span style="position:absolute;left:-19px;top:3px;width:10px;height:10px;border-radius:50%;background:#0096ae;"></span><div style="font-weight:700;">Étape 3 <span style="color:#64748b;font-size:10px;">· J+10</span></div></div>
+  </div>`;
+const previewGrid = `
+  <div style="${PV_FONT};display:grid;grid-template-columns:2fr 1fr;gap:8px;font-size:11px;color:#1f2937;">
+    <div style="background:#eff6ff;padding:10px 12px;border-radius:3px;">Colonne principale <span style="color:#64748b;">(8/12)</span></div>
+    <div style="background:#fef3c7;padding:10px 12px;border-radius:3px;">Latérale <span style="color:#64748b;">(4/12)</span></div>
+  </div>`;
+const previewStyle = `
+  <div style="${PV_FONT};color:#1f2937;">
+    <div style="font-weight:700;margin-bottom:16px;padding-bottom:8px;"><span style="background:#e0c070;color:#fff;padding:1px 6px;border-radius:3px;font-size:11px;margin-right:6px;">2.1</span>Heading with mt=16 pb=8</div>
+    <div style="font-size:10px;color:#64748b;font-family:JetBrains Mono,monospace;background:#f8f9fc;padding:4px 8px;border-radius:3px;">## Heading {:style mt=16 pb=8}</div>
+  </div>`;
+
 const HELP_CATEGORIES: HelpCategory[] = [
   {
     title: "Inline formatting",
     items: [
-      { name: "Bold", desc: "Emphasise a span of text.", syntax: "**bold text**" },
-      { name: "Italic", desc: "Italicise a span of text.", syntax: "*italic text*" },
-      { name: "Underline", desc: "Inline HTML — passes through the renderer.", syntax: "<u>underlined</u>" },
-      { name: "Inline code", desc: "Fixed-width span.", syntax: "`code`" },
-      { name: "Link", desc: "External or anchor link.", syntax: "[label](https://example.com)" },
+      { name: "Bold", desc: "Emphasise a span of text.", syntax: "**bold text**", preview: previewBold },
+      { name: "Italic", desc: "Italicise a span of text.", syntax: "*italic text*", preview: previewItalic },
+      { name: "Underline", desc: "Inline HTML — passes through the renderer.", syntax: "<u>underlined</u>", preview: previewUnderline },
+      { name: "Inline code", desc: "Fixed-width span.", syntax: "`code`", preview: previewCode },
+      { name: "Link", desc: "External or anchor link.", syntax: "[label](https://example.com)", preview: previewLink },
     ],
   },
   {
     title: "Text structure",
     items: [
-      { name: "Headings (h1–h4)", desc: "Section titles. First digit of the number badge comes from the filename (`01-foo.md` → 1.x) or an explicit `# Partie N` header.", syntax: "# H1\n## H2\n### H3\n#### H4" },
-      { name: "Bullet list", desc: "Unordered list.", syntax: "- Item 1\n- Item 2" },
-      { name: "Numbered list", desc: "Ordered list.", syntax: "1. First\n2. Second" },
-      { name: "Blockquote", desc: "Quoted paragraph.", syntax: "> Quote text." },
-      { name: "Horizontal rule", desc: "Section divider.", syntax: "---" },
-      { name: "Code block", desc: "Fenced code; optional language for syntax highlighting.", syntax: "```js\nconst x = 1;\n```" },
+      { name: "Headings (h1–h4)", desc: "Section titles. First digit of the number badge comes from the filename (`01-foo.md` → 1.x) or an explicit `# Partie N` header.", syntax: "# H1\n## H2\n### H3\n#### H4", preview: previewHeadings },
+      { name: "Bullet list", desc: "Unordered list.", syntax: "- Item 1\n- Item 2", preview: previewList },
+      { name: "Numbered list", desc: "Ordered list.", syntax: "1. First\n2. Second", preview: previewOrderedList },
+      { name: "Blockquote", desc: "Quoted paragraph.", syntax: "> Quote text.", preview: previewBlockquote },
+      { name: "Horizontal rule", desc: "Section divider.", syntax: "---", preview: previewHr },
+      { name: "Code block", desc: "Fenced code; optional language for syntax highlighting.", syntax: "```js\nconst x = 1;\n```", preview: previewCodeBlock },
     ],
   },
   {
     title: "Media",
     items: [
-      { name: "Table", desc: "GitHub-Flavored Markdown table.", syntax: "| H1 | H2 |\n| -- | -- |\n| a  | b  |" },
-      { name: "Image", desc: "Standalone image renders as a figure with optional caption.", syntax: "![Caption](./image.png)" },
-      { name: "Image (aligned, sized)", desc: "Pipe-separated options after the URL: alignment (left|center|right) and max-width.", syntax: "![Caption](./image.png|right|200px)" },
-      { name: "Mermaid diagram", desc: "Rendered via Mermaid 11 into an SVG.", syntax: "```mermaid\nflowchart LR\n  A --> B\n```" },
+      { name: "Table", desc: "GitHub-Flavored Markdown table.", syntax: "| H1 | H2 |\n| -- | -- |\n| a  | b  |", preview: previewTable },
+      { name: "Image", desc: "Standalone image renders as a figure with optional caption.", syntax: "![Caption](./image.png)", preview: previewImage },
+      { name: "Image (aligned, sized)", desc: "Pipe-separated options after the URL: alignment (left|center|right) and max-width.", syntax: "![Caption](./image.png|right|200px)", preview: previewImage },
+      { name: "Mermaid diagram", desc: "Rendered via Mermaid 11 into an SVG.", syntax: "```mermaid\nflowchart LR\n  A --> B\n```", preview: previewMermaid },
     ],
   },
   {
     title: "Page flow",
     items: [
-      { name: "Page break", desc: "Force a page break at the current location (export + preview).", syntax: "\\newpage\n\nor\n\n/newpage" },
-      { name: "Spacer", desc: "Invisible full-width block with a caller-chosen height. Accepts any CSS length.", syntax: "\\spacer[40px]\n\nor\n\n/spacer[2rem]" },
+      { name: "Page break", desc: "Force a page break at the current location (export + preview).", syntax: "\\newpage\n\nor\n\n/newpage", preview: previewPageBreak },
+      { name: "Spacer", desc: "Invisible full-width block with a caller-chosen height. Accepts any CSS length.", syntax: "\\spacer[40px]\n\nor\n\n/spacer[2rem]", preview: previewSpacer },
     ],
   },
   {
     title: "Alert containers",
     items: [
-      { name: ":::info", desc: "Editorial information.", syntax: ":::info\nInformation message.\n:::" },
-      { name: ":::warning", desc: "Caution or reminder.", syntax: ":::warning\nWarning message.\n:::" },
-      { name: ":::danger", desc: "Critical issue.", syntax: ":::danger\nCritical message.\n:::" },
-      { name: ":::success", desc: "Positive outcome.", syntax: ":::success\nSuccess message.\n:::" },
-      { name: ":::note", desc: "Annotation or aside.", syntax: ":::note\nEditorial note.\n:::" },
-      { name: ":::tip", desc: "Helpful advice.", syntax: ":::tip\nHelpful tip.\n:::" },
+      { name: ":::info", desc: "Editorial information.", syntax: ":::info\nInformation message.\n:::", preview: alertMock("Information", "Information message.", "#3373b3", "#eff6ff") },
+      { name: ":::warning", desc: "Caution or reminder.", syntax: ":::warning\nWarning message.\n:::", preview: alertMock("Attention", "Warning message.", "#eb9126", "#fff7ed") },
+      { name: ":::danger", desc: "Critical issue.", syntax: ":::danger\nCritical message.\n:::", preview: alertMock("Critique", "Critical message.", "#c0392b", "#fef2f2") },
+      { name: ":::success", desc: "Positive outcome.", syntax: ":::success\nSuccess message.\n:::", preview: alertMock("Succès", "Success message.", "#27ae60", "#f0fdf4") },
+      { name: ":::note", desc: "Annotation or aside.", syntax: ":::note\nEditorial note.\n:::", preview: alertMock("Note", "Editorial note.", "#64748b", "#f8fafc") },
+      { name: ":::tip", desc: "Helpful advice.", syntax: ":::tip\nHelpful tip.\n:::", preview: alertMock("Conseil", "Helpful tip.", "#493a8b", "#f5f3ff") },
     ],
   },
   {
     title: "BEORN layout components",
     items: [
-      { name: ":::kpi", desc: "KPI tiles. One non-empty line per tile. Syntax: `VALUE | LABEL | NOTE`. NOTE is optional.", syntax: ":::kpi\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse | SLA P1\n99,9 % | Disponibilité cible\n:::" },
-      { name: ":::enjeux", desc: "Numbered pillar tiles (auto 01-07, capped at 7). Syntax: `TITLE | PITCH`.", syntax: ":::enjeux\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps intégré\n:::" },
-      { name: ":::breakdown", desc: "Multi-card deliverables view. Uses `:::item TITLE | PHASE` sub-headers with a bulleted body per card.", syntax: ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::item Implémentation | Phase 2\n- Dev itératif\n- Tests\n:::" },
-      { name: ":::planning", desc: "Contract-lifecycle heat matrix. Config block (columns/milestones) + `---` + data rows `Title | T T T …` where T is X/■ = on, o/• = event, else off.", syntax: ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev     | . X X X .\n:::" },
-      { name: ":::quote", desc: "Blockquote with author/role attribution.", syntax: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::' },
-      { name: ":::timeline", desc: "Vertical timeline. Each `:::step TITLE | META` starts a new step with markdown body.", syntax: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::" },
-      { name: "12-column grid (`ao-grid`)", desc: "Fenced code block of kind `ao-grid`. Each `:::col-N` opens a column spanning N/12.", syntax: "```ao-grid\n:::col-8\nColonne principale\n:::col-4\nColonne latérale\n```" },
+      { name: ":::kpi", desc: "KPI tiles. One non-empty line per tile. Syntax: `VALUE | LABEL | NOTE`. NOTE is optional.", syntax: ":::kpi\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse | SLA P1\n99,9 % | Disponibilité cible\n:::", preview: previewKpi },
+      { name: ":::enjeux", desc: "Numbered pillar tiles (auto 01-07, capped at 7). Syntax: `TITLE | PITCH`.", syntax: ":::enjeux\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps intégré\n:::", preview: previewEnjeux },
+      { name: ":::breakdown", desc: "Multi-card deliverables view. Uses `:::item TITLE | PHASE` sub-headers with a bulleted body per card.", syntax: ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::item Implémentation | Phase 2\n- Dev itératif\n- Tests\n:::", preview: previewBreakdown },
+      { name: ":::planning", desc: "Contract-lifecycle heat matrix. Config block (columns/milestones) + `---` + data rows `Title | T T T …` where T is X/■ = on, o/• = event, else off.", syntax: ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev     | . X X X .\n:::", preview: previewPlanning },
+      { name: ":::quote", desc: "Blockquote with author/role attribution.", syntax: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::', preview: previewQuote },
+      { name: ":::timeline", desc: "Vertical timeline. Each `:::step TITLE | META` starts a new step with markdown body.", syntax: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::", preview: previewTimeline },
+      { name: "12-column grid (`ao-grid`)", desc: "Fenced code block of kind `ao-grid`. Each `:::col-N` opens a column spanning N/12.", syntax: "```ao-grid\n:::col-8\nColonne principale\n:::col-4\nColonne latérale\n```", preview: previewGrid },
     ],
   },
   {
     title: "Style directive",
     items: [
-      { name: "{:style …}", desc: "Inline per-block spacing override. Goes at the end of the block's first source line. Keys: mt/mr/mb/ml/pt/pr/pb/pl. Values are raw px (0–500). Use the Style Mode toggle for a visual editor.", syntax: "## Heading {:style mt=16 pb=8}\n\nParagraph. {:style mt=24}\n\n--- {:style mt=32 mb=32}" },
+      { name: "{:style …}", desc: "Inline per-block spacing override. Goes at the end of the block's first source line. Keys: mt/mr/mb/ml/pt/pr/pb/pl. Values are raw px (0–500). Use the Style Mode toggle for a visual editor.", syntax: "## Heading {:style mt=16 pb=8}\n\nParagraph. {:style mt=24}\n\n--- {:style mt=32 mb=32}", preview: previewStyle },
     ],
   },
   {
@@ -590,6 +666,34 @@ const HELP_CATEGORIES: HelpCategory[] = [
     ],
   },
 ];
+
+// Map component-menu labels to their preview HTML, for tooltip previews on
+// hover. Keys are the exact `label` strings used in the menu.
+const COMPONENT_PREVIEWS: Record<string, string> = {
+  "Alert — Info": alertMock("Information", "Information message.", "#3373b3", "#eff6ff"),
+  "Alert — Warning": alertMock("Attention", "Warning message.", "#eb9126", "#fff7ed"),
+  "Alert — Danger": alertMock("Critique", "Critical message.", "#c0392b", "#fef2f2"),
+  "Alert — Success": alertMock("Succès", "Success message.", "#27ae60", "#f0fdf4"),
+  "Alert — Note": alertMock("Note", "Editorial note.", "#64748b", "#f8fafc"),
+  "Alert — Tip": alertMock("Conseil", "Helpful tip.", "#493a8b", "#f5f3ff"),
+  "KPI tiles": previewKpi,
+  "Enjeux / pillars": previewEnjeux,
+  "Breakdown": previewBreakdown,
+  "Planning heat-matrix": previewPlanning,
+  "Quote": previewQuote,
+  "Timeline": previewTimeline,
+  "12-col grid  (ao-grid)": previewGrid,
+};
+
+const BLOCK_PREVIEWS: Record<string, string> = {
+  "Bullet list": previewList,
+  "Numbered list": previewOrderedList,
+  "Blockquote": previewBlockquote,
+  "Code block": previewCodeBlock,
+  "Horizontal rule": previewHr,
+  "Page break  (\\newpage)": previewPageBreak,
+  "Spacer  (\\spacer[20px])": previewSpacer,
+};
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -607,12 +711,13 @@ function openHelpModal(): void {
         <div class="help-category">
           <div class="help-category-title">${escapeHtml(cat.title)}</div>
           ${cat.items.map((item) => `
-            <div class="help-item">
-              <div>
+            <div class="help-item${item.preview ? " has-preview" : ""}">
+              <div class="help-item-head">
                 <div class="help-item-name">${escapeHtml(item.name)}</div>
                 <div class="help-item-desc">${escapeHtml(item.desc)}</div>
               </div>
               <pre class="help-item-syntax">${escapeHtml(item.syntax)}</pre>
+              ${item.preview ? `<div class="help-item-preview">${item.preview}</div>` : ""}
             </div>
           `).join("")}
         </div>
