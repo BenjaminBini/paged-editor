@@ -13,7 +13,6 @@ import {
 } from "../tabs/tab-bar-controller.js";
 import { triggerRender } from "../../document/render-scheduler.js";
 import { hideWelcome } from "../../shell/ui/menu-state-manager.js";
-import { updateGutterMarkers } from "../../editor/editor-decorations.js";
 import * as platform from "../../infrastructure/platform-adapter.js";
 import { emit } from "../../infrastructure/event-bus.js";
 import { setActiveFileContext } from "./active-file-context.js";
@@ -64,7 +63,6 @@ export async function reloadTabFromDisk(tab: { path: string; name: string; readO
     const [content, modTime] = await Promise.all([readFile(tab.path), getFileModTime(tab.path)]);
     cm.setValue(content);
     markActiveTabClean(content, modTime);
-    updateGutterMarkers();
     renderFileList();
     hideLoading();
     if (status) status.textContent ="Reloaded " + tab.name + " from disk";
@@ -112,8 +110,7 @@ export async function doSave(): Promise<boolean> {
     if (result.action === "reload") {
       cm.setValue(result.content!);
       markActiveTabClean(result.content!, result.modTime);
-      updateGutterMarkers();
-      renderFileList();
+        renderFileList();
       if (status) status.textContent ="Loaded disk version of " + tab.name;
       return true;
     }
@@ -127,8 +124,7 @@ export async function doSave(): Promise<boolean> {
       await writeFile(tab.path, cm.getValue());
       const modTime = await getFileModTime(tab.path);
       markActiveTabClean(cm.getValue(), modTime);
-      updateGutterMarkers();
-      renderFileList();
+        renderFileList();
       if (status) status.textContent ="Saved " + tab.name;
       return true;
     }
@@ -136,7 +132,6 @@ export async function doSave(): Promise<boolean> {
     // Normal save
     markActiveTabClean(content, result.modTime);
     updateTitle(tab.name, false);
-    updateGutterMarkers();
     renderFileList();
     if (status) status.textContent ="Saved " + tab.name;
     emit("file-saved", { file: tab.path, name: tab.name });
@@ -164,7 +159,6 @@ export async function doSaveAs(): Promise<boolean> {
     setActiveFileContext(name, filePath);
     markActiveTabClean(cm.getValue(), modTime);
     updateTitle(name, false);
-    updateGutterMarkers();
     renderFileList();
     if (status) status.textContent ="Saved as " + name;
     addRecentFile(filePath);

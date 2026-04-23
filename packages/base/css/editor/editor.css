@@ -215,22 +215,18 @@
   border-top: 1.5px solid rgba(88, 91, 112, 0.6);
   border-radius: 2px;
 }
-/* ── Heading numbering via CSS counters ─────────────────────────────── */
-/* No JS computation: editor-decorations applies .cm-md-h1 … .cm-md-h4
-   classes to heading lines; counters handle the 1 / 1.2 / 1.2.3 display
-   through ::before markers. Resets cascade by level so child counters
-   start fresh under each new parent. */
-.cm-content {
-  counter-reset: md-h1 md-h2 md-h3 md-h4;
-}
-.cm-md-h1 { counter-increment: md-h1; counter-reset: md-h2 md-h3 md-h4; }
-.cm-md-h2 { counter-increment: md-h2; counter-reset: md-h3 md-h4; }
-.cm-md-h3 { counter-increment: md-h3; counter-reset: md-h4; }
-.cm-md-h4 { counter-increment: md-h4; }
-
+/* ── Heading numbering via data-sec attribute ────────────────────────── */
+/* The editor-decorations plugin computes section labels (1 / 1.2 / 1.2.3
+   …) once per document change and stores them as `data-sec` on each
+   heading line. CSS does the visual work — we don't use CSS `counter()`
+   here because CodeMirror virtualises the viewport, so off-screen
+   heading lines leave the DOM and their counters vanish. Attribute-based
+   labels survive virtualisation because every visible heading carries
+   its own precomputed label. */
 .cm-md-h2::before,
 .cm-md-h3::before,
 .cm-md-h4::before {
+  content: attr(data-sec);
   font-family: "Nunito", sans-serif;
   font-weight: 700;
   margin-right: 6px;
@@ -240,17 +236,14 @@
   vertical-align: middle;
 }
 .cm-md-h2::before {
-  content: counter(md-h1) "." counter(md-h2);
   background: rgba(224, 192, 112, 0.14);
   color: #e0c070;
 }
 .cm-md-h3::before {
-  content: counter(md-h1) "." counter(md-h2) "." counter(md-h3);
   background: rgba(200, 216, 128, 0.10);
   color: #c8d880;
 }
 .cm-md-h4::before {
-  content: counter(md-h1) "." counter(md-h2) "." counter(md-h3) "." counter(md-h4);
   background: rgba(137, 180, 250, 0.09);
   color: #89b4fa;
 }

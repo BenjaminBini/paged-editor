@@ -123,8 +123,6 @@ export function onChangeDirtyTracking(): void {
 
 export function wireTabCallbacks({
   reattachCmListeners,
-  updateGutterMarkers,
-  applyHeadingMarks,
   buildOutline,
   updateMenuState,
   hideWelcome,
@@ -134,8 +132,6 @@ export function wireTabCallbacks({
   detachCmListeners,
 }: {
   reattachCmListeners: () => void;
-  updateGutterMarkers: () => void;
-  applyHeadingMarks: () => void;
   buildOutline: () => void;
   updateMenuState: () => void;
   hideWelcome: () => void;
@@ -179,8 +175,6 @@ export function wireTabCallbacks({
     if (isMarkdownTab(tab)) {
       setTableRangesDirty();
       setTimeout(refreshTableWidgets, 150);
-      setTimeout(updateGutterMarkers, 50);
-      setTimeout(applyHeadingMarks, 50);
     }
     updateMenuState();
     schedulePersist();

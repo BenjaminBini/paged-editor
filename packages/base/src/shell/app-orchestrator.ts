@@ -93,14 +93,6 @@ import { bindToggleButton } from "./ui/style-mode.js";
 import { bindSidebarDom } from "./ui/sidebar-panel-manager.js";
 import { install as installPreviewInteraction } from "./ui/preview-interaction.js";
 import { mountInspector } from "../editor/style-inspector.js";
-import {
-  updateGutterMarkers as _updateGutterMarkers,
-  applyPageBreakMarks,
-  applyHeadingMarks as _applyHeadingMarks,
-  getCursorLine,
-  setCursorLine,
-  resetPageBreakCache,
-} from "../editor/editor-decorations.js";
 import "./ui/resize-handle.js";
 import * as platform from "../infrastructure/platform-adapter.js";
 import { isMarkdownTab } from "../document/model/memoire-views.js";
@@ -194,11 +186,10 @@ cm.on("change", onChangeAutoRender);
 cm.on("change", onChangeDirtyTracking);
 
 // ── Editor decorations ─────────────────────────────────────────────────────
-// Consolidated: one debounced handler for all cm.change decoration updates,
-// one handler for cursorActivity. Replaces 5 independent timers.
+// The mdDecorations ViewPlugin (wired into the CM6 extensions list) owns
+// heading labels and HR widgets now. This orchestrator only needs to keep
+// the outline panel and the table-format button in sync with cursor moves.
 
-const updateGutterMarkers: () => void = (): void => _updateGutterMarkers();
-const applyHeadingMarks: () => void = (): void => _applyHeadingMarks();
 const _buildOutline: () => void = (): void => buildOutline(getActiveTab);
 
 const btnFormatTable: HTMLElement | null = document.getElementById("btnFormatTable");
@@ -206,14 +197,8 @@ const btnFormatTable: HTMLElement | null = document.getElementById("btnFormatTab
 let _decorTimer: ReturnType<typeof setTimeout> | null = null;
 function onChangeDecorations(): void {
   if (!hasOpenTabs() || !isEditableMarkdownContext()) return;
-  resetPageBreakCache();
   clearTimeout(_decorTimer ?? undefined);
-  _decorTimer = setTimeout(() => {
-    applyPageBreakMarks();       // 1. page break widgets
-    applyHeadingMarks();         // 2. heading number badges
-    _buildOutline();             // 3. document outline
-    updateGutterMarkers();       // 4. gutter change markers (heaviest — last)
-  }, 200);
+  _decorTimer = setTimeout(_buildOutline, 200);
 }
 
 let _cursorRafPending = false;
@@ -226,17 +211,7 @@ function onCursorDecorations(): void {
       if (btnFormatTable) btnFormatTable.style.display = "none";
       return;
     }
-    // Page breaks: re-apply when cursor moves to/from a \newpage line
-    applyPageBreakMarks();
-    // Heading badges: re-apply when cursor line changes
-    const cur = cm.getCursor("head").line;
-    if (cur !== getCursorLine()) {
-      setCursorLine(cur);
-      applyHeadingMarks();
-    }
-    // Outline highlight
     updateOutlineHighlight();
-    // Table format button
     if (btnFormatTable) {
       btnFormatTable.style.display = getTableRangeAt(cm.getCursor("head").line) ? "" : "none";
     }
@@ -246,13 +221,12 @@ function onCursorDecorations(): void {
 cm.on("change", onChangeDecorations);
 cm.on("cursorActivity", onCursorDecorations);
 cm.on("scroll", updateOutlineHighlight);
-setTimeout(() => { applyPageBreakMarks(); applyHeadingMarks(); _buildOutline(); }, 200);
+setTimeout(_buildOutline, 200);
 
 // ── Wire tab & sidebar callbacks (delegated to tab-integration.js) ─────────────
 
 wireTabCallbacks({
   reattachCmListeners, detachCmListeners,
-  updateGutterMarkers, applyHeadingMarks,
   buildOutline: _buildOutline, updateMenuState,
   hideWelcome, showWelcome, doSave, reloadTabFromDisk,
 });
