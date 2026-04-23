@@ -154,8 +154,6 @@ export function mountInspector(root: HTMLElement): void {
     for (const field of FIELDS) {
       const cell = document.createElement("div");
       cell.className = `inspector-cell inspector-cell-${field.pos}`;
-      const current = (entry.styleValues[field.key] as number | undefined) ?? 0;
-      const step = Math.max(MIN_STEP, Math.min(MAX_STEP, current));
 
       const label = document.createElement("label");
       label.textContent = field.label;
@@ -163,33 +161,44 @@ export function mountInspector(root: HTMLElement): void {
       const dec = document.createElement("button");
       dec.className = "inspector-dec";
       dec.textContent = "−";
-      dec.disabled = hasErrors || step <= MIN_STEP;
 
       const stepEl = document.createElement("span");
       stepEl.className = "inspector-step";
-      stepEl.textContent = String(step);
 
       const inc = document.createElement("button");
       inc.className = "inspector-inc";
       inc.textContent = "+";
-      inc.disabled = hasErrors || step >= MAX_STEP;
 
       const px = document.createElement("span");
       px.className = "inspector-px";
-      px.textContent = `${SPACING_SCALE[step]}px`;
+
+      // paint() reads the live value from the closure's entry (which commit()
+      // mutates optimistically), so repeated clicks fired before the
+      // debounced re-render land each use the latest step.
+      const paint = (): void => {
+        const current = (entry.styleValues[field.key] as number | undefined) ?? 0;
+        const step = Math.max(MIN_STEP, Math.min(MAX_STEP, current));
+        stepEl.textContent = String(step);
+        px.textContent = `${SPACING_SCALE[step]}px`;
+        dec.disabled = hasErrors || step <= MIN_STEP;
+        inc.disabled = hasErrors || step >= MAX_STEP;
+      };
 
       const apply = (delta: number): void => {
         if (hasErrors) return;
-        const nextStep = Math.max(MIN_STEP, Math.min(MAX_STEP, step + delta));
-        if (nextStep === step) return;
+        const current = (entry.styleValues[field.key] as number | undefined) ?? 0;
+        const nextStep = Math.max(MIN_STEP, Math.min(MAX_STEP, current + delta));
+        if (nextStep === current) return;
         const nextValues: StyleValues = { ...entry.styleValues, [field.key]: nextStep };
         if (nextStep === 0) delete nextValues[field.key];
         commit(entry, nextValues);
+        paint();
       };
 
       inc.addEventListener("click", () => apply(+1));
       dec.addEventListener("click", () => apply(-1));
 
+      paint();
       cell.append(label, dec, stepEl, inc, px);
       grid.appendChild(cell);
     }
