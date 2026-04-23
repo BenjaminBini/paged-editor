@@ -25,6 +25,9 @@ import {
   ViewPlugin,
   WidgetType,
 } from "../../assets/codemirror6.bundle.js";
+import { detectPartieNum } from "../document/rendering/markdown-helpers.js";
+import { getActiveFileName } from "../workspace/files/active-file-context.js";
+import { on as busOn, off as busOff } from "../infrastructure/event-bus.js";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -60,10 +63,18 @@ interface HeadingInfo {
 
 // Walk the whole document once, compute section numbers with stable counters.
 // O(lines); runs only when the document changes.
-function computeHeadingLabels(doc: any): Map<number, HeadingInfo> {
+//
+// If the filename (or an explicit "# Partie N" line) yields a partie number,
+// that number seeds the h1 counter — so in a file like "01-typography.md",
+// the first h2 renders as "1.1" instead of ".1", even when the document has
+// no top-level h1. h1 lines in the body don't increment the partie number;
+// they just reset child counters.
+function computeHeadingLabels(doc: any, partieNum: number): Map<number, HeadingInfo> {
   const map = new Map<number, HeadingInfo>();
   // counters[1..6] — 0-slot unused for 1-indexed clarity.
   const counters: number[] = [0, 0, 0, 0, 0, 0, 0];
+  if (partieNum > 0) counters[1] = partieNum;
+
   const lineCount = doc.lines as number;
   for (let lineNo = 1; lineNo <= lineCount; lineNo++) {
     const line = doc.line(lineNo);
@@ -71,8 +82,14 @@ function computeHeadingLabels(doc: any): Map<number, HeadingInfo> {
     if (!match) continue;
     const level = match[1].length;
     if (level < 1 || level > MAX_HEADING_LEVEL) continue;
-    counters[level] += 1;
-    for (let k = level + 1; k <= MAX_HEADING_LEVEL; k++) counters[k] = 0;
+    if (level === 1 && partieNum > 0) {
+      // Partie number is document-wide — h1 lines don't shift it.
+      counters[1] = partieNum;
+      for (let k = 2; k <= MAX_HEADING_LEVEL; k++) counters[k] = 0;
+    } else {
+      counters[level] += 1;
+      for (let k = level + 1; k <= MAX_HEADING_LEVEL; k++) counters[k] = 0;
+    }
     const parts: number[] = [];
     for (let k = 1; k <= level; k++) parts.push(counters[k]);
     map.set(line.from, { level, label: parts.join(".") });
@@ -147,25 +164,49 @@ function buildDecorations(
 
 // ── Plugin ────────────────────────────────────────────────────────────────────
 
+function currentPartieNum(doc: any): number {
+  return detectPartieNum(doc.toString() as string, getActiveFileName() || "");
+}
+
 export const mdDecorations = ViewPlugin.fromClass(
   class {
     decorations: any;
     labels: Map<number, HeadingInfo>;
+    partieNum: number;
+    private _onContentLoaded: () => void;
 
     constructor(view: any) {
-      this.labels = computeHeadingLabels(view.state.doc);
+      this.partieNum = currentPartieNum(view.state.doc);
+      this.labels = computeHeadingLabels(view.state.doc, this.partieNum);
       this.decorations = buildDecorations(view, this.labels);
+
+      // `content-loaded` fires after a tab switch completes — setValue
+      // updates the doc first, then tab-integration sets the active-file
+      // context, then content-loaded publishes. Rebuild labels here so the
+      // new filename drives the partie number.
+      this._onContentLoaded = (): void => {
+        this.partieNum = currentPartieNum(view.state.doc);
+        this.labels = computeHeadingLabels(view.state.doc, this.partieNum);
+        this.decorations = buildDecorations(view, this.labels);
+        view.dispatch({}); // force CM to pick up the new decoration set
+      };
+      busOn("content-loaded", this._onContentLoaded);
     }
 
     update(update: any): void {
       if (update.docChanged) {
-        // Recompute only when the text itself changes — scrolling and
-        // cursor moves reuse the cached labels.
-        this.labels = computeHeadingLabels(update.view.state.doc);
+        // Text changes may reveal/hide a `# Partie N` directive — recompute
+        // the partie number too. The filename check is a cheap string op.
+        this.partieNum = currentPartieNum(update.view.state.doc);
+        this.labels = computeHeadingLabels(update.view.state.doc, this.partieNum);
       }
       if (update.docChanged || update.viewportChanged || update.selectionSet) {
         this.decorations = buildDecorations(update.view, this.labels);
       }
+    }
+
+    destroy(): void {
+      busOff("content-loaded", this._onContentLoaded);
     }
   },
   { decorations: (v: any) => v.decorations },
