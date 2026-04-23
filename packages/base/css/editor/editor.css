@@ -215,35 +215,44 @@
   border-top: 1.5px solid rgba(88, 91, 112, 0.6);
   border-radius: 2px;
 }
-/* ── Heading level badges (replace ## prefix when cursor is elsewhere) ── */
-.cm-heading-badge {
-  display: inline-flex; align-items: center; justify-content: center;
+/* ── Heading numbering via CSS counters ─────────────────────────────── */
+/* No JS computation: editor-decorations applies .cm-md-h1 … .cm-md-h4
+   classes to heading lines; counters handle the 1 / 1.2 / 1.2.3 display
+   through ::before markers. Resets cascade by level so child counters
+   start fresh under each new parent. */
+.cm-content {
+  counter-reset: md-h1 md-h2 md-h3 md-h4;
+}
+.cm-md-h1 { counter-increment: md-h1; counter-reset: md-h2 md-h3 md-h4; }
+.cm-md-h2 { counter-increment: md-h2; counter-reset: md-h3 md-h4; }
+.cm-md-h3 { counter-increment: md-h3; counter-reset: md-h4; }
+.cm-md-h4 { counter-increment: md-h4; }
+
+.cm-md-h2::before,
+.cm-md-h3::before,
+.cm-md-h4::before {
   font-family: "Nunito", sans-serif;
-  font-weight: 700; line-height: 1;
-  padding: 2px 6px; border-radius: 4px;
-  margin-right: 6px; white-space: nowrap;
-  cursor: text; vertical-align: middle;
-}
-.cm-heading-badge[data-level="1"] {
-  background: rgba(240, 168, 64, 0.18); color: #f0a840;
-  font-size: 13px; padding: 3px 9px; border-radius: 5px;
-}
-.cm-heading-badge[data-level="2"] {
-  background: rgba(224, 192, 112, 0.14); color: #e0c070;
-  font-size: 12px; padding: 2px 8px;
-}
-.cm-heading-badge[data-level="3"] {
-  background: rgba(200, 216, 128, 0.10); color: #c8d880;
+  font-weight: 700;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 3px;
   font-size: 11px;
+  vertical-align: middle;
 }
-.cm-heading-badge[data-level="4"] {
-  background: rgba(137, 180, 250, 0.09); color: #89b4fa;
-  font-size: 11px;
+.cm-md-h2::before {
+  content: counter(md-h1) "." counter(md-h2);
+  background: rgba(224, 192, 112, 0.14);
+  color: #e0c070;
 }
-.cm-heading-badge[data-level="5"],
-.cm-heading-badge[data-level="6"] {
-  background: rgba(166, 173, 200, 0.08); color: #a6adc8;
-  font-size: 10px;
+.cm-md-h3::before {
+  content: counter(md-h1) "." counter(md-h2) "." counter(md-h3);
+  background: rgba(200, 216, 128, 0.10);
+  color: #c8d880;
+}
+.cm-md-h4::before {
+  content: counter(md-h1) "." counter(md-h2) "." counter(md-h3) "." counter(md-h4);
+  background: rgba(137, 180, 250, 0.09);
+  color: #89b4fa;
 }
 /* Hide text content of table lines; line widgets (siblings) stay visible */
 .tw-hidden-text { height: 0 !important; overflow: hidden !important; padding: 0 !important; margin: 0 !important; }

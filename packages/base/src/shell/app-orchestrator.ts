@@ -428,17 +428,10 @@ function updateMenuState(): void {
   _updateMenuState(getActiveTab, hasOpenTabs, getFolderPath);
 }
 
-const BLANK_FRONTMATTER: string = `---
-title: ""
-doctype: ""
----
-
-`;
-
 function newDocument(): void {
   hideWelcome();
-  openTab("", "Untitled", BLANK_FRONTMATTER, 0);
-  cm.setCursor({ line: 1, ch: 8 });
+  openTab("", "Untitled", "", 0);
+  cm.setCursor({ line: 0, ch: 0 });
   cm.focus();
 }
 

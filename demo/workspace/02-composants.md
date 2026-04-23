@@ -8,6 +8,8 @@ Six variantes de blocs contextuels. Le corps accepte du Markdown complet.
 **Information** — Contexte neutre, donnée complémentaire ou rappel de procédure.
 :::
 
+/spacer[20px]
+
 :::warning
 **Attention** — Avertissement modéré nécessitant vigilance avant d'agir.
 :::
@@ -146,6 +148,7 @@ Bloc fencé ` ```ao-grid ` avec sous-headers `:::col-N` (N = largeur sur 12 colo
 
 ```ao-grid
 :::col-7
+
 ### Colonne principale (7/12)
 
 La grille `ao-grid` divise la ligne en 12 colonnes. Chaque `:::col-N` ouvre une colonne de largeur N. Le contenu est du Markdown standard.
@@ -155,13 +158,14 @@ La grille `ao-grid` divise la ligne en 12 colonnes. Chaque `:::col-N` ouvre une 
 - Aucune fermeture explicite nécessaire
 
 :::col-5
+
 ### Colonne secondaire (5/12)
 
-| Indicateur | Valeur |
-|------------|--------|
+| Indicateur    | Valeur |
+| ------------- | ------ |
 | Disponibilité | 99,9 % |
-| MTTR | < 2 h |
-| SLA P1 | 4 h |
+| MTTR          | < 2 h  |
+| SLA P1        | 4 h    |
 
 :::tip
 Les colonnes peuvent contenir des alertes et des composants imbriqués.

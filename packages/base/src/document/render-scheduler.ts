@@ -219,6 +219,24 @@ async function patchRequest(): Promise<void> {
     if (patched > 0) {
       const elapsed = Math.round(performance.now() - startedAt);
       status.textContent = `Patched ${patched} — ${elapsed}ms`;
+
+      // The patch covered all visible changes. Advance the cached baseline
+      // (HTML, sourceBlocks, blockEntries, styleErrors) so the next diff
+      // starts from the patched state, and CANCEL the pending full-render
+      // timer — the preview is already correct; firing triggerRender would
+      // cause a visible flicker from the Paged.js re-layout.
+      _lastRenderedHtml = newHtml;
+      _lastSourceBlocks = newBlocks as typeof _lastSourceBlocks;
+      _lastBlockEntries = ((renderResult as any).blockEntries || []) as BlockEntry[];
+      _lastStyleErrors = ((renderResult as any).styleErrors || []) as StyleError[];
+      setBlockEntries(_lastBlockEntries);
+      setStyleErrors(_lastStyleErrors);
+      restoreSelection(_lastBlockEntries);
+      // Notify listeners so editor decorations + inspector reflect the new
+      // blockEntries without waiting for a full render.
+      emit("section-ready");
+      clearTimeout(renderTimeout ?? undefined);
+      renderTimeout = null;
     }
   } finally {
     _isPatching = false;

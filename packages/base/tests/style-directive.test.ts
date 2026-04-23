@@ -1,14 +1,16 @@
 import { describe, expect, test } from "vitest";
 import {
-  SPACING_SCALE,
+  MAX_PX,
+  MIN_PX,
   renderStyleAttr,
   parseDirectiveFragment,
   extractDirective,
 } from "../src/document/rendering/style-directive.js";
 
-describe("SPACING_SCALE", () => {
-  test("has 8 entries, 0 → 64", () => {
-    expect(SPACING_SCALE).toEqual([0, 4, 8, 16, 24, 32, 48, 64]);
+describe("px bounds", () => {
+  test("sane defaults", () => {
+    expect(MIN_PX).toBe(0);
+    expect(MAX_PX).toBeGreaterThan(100);
   });
 });
 
@@ -18,49 +20,59 @@ describe("renderStyleAttr", () => {
     expect(renderStyleAttr(undefined)).toBe("");
   });
 
-  test("single value → one declaration", () => {
-    expect(renderStyleAttr({ mt: 3 })).toBe("margin-top:16px;");
+  test("single value → one px declaration", () => {
+    expect(renderStyleAttr({ mt: 16 })).toBe("margin-top:16px;");
   });
 
   test("multiple values → declarations in fixed order", () => {
-    expect(renderStyleAttr({ pb: 2, mt: 3, ml: 1 })).toBe(
+    expect(renderStyleAttr({ pb: 8, mt: 16, ml: 4 })).toBe(
       "margin-top:16px;margin-left:4px;padding-bottom:8px;",
     );
   });
 
   test("zero is treated as absent", () => {
-    expect(renderStyleAttr({ mt: 0, pb: 3 })).toBe("padding-bottom:16px;");
+    expect(renderStyleAttr({ mt: 0, pb: 16 })).toBe("padding-bottom:16px;");
+  });
+
+  test("value clamps to MAX_PX", () => {
+    expect(renderStyleAttr({ mt: 9999 })).toBe(`margin-top:${MAX_PX}px;`);
   });
 });
 
 describe("parseDirectiveFragment", () => {
-  test("parses simple pairs", () => {
-    const { values, errors } = parseDirectiveFragment("mt=3 pb=2");
-    expect(values).toEqual({ mt: 3, pb: 2 });
+  test("parses simple px pairs", () => {
+    const { values, errors } = parseDirectiveFragment("mt=16 pb=8");
+    expect(values).toEqual({ mt: 16, pb: 8 });
     expect(errors).toEqual([]);
   });
 
   test("unknown key → error, key omitted", () => {
-    const { values, errors } = parseDirectiveFragment("mt=3 xy=1");
-    expect(values).toEqual({ mt: 3 });
-    expect(errors).toEqual([{ code: "unknown-key", token: "xy=1" }]);
+    const { values, errors } = parseDirectiveFragment("mt=16 xy=4");
+    expect(values).toEqual({ mt: 16 });
+    expect(errors).toEqual([{ code: "unknown-key", token: "xy=4" }]);
   });
 
-  test("invalid value (out of 0..7) → error, key omitted", () => {
-    const { values, errors } = parseDirectiveFragment("mt=99");
+  test("invalid value (out of 0..MAX_PX) → error, key omitted", () => {
+    const { values, errors } = parseDirectiveFragment(`mt=${MAX_PX + 1}`);
     expect(values).toEqual({});
-    expect(errors).toEqual([{ code: "invalid-value", token: "mt=99" }]);
+    expect(errors[0].code).toBe("invalid-value");
+  });
+
+  test("negative value → error", () => {
+    const { values, errors } = parseDirectiveFragment("mt=-5");
+    expect(values).toEqual({});
+    expect(errors).toEqual([{ code: "invalid-value", token: "mt=-5" }]);
   });
 
   test("duplicate key → first wins + error", () => {
-    const { values, errors } = parseDirectiveFragment("mt=3 mt=5");
-    expect(values).toEqual({ mt: 3 });
-    expect(errors).toEqual([{ code: "duplicate-key", token: "mt=5" }]);
+    const { values, errors } = parseDirectiveFragment("mt=16 mt=24");
+    expect(values).toEqual({ mt: 16 });
+    expect(errors).toEqual([{ code: "duplicate-key", token: "mt=24" }]);
   });
 
   test("non key=value token → unknown-key", () => {
-    const { values, errors } = parseDirectiveFragment("mt=3 garbage");
-    expect(values).toEqual({ mt: 3 });
+    const { values, errors } = parseDirectiveFragment("mt=16 garbage");
+    expect(values).toEqual({ mt: 16 });
     expect(errors).toEqual([{ code: "unknown-key", token: "garbage" }]);
   });
 

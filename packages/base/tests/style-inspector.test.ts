@@ -8,39 +8,39 @@ describe("computeDirectiveChange", () => {
       doc,
       line: 0,
       existingRange: null,
-      newValues: { mt: 3, pb: 2 },
+      newValues: { mt: 16, pb: 8 },
     });
     expect(change).toEqual({
       from: 10, // end of "## Heading"
       to: 10,
-      insert: " {:style mt=3 pb=2}",
+      insert: " {:style mt=16 pb=8}",
     });
   });
 
   test("replace existing directive", () => {
-    const doc = "## Heading {:style mt=3}\n";
+    const doc = "## Heading {:style mt=16}\n";
     const change = computeDirectiveChange({
       doc,
       line: 0,
-      existingRange: { from: 10, to: 24 },
-      newValues: { mt: 5, pb: 2 },
+      existingRange: { from: 10, to: 25 },
+      newValues: { mt: 24, pb: 8 },
     });
     expect(change).toEqual({
       from: 10,
-      to: 24,
-      insert: " {:style mt=5 pb=2}",
+      to: 25,
+      insert: " {:style mt=24 pb=8}",
     });
   });
 
   test("remove directive (all zero)", () => {
-    const doc = "## Heading {:style mt=3}\n";
+    const doc = "## Heading {:style mt=16}\n";
     const change = computeDirectiveChange({
       doc,
       line: 0,
-      existingRange: { from: 10, to: 24 },
+      existingRange: { from: 10, to: 25 },
       newValues: {},
     });
-    expect(change).toEqual({ from: 10, to: 24, insert: "" });
+    expect(change).toEqual({ from: 10, to: 25, insert: "" });
   });
 
   test("keys serialize in fixed order", () => {
@@ -48,9 +48,9 @@ describe("computeDirectiveChange", () => {
       doc: "p\n",
       line: 0,
       existingRange: null,
-      newValues: { pb: 1, mt: 2, ml: 3 },
+      newValues: { pb: 4, mt: 8, ml: 12 },
     });
-    expect(change.insert).toBe(" {:style mt=2 ml=3 pb=1}");
+    expect(change.insert).toBe(" {:style mt=8 ml=12 pb=4}");
   });
 
   test("zero values are omitted", () => {
@@ -58,8 +58,8 @@ describe("computeDirectiveChange", () => {
       doc: "p\n",
       line: 0,
       existingRange: null,
-      newValues: { mt: 3, pb: 0, ml: 2 },
+      newValues: { mt: 16, pb: 0, ml: 8 },
     });
-    expect(change.insert).toBe(" {:style mt=3 ml=2}");
+    expect(change.insert).toBe(" {:style mt=16 ml=8}");
   });
 });

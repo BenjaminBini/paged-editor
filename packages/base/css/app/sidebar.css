@@ -158,26 +158,35 @@
 }
 .inspector-box {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
+  grid-template-columns: 1fr;
+  gap: 4px;
 }
 .inspector-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   background: #1e293b;
   padding: 5px 8px;
   border-radius: 4px;
   font-size: 11px;
 }
-.inspector-cell label { color: #64748b; width: 22px; }
+.inspector-cell label { color: #64748b; width: 22px; flex-shrink: 0; }
 .inspector-cell button {
   background: #334155; border: none; color: #e2e8f0;
-  width: 20px; height: 20px; border-radius: 3px; cursor: pointer;
+  min-width: 22px; height: 20px; border-radius: 3px; cursor: pointer;
+  padding: 0 4px; font-weight: 600;
 }
-.inspector-cell button:disabled { opacity: 0.4; cursor: default; }
-.inspector-cell .inspector-step { width: 14px; text-align: center; font-weight: 600; }
-.inspector-cell .inspector-px { color: #64748b; margin-left: auto; font-size: 10px; }
+.inspector-cell button:disabled { opacity: 0.35; cursor: default; }
+.inspector-cell button:not(:disabled):hover { background: #475569; }
+.inspector-cell .inspector-dec-dbl,
+.inspector-cell .inspector-inc-dbl { font-size: 10px; letter-spacing: -1px; }
+.inspector-cell .inspector-px-value {
+  flex: 1;
+  text-align: center;
+  font-weight: 600;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+}
 .inspector-clear {
   background: #334155; border: none; color: #e2e8f0;
   padding: 5px 10px; border-radius: 4px; cursor: pointer;

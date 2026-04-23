@@ -34,7 +34,7 @@ describe("isStylableToken", () => {
 
 describe("buildBlockEntries — well-formed directives", () => {
   test("heading with directive", () => {
-    const body = "## Heading {:style mt=3 pb=2}\n";
+    const body = "## Heading {:style mt=16 pb=8}\n";
     const { blockEntries, styleErrors } = buildBlockEntries(body, {
       frontmatterCharOffset: 0,
       frontmatterLineOffset: 0,
@@ -47,8 +47,8 @@ describe("buildBlockEntries — well-formed directives", () => {
     expect(e.blockType).toBe("heading");
     expect(e.sourceLineStart).toBe(0);
     expect(e.sourceLineEnd).toBe(0);
-    expect(e.styleValues).toEqual({ mt: 3, pb: 2 });
-    expect(e.styleDirectiveRange).toEqual({ from: 10, to: 29 });
+    expect(e.styleValues).toEqual({ mt: 16, pb: 8 });
+    expect(e.styleDirectiveRange).toEqual({ from: 10, to: 30 });
     expect(e.errors).toEqual([]);
     expect(e.parentBlockId).toBeNull();
   });
@@ -66,7 +66,7 @@ describe("buildBlockEntries — well-formed directives", () => {
 
   test("paragraph with directive on first source line", () => {
     const body =
-      "First line of paragraph. {:style mt=4}\nSecond line continues.\n";
+      "First line of paragraph. {:style mt=24}\nSecond line continues.\n";
     const { blockEntries } = buildBlockEntries(body, {
       frontmatterCharOffset: 0,
       frontmatterLineOffset: 0,
@@ -74,19 +74,19 @@ describe("buildBlockEntries — well-formed directives", () => {
     });
     expect(blockEntries).toHaveLength(1);
     expect(blockEntries[0].blockType).toBe("paragraph");
-    expect(blockEntries[0].styleValues).toEqual({ mt: 4 });
+    expect(blockEntries[0].styleValues).toEqual({ mt: 24 });
   });
 });
 
 describe("buildBlockEntries — directive stripping (pass 2)", () => {
   test("fenced code block retains clean token.lang", () => {
-    const body = "```js {:style mt=3}\nconst x = 1;\n```\n";
+    const body = "```js {:style mt=16}\nconst x = 1;\n```\n";
     const { blockEntries, cleanedBody } = buildBlockEntries(body, {
       frontmatterCharOffset: 0,
       frontmatterLineOffset: 0,
       lex,
     });
-    expect(blockEntries[0].styleValues).toEqual({ mt: 3 });
+    expect(blockEntries[0].styleValues).toEqual({ mt: 16 });
     expect(cleanedBody).toBe("```js\nconst x = 1;\n```\n");
     const tokens = marked.lexer(cleanedBody) as Array<Record<string, unknown>>;
     expect(tokens[0].type).toBe("code");
@@ -96,32 +96,32 @@ describe("buildBlockEntries — directive stripping (pass 2)", () => {
   test("paragraph continuation line is not scanned", () => {
     // {:style} on line 2 is mid-paragraph prose, not a directive.
     const body =
-      "First line. {:style mt=2}\nSecond {:style looks} weird.\n";
+      "First line. {:style mt=8}\nSecond {:style looks} weird.\n";
     const { blockEntries, cleanedBody } = buildBlockEntries(body, {
       frontmatterCharOffset: 0,
       frontmatterLineOffset: 0,
       lex,
     });
-    expect(blockEntries[0].styleValues).toEqual({ mt: 2 });
+    expect(blockEntries[0].styleValues).toEqual({ mt: 8 });
     expect(cleanedBody).toContain("Second {:style looks} weird.");
   });
 
   test("hr directive stripped, produces clean ---", () => {
-    const body = "--- {:style mt=5}\n";
+    const body = "--- {:style mt=32}\n";
     const { blockEntries, cleanedBody } = buildBlockEntries(body, {
       frontmatterCharOffset: 0,
       frontmatterLineOffset: 0,
       lex,
     });
     expect(blockEntries[0].blockType).toBe("hr");
-    expect(blockEntries[0].styleValues).toEqual({ mt: 5 });
+    expect(blockEntries[0].styleValues).toEqual({ mt: 32 });
     expect(cleanedBody).toBe("---\n");
   });
 });
 
 describe("buildBlockEntries — malformed directives", () => {
   test("missing closing brace → malformed-directive, not stripped", () => {
-    const body = "## Heading {:style mt=3\n";
+    const body = "## Heading {:style mt=16\n";
     const { blockEntries, cleanedBody } = buildBlockEntries(body, {
       frontmatterCharOffset: 0,
       frontmatterLineOffset: 0,
@@ -132,14 +132,14 @@ describe("buildBlockEntries — malformed directives", () => {
     expect(blockEntries[0].errors).toHaveLength(1);
     expect(blockEntries[0].errors[0].code).toBe("malformed-directive");
     expect(blockEntries[0].errors[0].blockId).toBe("b0");
-    expect(blockEntries[0].styleDirectiveRange).toEqual({ from: 10, to: 23 });
+    expect(blockEntries[0].styleDirectiveRange).toEqual({ from: 10, to: 24 });
   });
 });
 
 describe("buildBlockEntries — orphan directives", () => {
   test("directive on a line that's not a block-start → orphan error", () => {
     // Blank-line content with a valid-looking directive — no stylable block starts here.
-    const body = "## Heading\n\n   {:style mt=3}\n";
+    const body = "## Heading\n\n   {:style mt=16}\n";
     const { styleErrors, cleanedBody } = buildBlockEntries(body, {
       frontmatterCharOffset: 0,
       frontmatterLineOffset: 0,
@@ -152,7 +152,7 @@ describe("buildBlockEntries — orphan directives", () => {
   });
 
   test("well-formed directive inside a fenced code block content is NOT orphan", () => {
-    const body = "```\nsome code {:style mt=3}\nmore\n```\n";
+    const body = "```\nsome code {:style mt=16}\nmore\n```\n";
     const { styleErrors } = buildBlockEntries(body, {
       frontmatterCharOffset: 0,
       frontmatterLineOffset: 0,
@@ -164,7 +164,7 @@ describe("buildBlockEntries — orphan directives", () => {
 
 describe("buildBlockEntries — coordinate translation", () => {
   test("frontmatter offsets are added to every exported range", () => {
-    const body = "## Heading {:style mt=3 pb=2}\n";
+    const body = "## Heading {:style mt=16 pb=8}\n";
     const frontmatterCharOffset = 20;
     const frontmatterLineOffset = 3;
     const { blockEntries, styleErrors } = buildBlockEntries(body, {
@@ -175,7 +175,7 @@ describe("buildBlockEntries — coordinate translation", () => {
     const e = blockEntries[0];
     expect(e.sourceLineStart).toBe(3);
     expect(e.sourceLineEnd).toBe(3);
-    expect(e.styleDirectiveRange).toEqual({ from: 30, to: 49 });
+    expect(e.styleDirectiveRange).toEqual({ from: 30, to: 50 });
     expect(styleErrors).toEqual([]);
   });
 });

@@ -713,6 +713,18 @@ marked.use({
       if (stripped === "\\newpage" || stripped === "/newpage") {
         return `<div class="page-break"${sl}${blockIdAttr}${styleAttr}></div>\n`;
       }
+      // \spacer[10px] or /spacer[10px] — invisible full-width block with a
+      // caller-chosen height. Accepts either prefix, mirroring \newpage /
+      // /newpage. Value accepts any CSS length (px, rem, em, %, vh).
+      const spacerMatch = stripped.match(/^[\\/]spacer\[([^\]]*)\]$/);
+      if (spacerMatch) {
+        const rawHeight = spacerMatch[1].trim();
+        const safeHeight = /^-?\d+(?:\.\d+)?(?:px|rem|em|%|vh|vw|cm|mm|in|pt|pc)$/.test(rawHeight)
+          ? rawHeight
+          : "0";
+        const mergedStyle = `height:${safeHeight};width:100%;${styleCss}`;
+        return `<div class="md-spacer"${sl}${blockIdAttr} style="${mergedStyle}" aria-hidden="true"></div>\n`;
+      }
       return `<p${sl}${blockIdAttr}${styleAttr}>${text}</p>\n`;
     },
 

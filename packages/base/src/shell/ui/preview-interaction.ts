@@ -128,4 +128,15 @@ export function install(container: HTMLElement): void {
   busOn("section-ready", () => {
     applyClasses(container, _hovered.value, _selected.value);
   });
+  // When Style Mode turns off, drop the hover + selection so highlights
+  // vanish from both the preview and the editor immediately.
+  effect(() => {
+    if (!isStyleModeActive()) {
+      if (_hovered.value !== null) _hovered.value = null;
+      if (_selected.value !== null) {
+        _selected.value = null;
+        _lastSelectedSourceLine = null;
+      }
+    }
+  });
 }

@@ -1,13 +1,15 @@
 // style-directive.ts — Core primitives for the {:style mt=N …} directive.
-// Scale, key set, inline-style serializer. Used by both the renderer
-// (section-pipeline) and the inspector UI.
+// Values are raw pixel counts (non-negative integers). Used by both the
+// renderer (section-pipeline) and the inspector UI.
 
-export const SPACING_SCALE: readonly number[] = [
-  0, 4, 8, 16, 24, 32, 48, 64,
-] as const;
+// Keeping these names for compatibility; values are now PIXEL BOUNDS, not
+// scale-step bounds.
+export const MIN_PX = 0;
+export const MAX_PX = 500;
 
-export const MIN_STEP = 0;
-export const MAX_STEP = SPACING_SCALE.length - 1;
+// Inspector stepper step sizes: single = 1px, double = 4px.
+export const STEP_SMALL = 1;
+export const STEP_LARGE = 4;
 
 export type SpacingKey =
   | "mt"
@@ -48,10 +50,10 @@ export function renderStyleAttr(values: StyleValues | undefined): string {
   if (!values) return "";
   let out = "";
   for (const key of SPACING_KEYS) {
-    const step = values[key];
-    if (typeof step !== "number" || step <= 0) continue;
-    const clamped = Math.max(MIN_STEP, Math.min(MAX_STEP, Math.floor(step)));
-    out += `${CSS_PROPERTY[key]}:${SPACING_SCALE[clamped]}px;`;
+    const px = values[key];
+    if (typeof px !== "number" || px <= 0) continue;
+    const clamped = Math.max(MIN_PX, Math.min(MAX_PX, Math.floor(px)));
+    out += `${CSS_PROPERTY[key]}:${clamped}px;`;
   }
   return out;
 }
@@ -94,7 +96,7 @@ export function parseDirectiveFragment(fragment: string): ParsedFragment {
       continue;
     }
     const num = Number(raw);
-    if (!Number.isInteger(num) || num < MIN_STEP || num > MAX_STEP) {
+    if (!Number.isInteger(num) || num < MIN_PX || num > MAX_PX) {
       errors.push({ code: "invalid-value", token });
       continue;
     }

@@ -38,11 +38,12 @@ export function disable(): void {
   if (!_active.value) return;
   _active.value = false;
   document.body.classList.remove("style-mode");
-  // Hand the sidebar back to the outline manager. It will re-request
-  // visibility on its next buildOutline, but we set "none" here so the
-  // transition is clean if the outline happens to be empty.
+  // Hand the sidebar back to the outline manager. setActivePanel releases
+  // the inspector slot and requestOutline re-establishes the outline (or
+  // leaves it hidden if empty).
   if (activeSidebarPanel() === "inspector") {
-    requestOutline(false);
+    setActivePanel("none");
+    requestOutline(true);
   }
 }
 
