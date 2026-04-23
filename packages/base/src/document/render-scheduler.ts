@@ -182,7 +182,11 @@ async function patchRequest(): Promise<void> {
   // Patch only applies to regular markdown sections with existing Paged.js output.
   if (!markdown.trim() || isTocTab(activeTab) || isCoverTab(activeTab)) return;
   if (!_lastRenderedHtml || !_lastSourceBlocks.length) return;
-  if (isRendering) return;
+  // Don't start a patch while a full render is running OR while another
+  // patch is still mid-await. Concurrent patches can double-advance the
+  // cached baseline; concurrent patch+render can leave Paged.js outputs
+  // layered in the DOM.
+  if (isRendering || _isPatching) return;
 
   _isPatching = true;
   try {

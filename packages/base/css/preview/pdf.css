@@ -446,15 +446,15 @@ h3 {
   max-width: 100%;
 }
 
-/* ── H4: Label style — uppercase, tiny, em-dash prefix ── */
+/* ── H4: Label style — uppercase, em-dash prefix ── */
 h4 {
-  font-size: 7.5pt;
+  font-size: 9pt;
   color: var(--section-color, var(--navy));
   font-weight: 800;
   margin: var(--space-lg) 0 var(--space-sm);
   line-height: 1.4;
   text-transform: uppercase;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   padding-left: 0 !important;
   text-indent: 0 !important;
 }
@@ -509,10 +509,10 @@ h3 + h4 {
   content: "\203A";
   position: absolute;
   left: 0;
-  font-weight: 700;
+  font-weight: 900;
   color: var(--section-color, var(--blue));
-  font-size: inherit;
-  line-height: 1.6;
+  font-size: 1.35em;
+  line-height: 1.2;
   top: 0;
 }
 .pdf-content ul ul {
@@ -548,8 +548,11 @@ ol li::marker {
 }
 
 /* ── Tables — rounded, section-colored header, subtle stripes ── */
+/* width: auto lets the table size to its content; max-width stops very
+   wide tables from overflowing the page. */
 table {
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   border-collapse: separate;
   border-spacing: 0;
   margin: var(--space-lg) 0;
@@ -1193,7 +1196,10 @@ figure.md-image figcaption {
   border-left: 4px solid var(--purple);
   background: color-mix(in srgb, var(--purple) 5%, #fff);
   font-style: italic;
-  border-radius: 0 4px 4px 0;
+  /* Rounded on all corners to match the other call-out panels (:::info
+     / :::kpi / :::enjeux). The left-border radius is set via a small
+     tweak that keeps the thick accent line visible flush-left. */
+  border-radius: 10px;
   break-inside: avoid;
   page-break-inside: avoid;
 }
@@ -1207,7 +1213,9 @@ figure.md-image figcaption {
   content: "\201C"; /* “ */
   position: absolute;
   left: 0.35em;
-  top: -0.1em;
+  /* Pushed down a little so the glyph's optical baseline aligns with the
+     quote text instead of hanging above the panel's rounded top edge. */
+  top: 0.15em;
   font-family: "Source Serif 4", "Source Serif Pro", Georgia, serif;
   font-style: normal;
   font-weight: 700;

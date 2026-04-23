@@ -389,8 +389,33 @@ function insertBlockSnippet(snippet: string, selectionStartOffset?: number, sele
   refreshToolbarState();
 }
 
+function previewHtmlForLabel(src: MenuPreview | undefined): string {
+  if (!src) return "";
+  if (src.html) return src.html;
+  if (src.renderMd) {
+    const rendered = renderSnippetHtml(src.renderMd);
+    if (!rendered) return "";
+    // Tooltips are smaller than the help modal; embed the iframe with a
+    // fixed inline width so srcdoc layout settles immediately.
+    return `<iframe class="help-preview-frame help-preview-frame-tooltip" srcdoc="${escapeHtmlAttr(buildPreviewSrcdoc(rendered))}" style="width:100%;border:none;background:#fff;border-radius:4px;min-height:80px;"></iframe>`;
+  }
+  return "";
+}
+
+function escapeHtmlAttr(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/"/g, "&quot;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function buildPreviewSrcdoc(renderedHtml: string): string {
+  return `<!DOCTYPE html><html><head><base href="${location.origin}/"><link rel="stylesheet" href="css/preview/pdf.css"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono&family=Source+Serif+4&display=swap" rel="stylesheet"><style>html,body{margin:0;padding:0;background:#fff;}body{padding:10px;font-size:7.5pt;}@page{margin:0;}.pdf-content{padding:0;}section.level2{padding:0;}section.level2>:first-child{margin-top:0;}section.level2>:last-child{margin-bottom:0;}.md-planning{font-size:6.5pt;}.md-kpi-value{font-size:12pt;}.md-enjeux-num{font-size:14pt;}</style></head><body><section class="level2" style="${PREVIEW_SECTION_VARS}"><div class="pdf-content" style="${PREVIEW_SECTION_VARS}">${renderedHtml}</div></section></body></html>`;
+}
+
 function blockItem(label: string, action: () => void): { label: string; action: () => void; preview?: string } {
-  return { label, action, preview: BLOCK_PREVIEWS[label] };
+  return { label, action, preview: previewHtmlForLabel(BLOCK_PREVIEWS[label]) };
 }
 
 function openBlocksMenu(button: HTMLElement): void {
@@ -408,7 +433,7 @@ function openBlocksMenu(button: HTMLElement): void {
 }
 
 function compItem(label: string, action: () => void): { label: string; action: () => void; preview?: string } {
-  return { label, action, preview: COMPONENT_PREVIEWS[label] };
+  return { label, action, preview: previewHtmlForLabel(COMPONENT_PREVIEWS[label]) };
 }
 
 function openComponentsMenu(button: HTMLElement): void {
@@ -463,13 +488,116 @@ interface HelpItem {
   name: string;
   desc: string;
   syntax: string;
-  preview?: string; // raw HTML with inline styles (sandboxed rendering isn't
-                    // practical for 30+ items; inline styles sidestep CSS
-                    // collisions while still giving authors a visual hint)
+  // `renderMd` means: render this markdown snippet through marked and drop
+  // the result into a sandbox iframe that loads pdf.css. That way the
+  // preview matches the real preview exactly (alert chips with their real
+  // SVG icons, kpi / enjeux / breakdown / planning / timeline, etc.).
+  // `preview` is a static inline-styled HTML string for things that don't
+  // exercise pdf.css (bold/italic/heading mockup).
+  renderMd?: string;
+  preview?: string;
 }
 interface HelpCategory {
   title: string;
   items: HelpItem[];
+}
+
+// ── Live-render sandbox iframe ─────────────────────────────────────────────
+// srcdoc iframes inherit the parent's URL as their base so the <link> to
+// pdf.css resolves. The iframe gets a minimal wrapper that matches the real
+// preview's section context (`<section class="level2">` + `.pdf-content`).
+// After load, we size the iframe to its content's height so previews don't
+// scroll internally.
+
+const PREVIEW_SECTION_VARS =
+  "--section-color:#3373b3;--section-color-light:#7ab4e8;";
+
+function makePreviewIframe(renderedHtml: string, maxWidthPx = 260): HTMLIFrameElement {
+  const iframe = document.createElement("iframe");
+  iframe.className = "help-preview-frame";
+  iframe.style.cssText =
+    `width:100%;border:none;background:#fff;border-radius:4px;min-height:60px;`;
+  const src = `<!DOCTYPE html>
+<html>
+<head>
+<base href="${location.origin}/">
+<link rel="stylesheet" href="css/preview/pdf.css">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono&family=Source+Serif+4&display=swap" rel="stylesheet">
+<style>
+  html, body { margin:0; padding:0; background:#fff; }
+  body { padding:12px; font-size:8pt; }
+  /* Trim print-only resets that otherwise leave tiny margins visible. */
+  @page { margin:0; }
+  .pdf-content { padding:0; }
+  /* Keep components visually tight so they fit a 260px tooltip. */
+  section.level2 { padding:0; }
+  section.level2 > :first-child { margin-top:0; }
+  section.level2 > :last-child { margin-bottom:0; }
+  .md-planning { font-size:7pt; }
+  .md-kpi-value { font-size:14pt; }
+  .md-enjeux-num { font-size:16pt; }
+</style>
+</head>
+<body>
+<section class="level2" style="${PREVIEW_SECTION_VARS}">
+  <div class="pdf-content" style="${PREVIEW_SECTION_VARS}">${renderedHtml}</div>
+</section>
+<script>
+  // Report content height so the parent can size the iframe.
+  function report() {
+    const h = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+    );
+    parent.postMessage({ type: "help-preview-size", h, id: ${JSON.stringify("preview-" + Math.random())} }, "*");
+  }
+  window.addEventListener("load", () => setTimeout(report, 50));
+  // Mermaid / fonts can reflow after load; send once more.
+  setTimeout(report, 500);
+</script>
+</body>
+</html>`;
+  iframe.srcdoc = src;
+  iframe.addEventListener("load", () => {
+    const fit = (): void => {
+      try {
+        const doc = iframe.contentDocument;
+        if (!doc) return;
+        const h = Math.max(doc.body?.scrollHeight || 0, doc.documentElement?.scrollHeight || 0);
+        if (h > 0) iframe.style.height = `${h}px`;
+      } catch {
+        /* cross-origin (shouldn't happen for srcdoc) */
+      }
+    };
+    fit();
+    setTimeout(fit, 120);
+    setTimeout(fit, 500);
+  });
+  void maxWidthPx;
+  return iframe;
+}
+
+// Render a markdown snippet to HTML using the globally-configured marked
+// instance. Works for `:::info`, `:::kpi`, `:::enjeux`, etc. because those
+// extensions are registered in section-pipeline at module load. Headings
+// need the section-pipeline's per-render _ctx so we avoid them here and
+// fall back to static previews for anything heading-driven.
+function renderSnippetHtml(md: string): string {
+  try {
+    const html = (window as any).marked?.parse?.(md) ?? "";
+    return typeof html === "string" ? html : "";
+  } catch {
+    return "";
+  }
+}
+
+function previewNode(item: HelpItem): HTMLElement | string {
+  if (item.renderMd) {
+    const html = renderSnippetHtml(item.renderMd);
+    if (html) return makePreviewIframe(html);
+  }
+  if (item.preview) return item.preview;
+  return "";
 }
 
 // ── Inline-styled preview mockups ──────────────────────────────────────────
@@ -633,24 +761,24 @@ const HELP_CATEGORIES: HelpCategory[] = [
   {
     title: "Alert containers",
     items: [
-      { name: ":::info", desc: "Editorial information.", syntax: ":::info\nInformation message.\n:::", preview: alertMock("Information", "Information message.", "#3373b3", "#eff6ff") },
-      { name: ":::warning", desc: "Caution or reminder.", syntax: ":::warning\nWarning message.\n:::", preview: alertMock("Attention", "Warning message.", "#eb9126", "#fff7ed") },
-      { name: ":::danger", desc: "Critical issue.", syntax: ":::danger\nCritical message.\n:::", preview: alertMock("Critique", "Critical message.", "#c0392b", "#fef2f2") },
-      { name: ":::success", desc: "Positive outcome.", syntax: ":::success\nSuccess message.\n:::", preview: alertMock("Succès", "Success message.", "#27ae60", "#f0fdf4") },
-      { name: ":::note", desc: "Annotation or aside.", syntax: ":::note\nEditorial note.\n:::", preview: alertMock("Note", "Editorial note.", "#64748b", "#f8fafc") },
-      { name: ":::tip", desc: "Helpful advice.", syntax: ":::tip\nHelpful tip.\n:::", preview: alertMock("Conseil", "Helpful tip.", "#493a8b", "#f5f3ff") },
+      { name: ":::info", desc: "Editorial information.", syntax: ":::info\nInformation message.\n:::", renderMd: ":::info\nInformation message.\n:::" },
+      { name: ":::warning", desc: "Caution or reminder.", syntax: ":::warning\nWarning message.\n:::", renderMd: ":::warning\nWarning message.\n:::" },
+      { name: ":::danger", desc: "Critical issue.", syntax: ":::danger\nCritical message.\n:::", renderMd: ":::danger\nCritical message.\n:::" },
+      { name: ":::success", desc: "Positive outcome.", syntax: ":::success\nSuccess message.\n:::", renderMd: ":::success\nSuccess message.\n:::" },
+      { name: ":::note", desc: "Annotation or aside.", syntax: ":::note\nEditorial note.\n:::", renderMd: ":::note\nEditorial note.\n:::" },
+      { name: ":::tip", desc: "Helpful advice.", syntax: ":::tip\nHelpful tip.\n:::", renderMd: ":::tip\nHelpful tip.\n:::" },
     ],
   },
   {
     title: "BEORN layout components",
     items: [
-      { name: ":::kpi", desc: "KPI tiles. One non-empty line per tile. Syntax: `VALUE | LABEL | NOTE`. NOTE is optional.", syntax: ":::kpi\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse | SLA P1\n99,9 % | Disponibilité cible\n:::", preview: previewKpi },
-      { name: ":::enjeux", desc: "Numbered pillar tiles (auto 01-07, capped at 7). Syntax: `TITLE | PITCH`.", syntax: ":::enjeux\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps intégré\n:::", preview: previewEnjeux },
-      { name: ":::breakdown", desc: "Multi-card deliverables view. Uses `:::item TITLE | PHASE` sub-headers with a bulleted body per card.", syntax: ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::item Implémentation | Phase 2\n- Dev itératif\n- Tests\n:::", preview: previewBreakdown },
-      { name: ":::planning", desc: "Contract-lifecycle heat matrix. Config block (columns/milestones) + `---` + data rows `Title | T T T …` where T is X/■ = on, o/• = event, else off.", syntax: ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev     | . X X X .\n:::", preview: previewPlanning },
-      { name: ":::quote", desc: "Blockquote with author/role attribution.", syntax: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::', preview: previewQuote },
-      { name: ":::timeline", desc: "Vertical timeline. Each `:::step TITLE | META` starts a new step with markdown body.", syntax: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::", preview: previewTimeline },
-      { name: "12-column grid (`ao-grid`)", desc: "Fenced code block of kind `ao-grid`. Each `:::col-N` opens a column spanning N/12.", syntax: "```ao-grid\n:::col-8\nColonne principale\n:::col-4\nColonne latérale\n```", preview: previewGrid },
+      { name: ":::kpi", desc: "KPI tiles. One non-empty line per tile. Syntax: `VALUE | LABEL | NOTE`. NOTE is optional.", syntax: ":::kpi\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse | SLA P1\n99,9 % | Disponibilité cible\n:::", renderMd: ":::kpi\n18 ans | Expertise | Depuis 2007\n100+ | Projets livrés\n< 4 h | Réponse\n99,9 % | Dispo\n:::" },
+      { name: ":::enjeux", desc: "Numbered pillar tiles (auto 01-07, capped at 7). Syntax: `TITLE | PITCH`.", syntax: ":::enjeux\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps intégré\n:::", renderMd: ":::enjeux\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps\n:::" },
+      { name: ":::breakdown", desc: "Multi-card deliverables view. Uses `:::item TITLE | PHASE` sub-headers with a bulleted body per card.", syntax: ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::item Implémentation | Phase 2\n- Dev itératif\n- Tests\n:::", renderMd: ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::item Implémentation | Phase 2\n- Dev itératif\n:::" },
+      { name: ":::planning", desc: "Contract-lifecycle heat matrix. Config block (columns/milestones) + `---` + data rows `Title | T T T …` where T is X/■ = on, o/• = event, else off.", syntax: ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev     | . X X X .\n:::", renderMd: ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev | . X X X .\nTests | . . X X X\n:::" },
+      { name: ":::quote", desc: "Blockquote with author/role attribution.", syntax: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::', renderMd: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::' },
+      { name: ":::timeline", desc: "Vertical timeline. Each `:::step TITLE | META` starts a new step with markdown body.", syntax: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::", renderMd: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::step Étape 3 | J+10\nDescription.\n:::" },
+      { name: "12-column grid (`ao-grid`)", desc: "Fenced code block of kind `ao-grid`. Each `:::col-N` opens a column spanning N/12.", syntax: "```ao-grid\n:::col-8\nColonne principale\n:::col-4\nColonne latérale\n```", renderMd: "```ao-grid\n:::col-8\nColonne principale (8/12)\n:::col-4\nLatérale (4/12)\n```" },
     ],
   },
   {
@@ -667,32 +795,38 @@ const HELP_CATEGORIES: HelpCategory[] = [
   },
 ];
 
-// Map component-menu labels to their preview HTML, for tooltip previews on
-// hover. Keys are the exact `label` strings used in the menu.
-const COMPONENT_PREVIEWS: Record<string, string> = {
-  "Alert — Info": alertMock("Information", "Information message.", "#3373b3", "#eff6ff"),
-  "Alert — Warning": alertMock("Attention", "Warning message.", "#eb9126", "#fff7ed"),
-  "Alert — Danger": alertMock("Critique", "Critical message.", "#c0392b", "#fef2f2"),
-  "Alert — Success": alertMock("Succès", "Success message.", "#27ae60", "#f0fdf4"),
-  "Alert — Note": alertMock("Note", "Editorial note.", "#64748b", "#f8fafc"),
-  "Alert — Tip": alertMock("Conseil", "Helpful tip.", "#493a8b", "#f5f3ff"),
-  "KPI tiles": previewKpi,
-  "Enjeux / pillars": previewEnjeux,
-  "Breakdown": previewBreakdown,
-  "Planning heat-matrix": previewPlanning,
-  "Quote": previewQuote,
-  "Timeline": previewTimeline,
-  "12-col grid  (ao-grid)": previewGrid,
+// Map component-menu labels to their preview source — either a markdown
+// snippet (renderMd) to sandbox-render via pdf.css, or a static HTML mock
+// for things that don't exercise the real renderer.
+interface MenuPreview {
+  renderMd?: string;
+  html?: string;
+}
+
+const COMPONENT_PREVIEWS: Record<string, MenuPreview> = {
+  "Alert — Info": { renderMd: ":::info\nInformation message.\n:::" },
+  "Alert — Warning": { renderMd: ":::warning\nWarning message.\n:::" },
+  "Alert — Danger": { renderMd: ":::danger\nCritical message.\n:::" },
+  "Alert — Success": { renderMd: ":::success\nSuccess message.\n:::" },
+  "Alert — Note": { renderMd: ":::note\nEditorial note.\n:::" },
+  "Alert — Tip": { renderMd: ":::tip\nHelpful tip.\n:::" },
+  "KPI tiles": { renderMd: ":::kpi\n18 ans | Expertise | Depuis 2007\n100+ | Projets\n< 4 h | Réponse\n99,9 % | Dispo\n:::" },
+  "Enjeux / pillars": { renderMd: ":::enjeux\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps\n:::" },
+  "Breakdown": { renderMd: ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier\n- Architecture\n:::item Impl | Phase 2\n- Dev\n:::" },
+  "Planning heat-matrix": { renderMd: ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick@0, Go-live@3\n---\nAnalyse | X X o . .\nDev | . X X X .\n:::" },
+  "Quote": { renderMd: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::' },
+  "Timeline": { renderMd: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::" },
+  "12-col grid  (ao-grid)": { renderMd: "```ao-grid\n:::col-8\nColonne principale\n:::col-4\nLatérale\n```" },
 };
 
-const BLOCK_PREVIEWS: Record<string, string> = {
-  "Bullet list": previewList,
-  "Numbered list": previewOrderedList,
-  "Blockquote": previewBlockquote,
-  "Code block": previewCodeBlock,
-  "Horizontal rule": previewHr,
-  "Page break  (\\newpage)": previewPageBreak,
-  "Spacer  (\\spacer[20px])": previewSpacer,
+const BLOCK_PREVIEWS: Record<string, MenuPreview> = {
+  "Bullet list": { renderMd: "- Item 1\n- Item 2\n- Item 3" },
+  "Numbered list": { renderMd: "1. First\n2. Second\n3. Third" },
+  "Blockquote": { renderMd: "> Quote text." },
+  "Code block": { renderMd: "```js\nconst x = 1;\n```" },
+  "Horizontal rule": { renderMd: "---" },
+  "Page break  (\\newpage)": { html: previewPageBreak },
+  "Spacer  (\\spacer[20px])": { html: previewSpacer },
 };
 
 function escapeHtml(s: string): string {
@@ -707,21 +841,40 @@ function openHelpModal(): void {
   if (!_helpBuilt) {
     const body = document.getElementById("helpBody");
     if (body) {
-      body.innerHTML = HELP_CATEGORIES.map((cat) => `
+      // Render category shells with placeholders for previews; we'll mount
+      // the preview iframes / static mockups after innerHTML is set so they
+      // aren't clobbered by the template literal.
+      body.innerHTML = HELP_CATEGORIES.map((cat, ci) => `
         <div class="help-category">
           <div class="help-category-title">${escapeHtml(cat.title)}</div>
-          ${cat.items.map((item) => `
-            <div class="help-item${item.preview ? " has-preview" : ""}">
+          ${cat.items.map((item, ii) => {
+            const hasPreview = !!(item.renderMd || item.preview);
+            return `
+            <div class="help-item${hasPreview ? " has-preview" : ""}" data-cat="${ci}" data-idx="${ii}">
               <div class="help-item-head">
                 <div class="help-item-name">${escapeHtml(item.name)}</div>
                 <div class="help-item-desc">${escapeHtml(item.desc)}</div>
               </div>
               <pre class="help-item-syntax">${escapeHtml(item.syntax)}</pre>
-              ${item.preview ? `<div class="help-item-preview">${item.preview}</div>` : ""}
+              ${hasPreview ? `<div class="help-item-preview" data-cat="${ci}" data-idx="${ii}"></div>` : ""}
             </div>
-          `).join("")}
+          `;
+          }).join("")}
         </div>
       `).join("");
+      // Mount previews (either iframes or static HTML).
+      for (const slot of body.querySelectorAll<HTMLElement>(".help-item-preview")) {
+        const ci = Number(slot.dataset.cat);
+        const ii = Number(slot.dataset.idx);
+        const item = HELP_CATEGORIES[ci]?.items[ii];
+        if (!item) continue;
+        const node = previewNode(item);
+        if (node instanceof HTMLElement) {
+          slot.appendChild(node);
+        } else if (typeof node === "string" && node) {
+          slot.innerHTML = node;
+        }
+      }
     }
     const closeBtn = document.getElementById("btnHelpClose");
     closeBtn?.addEventListener("click", closeHelpModal);
