@@ -393,7 +393,7 @@ h2 {
   font-size: 14pt;
   color: var(--section-color, var(--navy));
   font-weight: 700;
-  margin: 1rem 0 var(--space-md);
+  margin: var(--space-lg) 0 var(--space-sm);
   padding: 0;
   line-height: 1.3;
   position: relative;
