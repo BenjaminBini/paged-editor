@@ -7,9 +7,9 @@
   "confidential": false,
   "logos": {
     "candidat": {
-      "file": "assets/pasted-image-20260413-120334-220.png",
+      "file": "assets/beorn-logo.png",
       "showInCover": true,
-      "coverWidth": 200,
+      "coverWidth": 180,
       "coverX": 0,
       "coverY": 0,
       "showInFooter": false,
@@ -20,9 +20,9 @@
     "partenaire": {
       "file": "assets/lumapps-logo.svg",
       "showInCover": true,
-      "coverWidth": 310,
-      "coverX": 32,
-      "coverY": 0,
+      "coverWidth": 400,
+      "coverX": 28,
+      "coverY": -28,
       "showInFooter": false,
       "footerWidth": 80,
       "footerX": 0,
