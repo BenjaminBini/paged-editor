@@ -520,6 +520,7 @@ h3 + h4 {
 }
 .pdf-content ul ul li {
   font-size: 12px;
+  line-height: 1.4;
 }
 .pdf-content ul ul li::before {
   content: "\21B3"; /* ↳ downwards arrow with tip rightwards */
@@ -788,7 +789,7 @@ figure.md-image figcaption {
   background: var(--teal);
 }
 
-/* ── KPI tiles (:::kpi — one "VALUE | LABEL [| NOTE]" per line) ──
+/* ── Stat tiles (:::stat-tiles — one "VALUE | LABEL [| NOTE]" per line) ──
    Dashboard-card look, gradient surface. Grid caps at 4 tiles per row
    but fills available width when there are fewer — 2 tiles share 50/50,
    not 25/25 with two ghost columns. Works inside narrow ao-grid columns
@@ -798,7 +799,7 @@ figure.md-image figcaption {
    a quarter of the row minus the 3-gap math (3 × 1rem / 4). `auto-fit`
    packs as many of those tracks as fit, then collapses unused ones, so
    remaining tracks expand to 1fr. */
-.md-kpi {
+.md-stat-tiles {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(calc(25% - 0.75rem), 1fr));
   gap: var(--space-md);
@@ -806,7 +807,7 @@ figure.md-image figcaption {
   break-inside: avoid;
   page-break-inside: avoid;
 }
-.md-kpi-item {
+.md-stat-tiles-item {
   min-width: 0;
   padding: var(--space-md) var(--space-sm);
   background: linear-gradient(
@@ -824,7 +825,7 @@ figure.md-image figcaption {
   color: #fff;
   box-shadow: 0 2px 6px rgba(25, 54, 88, 0.18);
 }
-.md-kpi-value {
+.md-stat-tiles-value {
   font-family: "Nunito", sans-serif;
   font-size: 2.1em;
   font-weight: 800;
@@ -835,7 +836,7 @@ figure.md-image figcaption {
   font-feature-settings: "tnum";
 }
 /* Optional icon — sits inline with the label text (small, coloured) */
-.md-kpi-label {
+.md-stat-tiles-label {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -851,14 +852,14 @@ figure.md-image figcaption {
   border-top: 1px solid rgba(255, 255, 255, 0.28);
   line-height: 1.3;
 }
-.md-kpi-icon {
+.md-stat-tiles-icon {
   display: inline-flex;
   flex-shrink: 0;
   width: 13px;
   height: 13px;
   color: rgba(255, 255, 255, 0.88);
 }
-.md-kpi-icon svg {
+.md-stat-tiles-icon svg {
   width: 100%;
   height: 100%;
   fill: none;
@@ -867,7 +868,7 @@ figure.md-image figcaption {
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-.md-kpi-note {
+.md-stat-tiles-note {
   text-align: center;
   font-size: 0.75em;
   color: rgba(255, 255, 255, 0.72);
@@ -876,11 +877,11 @@ figure.md-image figcaption {
   line-height: 1.3;
 }
 
-/* ── Editorial enjeux grid (:::kpi but for "project pillars") ──
+/* ── Numbered-grid editorial pillars (:::stat-tiles but for "project pillars") ──
    7-tile max (one per BEORN palette colour). Each tile has a big display
    number, a coloured hairline, a matching-colour title, and a serif pitch.
    No card chrome — whitespace and the number carry the hierarchy. */
-.md-enjeux {
+.md-numbered-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   column-gap: var(--space-lg);
@@ -889,42 +890,42 @@ figure.md-image figcaption {
   break-inside: avoid;
   page-break-inside: avoid;
 }
-.md-enjeux-item {
+.md-numbered-grid-item {
   display: flex;
   flex-direction: column;
   gap: 10px;
   break-inside: avoid;
   page-break-inside: avoid;
 }
-.md-enjeux-item:nth-child(1) {
+.md-numbered-grid-item:nth-child(1) {
   color: var(--navy);
 }
-.md-enjeux-item:nth-child(2) {
+.md-numbered-grid-item:nth-child(2) {
   color: var(--blue);
 }
-.md-enjeux-item:nth-child(3) {
+.md-numbered-grid-item:nth-child(3) {
   color: var(--teal);
 }
-.md-enjeux-item:nth-child(4) {
+.md-numbered-grid-item:nth-child(4) {
   color: var(--purple);
 }
-.md-enjeux-item:nth-child(5) {
+.md-numbered-grid-item:nth-child(5) {
   color: var(--magenta);
 }
-.md-enjeux-item:nth-child(6) {
+.md-numbered-grid-item:nth-child(6) {
   color: var(--orange);
 }
-.md-enjeux-item:nth-child(7) {
+.md-numbered-grid-item:nth-child(7) {
   color: var(--green);
 }
-.md-enjeux-num-row {
+.md-numbered-grid-num-row {
   display: flex;
   align-items: flex-end;
   padding-bottom: 6px;
   border-bottom: 1.5px solid currentColor;
   line-height: 1;
 }
-.md-enjeux-num {
+.md-numbered-grid-num {
   font-family: "Nunito", sans-serif;
   font-size: 36pt;
   font-weight: 900;
@@ -934,7 +935,7 @@ figure.md-image figcaption {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum", "lnum";
 }
-.md-enjeux-title {
+.md-numbered-grid-title {
   font-family: "Nunito", sans-serif;
   font-size: 11pt;
   font-weight: 800;
@@ -942,7 +943,7 @@ figure.md-image figcaption {
   line-height: 1.22;
   margin: 0;
 }
-.md-enjeux-pitch {
+.md-numbered-grid-pitch {
   font-family: "Nunito", sans-serif;
   font-size: 9.5pt;
   line-height: 1.5;
@@ -950,12 +951,12 @@ figure.md-image figcaption {
   margin: 0;
 }
 
-/* ── Breakdown grid (:::breakdown + inner :::item TITRE | PHASE) ──
+/* ── Card grid (:::card-grid + inner :::card TITRE | PHASE) ──
    7 auto-numbered cards laid out in a 4-column grid (4 + 3 wrap for 7
    items). Each card holds a big palette number, a coloured hairline,
    title, optional phase tag, then the markdown list the author wrote
    inside the item. Bullets inherit the card's palette colour. */
-.md-breakdown {
+.md-card-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   column-gap: var(--space-md);
@@ -964,40 +965,40 @@ figure.md-image figcaption {
   break-inside: avoid;
   page-break-inside: avoid;
 }
-.md-breakdown-item {
+.md-card-grid-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
   break-inside: avoid;
   page-break-inside: avoid;
 }
-.md-breakdown-item:nth-child(1) {
+.md-card-grid-card:nth-child(1) {
   color: var(--navy);
 }
-.md-breakdown-item:nth-child(2) {
+.md-card-grid-card:nth-child(2) {
   color: var(--blue);
 }
-.md-breakdown-item:nth-child(3) {
+.md-card-grid-card:nth-child(3) {
   color: var(--teal);
 }
-.md-breakdown-item:nth-child(4) {
+.md-card-grid-card:nth-child(4) {
   color: var(--purple);
 }
-.md-breakdown-item:nth-child(5) {
+.md-card-grid-card:nth-child(5) {
   color: var(--green);
 }
-.md-breakdown-item:nth-child(6) {
+.md-card-grid-card:nth-child(6) {
   color: var(--orange);
 }
-.md-breakdown-item:nth-child(7) {
+.md-card-grid-card:nth-child(7) {
   color: var(--magenta);
 }
-.md-breakdown-left {
+.md-card-grid-left {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
-.md-breakdown-num {
+.md-card-grid-num {
   font-family: "Nunito", sans-serif;
   font-size: 28pt;
   font-weight: 900;
@@ -1007,7 +1008,7 @@ figure.md-image figcaption {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum", "lnum";
 }
-.md-breakdown-title {
+.md-card-grid-title {
   font-family: "Nunito", sans-serif;
   font-size: 10.5pt;
   font-weight: 800;
@@ -1017,7 +1018,7 @@ figure.md-image figcaption {
   border-top: 1.5px solid currentColor;
   letter-spacing: -0.005em;
 }
-.md-breakdown-phase {
+.md-card-grid-phase {
   font-family: "Nunito", sans-serif;
   font-size: 6pt;
   font-weight: 700;
@@ -1028,9 +1029,9 @@ figure.md-image figcaption {
   margin-top: 2px;
   line-height: 1.3;
 }
-/* Markdown-parsed <ul> sits as a direct child of .md-breakdown-item.
+/* Markdown-parsed <ul> sits as a direct child of .md-card-grid-card.
    Override global list styles for compact bullets in a narrow card. */
-.md-breakdown-item > ul {
+.md-card-grid-card > ul {
   list-style: none !important;
   margin: 2px 0 0 !important;
   padding: 0 !important;
@@ -1038,7 +1039,7 @@ figure.md-image figcaption {
   flex-direction: column;
   gap: 5px;
 }
-.md-breakdown-item > ul > li {
+.md-card-grid-card > ul > li {
   position: relative;
   padding-left: 18px !important;
   margin: 0 !important;
@@ -1047,35 +1048,35 @@ figure.md-image figcaption {
   line-height: 1.38;
   color: var(--text);
 }
-.md-breakdown-item > ul > li::before {
+.md-card-grid-card > ul > li::before {
   font-size: 12px;
 }
 
-/* ── Planning heat-matrix (:::planning) ──
-   Contract-lifecycle grid: 1 row per prestation, 1 column per period,
+/* ── Heatmap (:::heatmap) ──
+   Contract-lifecycle grid: 1 row per series, 1 column per period,
    milestone row (▼ arrows) on top. Column count is dynamic via the
-   custom property `--md-planning-cols` set on the wrapper.
+   custom property `--md-heatmap-cols` set on the wrapper.
    - cell.on    → filled in the row's palette colour
    - cell.event → grey background + coloured dot (punctual event)
    - cell.off   → grey background (inactive)
    - milestones → absolute-positioned on a fractional track */
-.md-planning {
+.md-heatmap {
   font-family: "Nunito", sans-serif;
   margin: var(--space-md) 0;
   break-inside: avoid;
   page-break-inside: avoid;
 }
-.md-planning-milestones {
+.md-heatmap-milestones {
   display: grid;
   grid-template-columns: 180px 1fr;
   gap: 4px;
   margin-bottom: 8px;
 }
-.md-planning-milestones-track {
+.md-heatmap-milestones-track {
   position: relative;
   height: 42px;
 }
-.md-planning-milestone {
+.md-heatmap-milestone {
   position: absolute;
   top: 0;
   bottom: 0;
@@ -1086,15 +1087,15 @@ figure.md-image figcaption {
   transform: translateX(-50%);
 }
 /* Edge milestones anchor to their edge so the label doesn't clip. */
-.md-planning-milestone.start {
+.md-heatmap-milestone.start {
   transform: translateX(0);
   align-items: flex-start;
 }
-.md-planning-milestone.end {
+.md-heatmap-milestone.end {
   transform: translateX(-100%);
   align-items: flex-end;
 }
-.md-planning-milestone-label {
+.md-heatmap-milestone-label {
   font-size: 7pt;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -1103,7 +1104,7 @@ figure.md-image figcaption {
   white-space: nowrap;
   line-height: 1;
 }
-.md-planning-milestone-sub {
+.md-heatmap-milestone-sub {
   font-size: 6.5pt;
   font-weight: 600;
   color: var(--text-light);
@@ -1112,22 +1113,22 @@ figure.md-image figcaption {
   margin-top: 2px;
   font-variant-numeric: tabular-nums;
 }
-.md-planning-milestone-arrow {
+.md-heatmap-milestone-arrow {
   font-size: 11pt;
   line-height: 1;
   color: var(--slate);
 }
 
-.md-planning-head,
-.md-planning-row {
+.md-heatmap-head,
+.md-heatmap-row {
   display: grid;
-  grid-template-columns: 180px repeat(var(--md-planning-cols, 7), 1fr);
+  grid-template-columns: 180px repeat(var(--md-heatmap-cols, 7), 1fr);
   gap: 4px;
 }
-.md-planning-head {
+.md-heatmap-head {
   margin-bottom: 6px;
 }
-.md-planning-col {
+.md-heatmap-col {
   font-size: 7pt;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -1137,53 +1138,53 @@ figure.md-image figcaption {
   padding: 5px 0 6px;
   border-radius: 3px 3px 0 0;
 }
-.md-planning-col-mise {
+.md-heatmap-col-mise {
   color: var(--blue);
   background: color-mix(in srgb, var(--blue) 10%, transparent);
 }
-.md-planning-col-expl {
+.md-heatmap-col-expl {
   color: var(--green);
   background: color-mix(in srgb, var(--green) 10%, transparent);
 }
-.md-planning-col-fin {
+.md-heatmap-col-fin {
   color: var(--magenta);
   background: color-mix(in srgb, var(--magenta) 10%, transparent);
 }
-.md-planning-row {
+.md-heatmap-row {
   align-items: center;
   padding: 3px 0;
 }
-.md-planning-row-label {
+.md-heatmap-row-label {
   display: flex;
   align-items: baseline;
   gap: 7px;
 }
-.md-planning-row-num {
+.md-heatmap-row-num {
   font-size: 9pt;
   font-weight: 800;
   color: currentColor;
   font-variant-numeric: tabular-nums;
 }
-.md-planning-row-name {
+.md-heatmap-row-name {
   font-size: 9pt;
   font-weight: 700;
   color: var(--navy);
 }
-.md-planning-cell {
+.md-heatmap-cell {
   height: 14px;
   border-radius: 2px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.md-planning-cell.on {
+.md-heatmap-cell.on {
   background: currentColor;
 }
-.md-planning-cell.off,
-.md-planning-cell.event {
+.md-heatmap-cell.off,
+.md-heatmap-cell.event {
   background: var(--light-bg);
 }
-.md-planning-cell.event::after {
+.md-heatmap-cell.event::after {
   content: "";
   width: 7px;
   height: 7px;
@@ -1207,7 +1208,7 @@ figure.md-image figcaption {
   background: color-mix(in srgb, var(--purple) 5%, #fff);
   font-style: italic;
   /* Rounded on all corners to match the other call-out panels (:::info
-     / :::kpi / :::enjeux). The left-border radius is set via a small
+     / :::stat-tiles / :::numbered-grid). The left-border radius is set via a small
      tweak that keeps the thick accent line visible flush-left. */
   border-radius: 10px;
   break-inside: avoid;

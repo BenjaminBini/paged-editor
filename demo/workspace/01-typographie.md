@@ -45,11 +45,11 @@ Les [liens hypertextes](https://beorntech.com) sont soulignés dans le rendu.
 
 | Composant | Description            | Syntaxe             |
 | --------- | ---------------------- | ------------------- |
-| Alerte    | Bloc contextuel coloré | `:::info … :::`     |
-| KPI       | Tuiles indicateurs     | `:::kpi … :::`      |
-| Planning  | Matrice calendrier     | `:::planning … :::` |
-| Timeline  | Frise étapes           | `:::timeline … :::` |
-| Enjeux    | Grille piliers         | `:::enjeux … :::`   |
+| Alerte        | Bloc contextuel coloré | `:::info … :::`          |
+| Stat tiles    | Tuiles chiffres        | `:::stat-tiles … :::`    |
+| Heatmap       | Matrice calendrier     | `:::heatmap … :::`       |
+| Timeline      | Frise étapes           | `:::timeline … :::`      |
+| Numbered grid | Grille piliers         | `:::numbered-grid … :::` |
 
 Alignement des colonnes :
 

@@ -30,22 +30,22 @@ Six variantes de blocs contextuels. Le corps accepte du Markdown complet.
 **Conseil** — Bonne pratique ou astuce opérationnelle à retenir.
 :::
 
-## KPI
+## Stat tiles
 
-Tuiles indicateurs : une ligne par KPI, syntaxe `VALEUR | LIBELLÉ | NOTE (optionnel)`.
+Tuiles chiffres : une ligne par tuile, syntaxe `VALEUR | LIBELLÉ | NOTE (optionnel)`.
 
-:::kpi
+:::stat-tiles
 18 ans | Expertise portails | Depuis 2007
 100+ | Projets livrés
 < 4 h | Temps de réponse garanti | SLA P1
 99,9 % | Disponibilité cible
 :::
 
-## Enjeux
+## Numbered grid
 
 Grille de piliers numérotés automatiquement (max 7). Syntaxe : `TITRE | PITCH`.
 
-:::enjeux
+:::numbered-grid
 Qualité | Zéro régression, revue systématique à chaque livraison
 Réactivité | SLA < 4 h, astreinte 24/7 pour les incidents critiques
 Sécurité | DevSecOps intégré, OWASP, audits trimestriels
@@ -96,39 +96,39 @@ Basculement en production avec surveillance renforcée et support prioritaire pe
 
 ## Prestations détaillées
 
-Conteneur `:::breakdown` avec sous-headers `:::item TITRE | PHASE`.
+Conteneur `:::card-grid` avec sous-headers `:::card TITRE | PHASE`.
 
-:::breakdown
-:::item Audit & Initialisation | Phase 1
+:::card-grid
+:::card Audit & Initialisation | Phase 1
 - Inventaire des applications en scope
 - Cartographie des flux et des dépendances
 - Plan de charge prévisionnel validé
 
-:::item Maintenance corrective | En continu
+:::card Maintenance corrective | En continu
 - Analyse et correction des anomalies (P1/P2/P3)
 - Gestion du backlog de bugs et suivi SLA
 - Reporting mensuel de disponibilité
 
-:::item Projets agiles | Sprints de 2 semaines
+:::card Projets agiles | Sprints de 2 semaines
 - Backlog produit copiloté avec le métier
 - Démos et rétrospectives à chaque sprint
 - Livraisons continues en environnement de recette
 
-:::item Sécurité & Conformité | Trimestriel
+:::card Sécurité & Conformité | Trimestriel
 - Audits de sécurité applicative (OWASP)
 - Veille CVE et application des patches critiques
 - Mise à jour de la documentation PSSI
 :::
 
-## Planning contractuel
+## Heatmap
 
-Conteneur `:::planning` : bloc de config YAML-like, séparateur `---`, puis lignes `TITRE | cellules`.
+Conteneur `:::heatmap` : bloc de config YAML-like, séparateur `---`, puis lignes `TITRE | cellules`.
 
 Cellules : `X` ou `■` = actif, `o` ou `•` = événement, tout autre caractère = inactif.
 
 Phases de colonnes : `:mise` (mise en place), `:expl` (exploitation), `:fin` (fin de contrat).
 
-:::planning
+:::heatmap
 columns: T1:mise, T2:mise, T3:expl, T4:expl, T5:expl, T6:expl, T7:expl, T8:fin
 milestones: Démarrage@0, Recette@2:Semaine 6, Go-Live@3:Jalon contractuel, Bilan@8
 ---

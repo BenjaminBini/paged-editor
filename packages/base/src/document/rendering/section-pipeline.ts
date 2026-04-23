@@ -31,15 +31,15 @@ const MD_CONTAINER_START_RE: RegExp = /(?:^|\n):::[a-z]/;
 const MD_ALERT_KINDS: Set<string> = new Set(["info", "warning", "danger", "success", "note", "tip"]);
 const MD_KNOWN_CONTAINERS: Set<string> = new Set([
   ...MD_ALERT_KINDS,
-  "kpi",
-  "enjeux",
-  "breakdown",
-  "planning",
+  "stat-tiles",
+  "numbered-grid",
+  "card-grid",
+  "heatmap",
   "quote",
   "timeline",
 ]);
 const MD_STEP_HEADER_RE: RegExp = /^:::step[ \t]+([^\n]+)\r?\n/gm;
-const MD_ITEM_HEADER_RE: RegExp = /^:::item[ \t]+([^\n]+)\r?\n/gm;
+const MD_CARD_HEADER_RE: RegExp = /^:::card[ \t]+([^\n]+)\r?\n/gm;
 const MD_ATTR_RE: RegExp = /(\w+)="([^"]*)"/g;
 const IMAGE_ALIGNMENT_VALUES: Set<string> = new Set(["left", "center", "right"]);
 const IMAGE_MAX_WIDTH_RE: RegExp = /^\d+(?:\.\d+)?(?:px|%|em|rem|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cm|mm|in|pt|pc|ch|ex)$/i;
@@ -277,9 +277,9 @@ function renderAlertContainer(kind: string, body: string, sl: string): string {
   return `<div class="md-alert md-alert-${kind}"${sl}>\n${chip}\n${inner}</div>\n`;
 }
 
-// `:::kpi` — each non-empty body line becomes a KPI tile.
+// `:::stat-tiles` — each non-empty body line becomes a stat tile.
 // Line syntax: `VALUE | LABEL [| NOTE]` (pipes are trimmed).
-function renderKpiContainer(body: string, sl: string): string {
+function renderStatTilesContainer(body: string, sl: string): string {
   const items = body
     .split("\n")
     .map((l) => l.trim())
@@ -291,20 +291,20 @@ function renderKpiContainer(body: string, sl: string): string {
   if (!items.length) return "";
   const tiles = items
     .map((it) => {
-      const label = it.label ? `<div class="md-kpi-label">${marked.parseInline(it.label)}</div>` : "";
-      const note = it.note ? `<div class="md-kpi-note">${marked.parseInline(it.note)}</div>` : "";
-      return `<div class="md-kpi-item">\n<div class="md-kpi-value">${marked.parseInline(it.value)}</div>\n${label}${note}</div>`;
+      const label = it.label ? `<div class="md-stat-tiles-label">${marked.parseInline(it.label)}</div>` : "";
+      const note = it.note ? `<div class="md-stat-tiles-note">${marked.parseInline(it.note)}</div>` : "";
+      return `<div class="md-stat-tiles-item">\n<div class="md-stat-tiles-value">${marked.parseInline(it.value)}</div>\n${label}${note}</div>`;
     })
     .join("\n");
-  return `<div class="md-kpi"${sl}>\n${tiles}\n</div>\n`;
+  return `<div class="md-stat-tiles"${sl}>\n${tiles}\n</div>\n`;
 }
 
-// `:::enjeux` — editorial "project enjeux / pillars" grid.
+// `:::numbered-grid` — editorial "project pillars" grid.
 // Each non-empty body line becomes a numbered tile (auto 01…07) with a title
 // and optional pitch, rendered in a rotating BEORN palette colour.
 // Line syntax: `TITLE | PITCH` (PITCH optional). Cap at 7 items (palette size);
-// author a second `:::enjeux` block for more.
-function renderEnjeuxContainer(body: string, sl: string): string {
+// author a second `:::numbered-grid` block for more.
+function renderNumberedGridContainer(body: string, sl: string): string {
   const items = body
     .split("\n")
     .map((l) => l.trim())
@@ -319,27 +319,27 @@ function renderEnjeuxContainer(body: string, sl: string): string {
     .map((it, i) => {
       const num = String(i + 1).padStart(2, "0");
       const title = it.title
-        ? `<div class="md-enjeux-title">${marked.parseInline(it.title)}</div>`
+        ? `<div class="md-numbered-grid-title">${marked.parseInline(it.title)}</div>`
         : "";
       const pitch = it.pitch
-        ? `<p class="md-enjeux-pitch">${marked.parseInline(it.pitch)}</p>`
+        ? `<p class="md-numbered-grid-pitch">${marked.parseInline(it.pitch)}</p>`
         : "";
-      return `<div class="md-enjeux-item">\n<div class="md-enjeux-num-row"><span class="md-enjeux-num">${num}</span></div>\n${title}${pitch}</div>`;
+      return `<div class="md-numbered-grid-item">\n<div class="md-numbered-grid-num-row"><span class="md-numbered-grid-num">${num}</span></div>\n${title}${pitch}</div>`;
     })
     .join("\n");
-  return `<div class="md-enjeux"${sl}>\n${tiles}\n</div>\n`;
+  return `<div class="md-numbered-grid"${sl}>\n${tiles}\n</div>\n`;
 }
 
-// `:::breakdown` with inner `:::item TITLE | PHASE` headers.
+// `:::card-grid` with inner `:::card TITLE | PHASE` headers.
 // Each item is a card with auto-numbered display digit (01…07), title, optional
 // phase tag, and a markdown list (parsed as the item's content). Renders as a
 // 4-column grid with rotating BEORN palette — designed for "prestations detail"
 // or similar "N deliverables with sub-bullets" views.
-function renderBreakdownContainer(body: string, sl: string): string {
-  MD_ITEM_HEADER_RE.lastIndex = 0;
+function renderCardGridContainer(body: string, sl: string): string {
+  MD_CARD_HEADER_RE.lastIndex = 0;
   const headers: Array<{ title: string; phase: string; at: number; end: number }> = [];
   let hm: RegExpExecArray | null;
-  while ((hm = MD_ITEM_HEADER_RE.exec(body)) !== null) {
+  while ((hm = MD_CARD_HEADER_RE.exec(body)) !== null) {
     const parts = hm[1].split("|").map((p) => p.trim());
     headers.push({
       title: parts[0] || "",
@@ -357,22 +357,22 @@ function renderBreakdownContainer(body: string, sl: string): string {
       const inner = marked.parse(content) as string;
       const num = String(i + 1).padStart(2, "0");
       const phase = h.phase
-        ? `<span class="md-breakdown-phase">${marked.parseInline(h.phase)}</span>`
+        ? `<span class="md-card-grid-phase">${marked.parseInline(h.phase)}</span>`
         : "";
-      return `<div class="md-breakdown-item">\n<div class="md-breakdown-left"><span class="md-breakdown-num">${num}</span><span class="md-breakdown-title">${marked.parseInline(h.title)}</span>${phase}</div>\n${inner}</div>`;
+      return `<div class="md-card-grid-card">\n<div class="md-card-grid-left"><span class="md-card-grid-num">${num}</span><span class="md-card-grid-title">${marked.parseInline(h.title)}</span>${phase}</div>\n${inner}</div>`;
     })
     .join("\n");
-  return `<div class="md-breakdown"${sl}>\n${items}\n</div>\n`;
+  return `<div class="md-card-grid"${sl}>\n${items}\n</div>\n`;
 }
 
-// `:::planning` — contract-lifecycle heat-matrix with milestones on top.
+// `:::heatmap` — contract-lifecycle heat-matrix with milestones on top.
 // Syntax (config block + `---` + data rows):
 //   columns: LABEL[:phase], LABEL[:phase], …   (phase = mise|expl|fin, optional)
 //   milestones: LABEL@POS[:SUB], …             (POS = 0…N column-index; SUB = optional subtitle)
 //   ---
 //   Row title | T T T T T T T                   (T: X/■ = on, o/• = event, any else = off)
 // Rows are auto-numbered 01…N and assigned a rotating BEORN palette colour.
-function renderPlanningContainer(body: string, sl: string): string {
+function renderHeatmapContainer(body: string, sl: string): string {
   const parts = body.split(/\n---\s*\n/);
   const configRaw = parts[0] || "";
   const rowsRaw = parts.slice(1).join("\n---\n") || "";
@@ -459,13 +459,13 @@ function renderPlanningContainer(body: string, sl: string): string {
       if (m.pos <= 0.01) posClass = " start";
       else if (m.pos >= 99.99) posClass = " end";
       const subHtml = m.sub
-        ? `<span class="md-planning-milestone-sub">${marked.parseInline(m.sub)}</span>`
+        ? `<span class="md-heatmap-milestone-sub">${marked.parseInline(m.sub)}</span>`
         : "";
       return (
-        `<div class="md-planning-milestone${posClass}" style="left:${m.pos}%">` +
-        `<span class="md-planning-milestone-label">${marked.parseInline(m.label)}</span>` +
+        `<div class="md-heatmap-milestone${posClass}" style="left:${m.pos}%">` +
+        `<span class="md-heatmap-milestone-label">${marked.parseInline(m.label)}</span>` +
         subHtml +
-        `<span class="md-planning-milestone-arrow">▼</span>` +
+        `<span class="md-heatmap-milestone-arrow">▼</span>` +
         `</div>`
       );
     })
@@ -473,8 +473,8 @@ function renderPlanningContainer(body: string, sl: string): string {
 
   const colsHtml = columns
     .map((c) => {
-      const phaseClass = c.phase ? ` md-planning-col-${c.phase}` : "";
-      return `<div class="md-planning-col${phaseClass}">${marked.parseInline(c.label)}</div>`;
+      const phaseClass = c.phase ? ` md-heatmap-col-${c.phase}` : "";
+      return `<div class="md-heatmap-col${phaseClass}">${marked.parseInline(c.label)}</div>`;
     })
     .join("");
 
@@ -483,13 +483,13 @@ function renderPlanningContainer(body: string, sl: string): string {
       const num = String(i + 1).padStart(2, "0");
       const color = palette[i % palette.length];
       const cellsHtml = r.cells
-        .map((c) => `<div class="md-planning-cell ${c}"></div>`)
+        .map((c) => `<div class="md-heatmap-cell ${c}"></div>`)
         .join("");
       return (
-        `<div class="md-planning-row" style="color:${color}">` +
-        `<div class="md-planning-row-label">` +
-        `<span class="md-planning-row-num">${num}</span>` +
-        `<span class="md-planning-row-name">${marked.parseInline(r.title)}</span>` +
+        `<div class="md-heatmap-row" style="color:${color}">` +
+        `<div class="md-heatmap-row-label">` +
+        `<span class="md-heatmap-row-num">${num}</span>` +
+        `<span class="md-heatmap-row-name">${marked.parseInline(r.title)}</span>` +
         `</div>` +
         cellsHtml +
         `</div>`
@@ -498,9 +498,9 @@ function renderPlanningContainer(body: string, sl: string): string {
     .join("");
 
   return (
-    `<div class="md-planning" style="--md-planning-cols:${ncols}"${sl}>\n` +
-    `<div class="md-planning-milestones"><div></div><div class="md-planning-milestones-track">${milestonesHtml}</div></div>\n` +
-    `<div class="md-planning-head"><div></div>${colsHtml}</div>\n` +
+    `<div class="md-heatmap" style="--md-heatmap-cols:${ncols}"${sl}>\n` +
+    `<div class="md-heatmap-milestones"><div></div><div class="md-heatmap-milestones-track">${milestonesHtml}</div></div>\n` +
+    `<div class="md-heatmap-head"><div></div>${colsHtml}</div>\n` +
     rowsHtml +
     `\n</div>\n`
   );
@@ -586,7 +586,7 @@ marked.use({
   extensions: [
     {
       // Generic `:::name [attrs]\n…body…\n:::` container. Name dispatches to
-      // the appropriate renderer (alert / kpi / quote / timeline). Unknown
+      // the appropriate renderer (alert / stat-tiles / quote / timeline). Unknown
       // names return undefined so marked falls through to its default
       // tokenizers. Containers cannot be nested — a bare `:::` line always
       // closes the nearest container.
@@ -622,10 +622,10 @@ marked.use({
         const name = (token.name as string) || "";
         const body = (token.text as string) || "";
         if (MD_ALERT_KINDS.has(name)) return renderAlertContainer(name, body, rootAttrs);
-        if (name === "kpi") return renderKpiContainer(body, rootAttrs);
-        if (name === "enjeux") return renderEnjeuxContainer(body, rootAttrs);
-        if (name === "breakdown") return renderBreakdownContainer(body, rootAttrs);
-        if (name === "planning") return renderPlanningContainer(body, rootAttrs);
+        if (name === "stat-tiles") return renderStatTilesContainer(body, rootAttrs);
+        if (name === "numbered-grid") return renderNumberedGridContainer(body, rootAttrs);
+        if (name === "card-grid") return renderCardGridContainer(body, rootAttrs);
+        if (name === "heatmap") return renderHeatmapContainer(body, rootAttrs);
         if (name === "quote") return renderQuoteContainer((token.attrs as string) || "", body, rootAttrs);
         if (name === "timeline") return renderTimelineContainer(body, rootAttrs);
         return "";

@@ -411,7 +411,7 @@ function escapeHtmlAttr(s: string): string {
 }
 
 function buildPreviewSrcdoc(renderedHtml: string): string {
-  return `<!DOCTYPE html><html><head><base href="${location.origin}/"><link rel="stylesheet" href="css/preview/pdf.css"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono&family=Source+Serif+4&display=swap" rel="stylesheet"><style>html,body{margin:0;padding:0;background:#fff;}body{padding:10px;font-size:7.5pt;}@page{margin:0;}.pdf-content{padding:0;}section.level2{padding:0;}section.level2>:first-child{margin-top:0;}section.level2>:last-child{margin-bottom:0;}.md-planning{font-size:6.5pt;}.md-kpi-value{font-size:12pt;}.md-enjeux-num{font-size:14pt;}</style></head><body><section class="level2" style="${PREVIEW_SECTION_VARS}"><div class="pdf-content" style="${PREVIEW_SECTION_VARS}">${renderedHtml}</div></section></body></html>`;
+  return `<!DOCTYPE html><html><head><base href="${location.origin}/"><link rel="stylesheet" href="css/preview/pdf.css"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono&family=Source+Serif+4&display=swap" rel="stylesheet"><style>html,body{margin:0;padding:0;background:#fff;}body{padding:10px;font-size:7.5pt;}@page{margin:0;}.pdf-content{padding:0;}section.level2{padding:0;}section.level2>:first-child{margin-top:0;}section.level2>:last-child{margin-bottom:0;}.md-heatmap{font-size:6.5pt;}.md-stat-tiles-value{font-size:12pt;}.md-numbered-grid-num{font-size:14pt;}</style></head><body><section class="level2" style="${PREVIEW_SECTION_VARS}"><div class="pdf-content" style="${PREVIEW_SECTION_VARS}">${renderedHtml}</div></section></body></html>`;
 }
 
 function blockItem(label: string, action: () => void): { label: string; action: () => void; preview?: string } {
@@ -445,24 +445,24 @@ function openComponentsMenu(button: HTMLElement): void {
     compItem("Alert — Note", () => insertBlockSnippet(":::note\nEditorial note.\n:::", 8, 22)),
     compItem("Alert — Tip", () => insertBlockSnippet(":::tip\nHelpful tip.\n:::", 7, 18)),
     { separator: true },
-    compItem("KPI tiles", () =>
+    compItem("Stat tiles", () =>
       insertBlockSnippet(
-        ":::kpi\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse garanti | SLA P1\n99,9 % | Disponibilité cible\n:::",
+        ":::stat-tiles\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse garanti | SLA P1\n99,9 % | Disponibilité cible\n:::",
       ),
     ),
-    compItem("Enjeux / pillars", () =>
+    compItem("Numbered grid", () =>
       insertBlockSnippet(
-        ":::enjeux\nQualité | Zéro régression, revue systématique\nRéactivité | SLA < 4 h, astreinte 24/7\nSécurité | DevSecOps intégré, audits\n:::",
+        ":::numbered-grid\nQualité | Zéro régression, revue systématique\nRéactivité | SLA < 4 h, astreinte 24/7\nSécurité | DevSecOps intégré, audits\n:::",
       ),
     ),
-    compItem("Breakdown", () =>
+    compItem("Card grid", () =>
       insertBlockSnippet(
-        ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture cible\n:::item Implémentation | Phase 2\n- Dev itératif\n- Tests automatisés\n:::",
+        ":::card-grid\n:::card Cadrage | Phase 1\n- Atelier besoins\n- Architecture cible\n:::card Implémentation | Phase 2\n- Dev itératif\n- Tests automatisés\n:::",
       ),
     ),
-    compItem("Planning heat-matrix", () =>
+    compItem("Heatmap", () =>
       insertBlockSnippet(
-        ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:expl, S6:fin\nmilestones: Kick-off@0, Go-live@3:Prod, Clôture@6\n---\nAnalyse | X X o . . .\nDéveloppement | . X X X . .\nTests | . . X X X .\nProduction | . . . o X X\n:::",
+        ":::heatmap\ncolumns: S1, S2, S3:mise, S4:expl, S5:expl, S6:fin\nmilestones: Kick-off@0, Go-live@3:Prod, Clôture@6\n---\nAnalyse | X X o . . .\nDéveloppement | . X X X . .\nTests | . . X X X .\nProduction | . . . o X X\n:::",
       ),
     ),
     compItem("Quote", () =>
@@ -491,7 +491,7 @@ interface HelpItem {
   // `renderMd` means: render this markdown snippet through marked and drop
   // the result into a sandbox iframe that loads pdf.css. That way the
   // preview matches the real preview exactly (alert chips with their real
-  // SVG icons, kpi / enjeux / breakdown / planning / timeline, etc.).
+  // SVG icons, stat-tiles / numbered-grid / card-grid / heatmap / timeline, etc.).
   // `preview` is a static inline-styled HTML string for things that don't
   // exercise pdf.css (bold/italic/heading mockup).
   renderMd?: string;
@@ -533,9 +533,9 @@ function makePreviewIframe(renderedHtml: string, maxWidthPx = 260): HTMLIFrameEl
   section.level2 { padding:0; }
   section.level2 > :first-child { margin-top:0; }
   section.level2 > :last-child { margin-bottom:0; }
-  .md-planning { font-size:7pt; }
-  .md-kpi-value { font-size:14pt; }
-  .md-enjeux-num { font-size:16pt; }
+  .md-heatmap { font-size:7pt; }
+  .md-stat-tiles-value { font-size:14pt; }
+  .md-numbered-grid-num { font-size:16pt; }
 </style>
 </head>
 <body>
@@ -578,7 +578,7 @@ function makePreviewIframe(renderedHtml: string, maxWidthPx = 260): HTMLIFrameEl
 }
 
 // Render a markdown snippet to HTML using the globally-configured marked
-// instance. Works for `:::info`, `:::kpi`, `:::enjeux`, etc. because those
+// instance. Works for `:::info`, `:::stat-tiles`, `:::numbered-grid`, etc. because those
 // extensions are registered in section-pipeline at module load. Headings
 // need the section-pipeline's per-render _ctx so we avoid them here and
 // fall back to static previews for anything heading-driven.
@@ -667,25 +667,25 @@ const previewMermaid = `
     <span style="display:inline-block;background:#3373b3;color:#fff;padding:2px 10px;border-radius:3px;">B</span>
   </div>`;
 
-const previewKpi = `
+const previewStatTiles = `
   <div style="${PV_FONT};display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
     <div style="background:#f1f5f9;padding:12px;border-radius:4px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#193658;">18 ans</div><div style="font-size:10px;color:#64748b;margin-top:2px;">Expertise</div></div>
     <div style="background:#f1f5f9;padding:12px;border-radius:4px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#193658;">100+</div><div style="font-size:10px;color:#64748b;margin-top:2px;">Projets</div></div>
     <div style="background:#f1f5f9;padding:12px;border-radius:4px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#193658;">&lt; 4 h</div><div style="font-size:10px;color:#64748b;margin-top:2px;">Temps</div></div>
     <div style="background:#f1f5f9;padding:12px;border-radius:4px;text-align:center;"><div style="font-size:18px;font-weight:800;color:#193658;">99,9 %</div><div style="font-size:10px;color:#64748b;margin-top:2px;">Dispo</div></div>
   </div>`;
-const previewEnjeux = `
+const previewNumberedGrid = `
   <div style="${PV_FONT};display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">
     <div style="border-top:3px solid #193658;padding:10px 8px;background:#f8f9fc;"><div style="font-size:14px;font-weight:800;color:#193658;">01</div><div style="font-size:11px;font-weight:700;color:#193658;margin-top:4px;">Qualité</div><div style="font-size:10px;color:#64748b;margin-top:2px;">Zéro régression</div></div>
     <div style="border-top:3px solid #3373b3;padding:10px 8px;background:#f8f9fc;"><div style="font-size:14px;font-weight:800;color:#3373b3;">02</div><div style="font-size:11px;font-weight:700;color:#3373b3;margin-top:4px;">Réactivité</div><div style="font-size:10px;color:#64748b;margin-top:2px;">SLA &lt; 4 h</div></div>
     <div style="border-top:3px solid #0096ae;padding:10px 8px;background:#f8f9fc;"><div style="font-size:14px;font-weight:800;color:#0096ae;">03</div><div style="font-size:11px;font-weight:700;color:#0096ae;margin-top:4px;">Sécurité</div><div style="font-size:10px;color:#64748b;margin-top:2px;">DevSecOps</div></div>
   </div>`;
-const previewBreakdown = `
+const previewCardGrid = `
   <div style="${PV_FONT};display:grid;grid-template-columns:repeat(2,1fr);gap:8px;font-size:11px;color:#1f2937;">
     <div style="background:#f8f9fc;padding:8px 10px;border-left:3px solid #193658;"><div style="font-weight:700;"><span style="color:#193658;">01</span> Cadrage · <em style="color:#64748b;">Phase 1</em></div><ul style="margin:4px 0 0 16px;padding:0;font-size:10px;color:#334155;"><li>Atelier besoins</li><li>Architecture</li></ul></div>
     <div style="background:#f8f9fc;padding:8px 10px;border-left:3px solid #3373b3;"><div style="font-weight:700;"><span style="color:#3373b3;">02</span> Implémentation · <em style="color:#64748b;">Phase 2</em></div><ul style="margin:4px 0 0 16px;padding:0;font-size:10px;color:#334155;"><li>Dev itératif</li><li>Tests</li></ul></div>
   </div>`;
-const previewPlanning = `
+const previewHeatmap = `
   <div style="${PV_FONT};font-size:10px;color:#1f2937;">
     <div style="display:grid;grid-template-columns:80px repeat(6,1fr);gap:2px;color:#64748b;font-size:9px;text-align:center;margin-bottom:4px;">
       <div></div><div>S1</div><div>S2</div><div>S3</div><div>S4</div><div>S5</div><div>S6</div>
@@ -772,10 +772,10 @@ const HELP_CATEGORIES: HelpCategory[] = [
   {
     title: "BEORN layout components",
     items: [
-      { name: ":::kpi", desc: "KPI tiles. One non-empty line per tile. Syntax: `VALUE | LABEL | NOTE`. NOTE is optional.", syntax: ":::kpi\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse | SLA P1\n99,9 % | Disponibilité cible\n:::", renderMd: ":::kpi\n18 ans | Expertise | Depuis 2007\n100+ | Projets livrés\n< 4 h | Réponse\n99,9 % | Dispo\n:::" },
-      { name: ":::enjeux", desc: "Numbered pillar tiles (auto 01-07, capped at 7). Syntax: `TITLE | PITCH`.", syntax: ":::enjeux\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps intégré\n:::", renderMd: ":::enjeux\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps\n:::" },
-      { name: ":::breakdown", desc: "Multi-card deliverables view. Uses `:::item TITLE | PHASE` sub-headers with a bulleted body per card.", syntax: ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::item Implémentation | Phase 2\n- Dev itératif\n- Tests\n:::", renderMd: ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::item Implémentation | Phase 2\n- Dev itératif\n:::" },
-      { name: ":::planning", desc: "Contract-lifecycle heat matrix. Config block (columns/milestones) + `---` + data rows `Title | T T T …` where T is X/■ = on, o/• = event, else off.", syntax: ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev     | . X X X .\n:::", renderMd: ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev | . X X X .\nTests | . . X X X\n:::" },
+      { name: ":::stat-tiles", desc: "Grid of large-number tiles with label and optional note. One non-empty line per tile. Syntax: `VALUE | LABEL | NOTE`. NOTE is optional.", syntax: ":::stat-tiles\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse | SLA P1\n99,9 % | Disponibilité cible\n:::", renderMd: ":::stat-tiles\n18 ans | Expertise | Depuis 2007\n100+ | Projets livrés\n< 4 h | Réponse\n99,9 % | Dispo\n:::" },
+      { name: ":::numbered-grid", desc: "Numbered tile grid (auto 01-07, capped at 7). Syntax: `TITLE | PITCH`.", syntax: ":::numbered-grid\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps intégré\n:::", renderMd: ":::numbered-grid\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps\n:::" },
+      { name: ":::card-grid", desc: "Grid of cards with title, tag, and bullet list. Uses `:::card TITLE | PHASE` sub-headers with a bulleted body per card.", syntax: ":::card-grid\n:::card Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::card Implémentation | Phase 2\n- Dev itératif\n- Tests\n:::", renderMd: ":::card-grid\n:::card Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::card Implémentation | Phase 2\n- Dev itératif\n:::" },
+      { name: ":::heatmap", desc: "Heat matrix with optional milestone track. Config block (columns/milestones) + `---` + data rows `Title | T T T …` where T is X/■ = on, o/• = event, else off.", syntax: ":::heatmap\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev     | . X X X .\n:::", renderMd: ":::heatmap\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev | . X X X .\nTests | . . X X X\n:::" },
       { name: ":::quote", desc: "Blockquote with author/role attribution.", syntax: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::', renderMd: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::' },
       { name: ":::timeline", desc: "Vertical timeline. Each `:::step TITLE | META` starts a new step with markdown body.", syntax: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::", renderMd: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::step Étape 3 | J+10\nDescription.\n:::" },
       { name: "12-column grid (`ao-grid`)", desc: "Fenced code block of kind `ao-grid`. Each `:::col-N` opens a column spanning N/12.", syntax: "```ao-grid\n:::col-8\nColonne principale\n:::col-4\nColonne latérale\n```", renderMd: "```ao-grid\n:::col-8\nColonne principale (8/12)\n:::col-4\nLatérale (4/12)\n```" },
@@ -810,10 +810,10 @@ const COMPONENT_PREVIEWS: Record<string, MenuPreview> = {
   "Alert — Success": { renderMd: ":::success\nSuccess message.\n:::" },
   "Alert — Note": { renderMd: ":::note\nEditorial note.\n:::" },
   "Alert — Tip": { renderMd: ":::tip\nHelpful tip.\n:::" },
-  "KPI tiles": { renderMd: ":::kpi\n18 ans | Expertise | Depuis 2007\n100+ | Projets\n< 4 h | Réponse\n99,9 % | Dispo\n:::" },
-  "Enjeux / pillars": { renderMd: ":::enjeux\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps\n:::" },
-  "Breakdown": { renderMd: ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier\n- Architecture\n:::item Impl | Phase 2\n- Dev\n:::" },
-  "Planning heat-matrix": { renderMd: ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick@0, Go-live@3\n---\nAnalyse | X X o . .\nDev | . X X X .\n:::" },
+  "Stat tiles": { renderMd: ":::stat-tiles\n18 ans | Expertise | Depuis 2007\n100+ | Projets\n< 4 h | Réponse\n99,9 % | Dispo\n:::" },
+  "Numbered grid": { renderMd: ":::numbered-grid\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps\n:::" },
+  "Card grid": { renderMd: ":::card-grid\n:::card Cadrage | Phase 1\n- Atelier\n- Architecture\n:::card Impl | Phase 2\n- Dev\n:::" },
+  "Heatmap": { renderMd: ":::heatmap\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick@0, Go-live@3\n---\nAnalyse | X X o . .\nDev | . X X X .\n:::" },
   "Quote": { renderMd: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::' },
   "Timeline": { renderMd: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::" },
   "12-col grid  (ao-grid)": { renderMd: "```ao-grid\n:::col-8\nColonne principale\n:::col-4\nLatérale\n```" },
