@@ -210,6 +210,10 @@ export class PreviewRenderer {
 
         if (!hasPagedRef) {
           const fresh = newEl.cloneNode(true) as HTMLElement;
+          // Preserve style-mode state classes so the selected/hovered
+          // outline doesn't flicker off mid-edit.
+          if (el.classList.contains("style-hovered")) fresh.classList.add("style-hovered");
+          if (el.classList.contains("style-selected")) fresh.classList.add("style-selected");
           el.replaceWith(fresh);
           patched++;
           continue;
@@ -217,6 +221,8 @@ export class PreviewRenderer {
 
         // Otherwise sync attributes while keeping Paged.js's chunker state
         // on this wrapper intact.
+        const hadHovered = el.classList.contains("style-hovered");
+        const hadSelected = el.classList.contains("style-selected");
         for (const attr of Array.from(newEl.attributes)) {
           if (PRESERVED_ATTRS.has(attr.name)) continue;
           el.setAttribute(attr.name, attr.value);
@@ -227,6 +233,11 @@ export class PreviewRenderer {
         }
         // data-block-id tracks the fresh render (not preserved).
         if (newBlockId !== null) el.setAttribute("data-block-id", newBlockId);
+        // Re-apply the style-mode state classes that got wiped by the class
+        // attribute sync — the signal hasn't changed, so the preview
+        // interaction's effect won't re-fire.
+        if (hadHovered) el.classList.add("style-hovered");
+        if (hadSelected) el.classList.add("style-selected");
 
         el.innerHTML = newEl.innerHTML;
         patched++;

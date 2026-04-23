@@ -6,6 +6,7 @@
 
 import { effect, signal } from "../../infrastructure/signal.js";
 import { isInteractionSuspended, isStyleModeActive } from "./style-mode.js";
+import { on as busOn } from "../../infrastructure/event-bus.js";
 
 const _hovered = signal<string | null>(null);
 const _selected = signal<string | null>(null);
@@ -116,9 +117,15 @@ export function install(container: HTMLElement): void {
     }
   });
 
-  // Mirror signal state to the DOM whenever either changes OR the container
-  // re-populates after a render (we re-apply classes defensively).
+  // Mirror signal state to the DOM whenever either signal changes.
   effect(() => {
+    applyClasses(container, _hovered.value, _selected.value);
+  });
+  // Also re-apply after each render — patchVisiblePages and the full-render
+  // path both replace preview elements, which clears the .style-hovered /
+  // .style-selected classes. The signals may still hold the same block ids
+  // (so the effect above wouldn't re-fire), but the DOM needs a repaint.
+  busOn("section-ready", () => {
     applyClasses(container, _hovered.value, _selected.value);
   });
 }
