@@ -11,7 +11,7 @@
     "registry": "https://npm.pkg.github.com"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node -e \"require('fs').cpSync('assets','dist/assets',{recursive:true,force:true})\"",
     "build:check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
