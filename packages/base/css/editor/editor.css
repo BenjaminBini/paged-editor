@@ -328,3 +328,7 @@
   text-decoration: underline wavy #ef4444;
   text-underline-offset: 2px;
 }
+
+/* ── Format toolbar: push help button to the right ───────────────────── */
+.editor-format-push { flex: 1; background: transparent; }
+

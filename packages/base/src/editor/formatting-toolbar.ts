@@ -366,6 +366,276 @@ function openSymbolMenu(button: HTMLElement): void {
   })));
 }
 
+// ── Block-level snippets ──────────────────────────────────────────────────
+// Each entry inserts a snippet on a fresh line below the cursor. We pad with
+// surrounding blank lines so the inserted block isn't merged into the current
+// paragraph by marked.
+
+function insertBlockSnippet(snippet: string, selectionStartOffset?: number, selectionEndOffset?: number): void {
+  const { doc, from } = selectionRange();
+  const cursorLine = from.line as number;
+  const lineText: string = doc.getLine(cursorLine) ?? "";
+  const needLeadingBlank = lineText.trim().length > 0;
+  const prefix = needLeadingBlank ? "\n\n" : (cursorLine === 0 ? "" : "\n");
+  const full = `${prefix}${snippet}\n`;
+  const insertPos = { line: cursorLine, ch: lineText.length };
+  const insertIndex = doc.indexFromPos(insertPos);
+  applyReplacement(doc, insertIndex, insertIndex, full, {
+    selectStartOffset: selectionStartOffset != null ? prefix.length + selectionStartOffset : undefined,
+    selectEndOffset: selectionEndOffset != null ? prefix.length + selectionEndOffset : undefined,
+    cursorOffset: selectionStartOffset == null ? full.length : undefined,
+  });
+  cm.focus();
+  refreshToolbarState();
+}
+
+function openBlocksMenu(button: HTMLElement): void {
+  showButtonMenu(button, [
+    {
+      label: "Bullet list",
+      action: () => insertBlockSnippet("- Item 1\n- Item 2\n- Item 3", 2, 8),
+    },
+    {
+      label: "Numbered list",
+      action: () => insertBlockSnippet("1. First\n2. Second\n3. Third", 3, 8),
+    },
+    {
+      label: "Blockquote",
+      action: () => insertBlockSnippet("> Quote text.", 2, 13),
+    },
+    { separator: true },
+    {
+      label: "Code block",
+      action: () => insertBlockSnippet("```\ncode\n```", 4, 8),
+    },
+    {
+      label: "Horizontal rule",
+      action: () => insertBlockSnippet("---"),
+    },
+    { separator: true },
+    {
+      label: "Page break  (\\newpage)",
+      action: () => insertBlockSnippet("\\newpage"),
+    },
+    {
+      label: "Spacer  (\\spacer[20px])",
+      action: () => insertBlockSnippet("\\spacer[20px]"),
+    },
+  ]);
+}
+
+function openComponentsMenu(button: HTMLElement): void {
+  showButtonMenu(button, [
+    {
+      label: "Alert — Info",
+      action: () => insertBlockSnippet(":::info\nInformation message.\n:::", 7, 26),
+    },
+    {
+      label: "Alert — Warning",
+      action: () => insertBlockSnippet(":::warning\nWarning message.\n:::", 11, 27),
+    },
+    {
+      label: "Alert — Danger",
+      action: () => insertBlockSnippet(":::danger\nCritical message.\n:::", 10, 27),
+    },
+    {
+      label: "Alert — Success",
+      action: () => insertBlockSnippet(":::success\nSuccess message.\n:::", 11, 27),
+    },
+    {
+      label: "Alert — Note",
+      action: () => insertBlockSnippet(":::note\nEditorial note.\n:::", 8, 22),
+    },
+    {
+      label: "Alert — Tip",
+      action: () => insertBlockSnippet(":::tip\nHelpful tip.\n:::", 7, 18),
+    },
+    { separator: true },
+    {
+      label: "KPI tiles",
+      action: () =>
+        insertBlockSnippet(
+          ":::kpi\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse garanti | SLA P1\n99,9 % | Disponibilité cible\n:::",
+        ),
+    },
+    {
+      label: "Enjeux / pillars",
+      action: () =>
+        insertBlockSnippet(
+          ":::enjeux\nQualité | Zéro régression, revue systématique\nRéactivité | SLA < 4 h, astreinte 24/7\nSécurité | DevSecOps intégré, audits\n:::",
+        ),
+    },
+    {
+      label: "Breakdown",
+      action: () =>
+        insertBlockSnippet(
+          ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture cible\n:::item Implémentation | Phase 2\n- Dev itératif\n- Tests automatisés\n:::",
+        ),
+    },
+    {
+      label: "Planning heat-matrix",
+      action: () =>
+        insertBlockSnippet(
+          ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:expl, S6:fin\nmilestones: Kick-off@0, Go-live@3:Prod, Clôture@6\n---\nAnalyse | X X o . . .\nDéveloppement | . X X X . .\nTests | . . X X X .\nProduction | . . . o X X\n:::",
+        ),
+    },
+    {
+      label: "Quote",
+      action: () =>
+        insertBlockSnippet(
+          ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::',
+        ),
+    },
+    {
+      label: "Timeline",
+      action: () =>
+        insertBlockSnippet(
+          ":::timeline\n:::step Étape 1 | J+0\nDescription de l'étape 1.\n:::step Étape 2 | J+5\nDescription de l'étape 2.\n:::step Étape 3 | J+10\nDescription de l'étape 3.\n:::",
+        ),
+    },
+    { separator: true },
+    {
+      label: "12-col grid  (ao-grid)",
+      action: () =>
+        insertBlockSnippet(
+          "```ao-grid\n:::col-8\nColonne principale (8/12)\n:::col-4\nColonne latérale (4/12)\n```",
+        ),
+    },
+  ]);
+}
+
+// ── Help modal ─────────────────────────────────────────────────────────────
+
+interface HelpItem {
+  name: string;
+  desc: string;
+  syntax: string;
+}
+interface HelpCategory {
+  title: string;
+  items: HelpItem[];
+}
+
+const HELP_CATEGORIES: HelpCategory[] = [
+  {
+    title: "Inline formatting",
+    items: [
+      { name: "Bold", desc: "Emphasise a span of text.", syntax: "**bold text**" },
+      { name: "Italic", desc: "Italicise a span of text.", syntax: "*italic text*" },
+      { name: "Underline", desc: "Inline HTML — passes through the renderer.", syntax: "<u>underlined</u>" },
+      { name: "Inline code", desc: "Fixed-width span.", syntax: "`code`" },
+      { name: "Link", desc: "External or anchor link.", syntax: "[label](https://example.com)" },
+    ],
+  },
+  {
+    title: "Text structure",
+    items: [
+      { name: "Headings (h1–h4)", desc: "Section titles. First digit of the number badge comes from the filename (`01-foo.md` → 1.x) or an explicit `# Partie N` header.", syntax: "# H1\n## H2\n### H3\n#### H4" },
+      { name: "Bullet list", desc: "Unordered list.", syntax: "- Item 1\n- Item 2" },
+      { name: "Numbered list", desc: "Ordered list.", syntax: "1. First\n2. Second" },
+      { name: "Blockquote", desc: "Quoted paragraph.", syntax: "> Quote text." },
+      { name: "Horizontal rule", desc: "Section divider.", syntax: "---" },
+      { name: "Code block", desc: "Fenced code; optional language for syntax highlighting.", syntax: "```js\nconst x = 1;\n```" },
+    ],
+  },
+  {
+    title: "Media",
+    items: [
+      { name: "Table", desc: "GitHub-Flavored Markdown table.", syntax: "| H1 | H2 |\n| -- | -- |\n| a  | b  |" },
+      { name: "Image", desc: "Standalone image renders as a figure with optional caption.", syntax: "![Caption](./image.png)" },
+      { name: "Image (aligned, sized)", desc: "Pipe-separated options after the URL: alignment (left|center|right) and max-width.", syntax: "![Caption](./image.png|right|200px)" },
+      { name: "Mermaid diagram", desc: "Rendered via Mermaid 11 into an SVG.", syntax: "```mermaid\nflowchart LR\n  A --> B\n```" },
+    ],
+  },
+  {
+    title: "Page flow",
+    items: [
+      { name: "Page break", desc: "Force a page break at the current location (export + preview).", syntax: "\\newpage\n\nor\n\n/newpage" },
+      { name: "Spacer", desc: "Invisible full-width block with a caller-chosen height. Accepts any CSS length.", syntax: "\\spacer[40px]\n\nor\n\n/spacer[2rem]" },
+    ],
+  },
+  {
+    title: "Alert containers",
+    items: [
+      { name: ":::info", desc: "Editorial information.", syntax: ":::info\nInformation message.\n:::" },
+      { name: ":::warning", desc: "Caution or reminder.", syntax: ":::warning\nWarning message.\n:::" },
+      { name: ":::danger", desc: "Critical issue.", syntax: ":::danger\nCritical message.\n:::" },
+      { name: ":::success", desc: "Positive outcome.", syntax: ":::success\nSuccess message.\n:::" },
+      { name: ":::note", desc: "Annotation or aside.", syntax: ":::note\nEditorial note.\n:::" },
+      { name: ":::tip", desc: "Helpful advice.", syntax: ":::tip\nHelpful tip.\n:::" },
+    ],
+  },
+  {
+    title: "BEORN layout components",
+    items: [
+      { name: ":::kpi", desc: "KPI tiles. One non-empty line per tile. Syntax: `VALUE | LABEL | NOTE`. NOTE is optional.", syntax: ":::kpi\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse | SLA P1\n99,9 % | Disponibilité cible\n:::" },
+      { name: ":::enjeux", desc: "Numbered pillar tiles (auto 01-07, capped at 7). Syntax: `TITLE | PITCH`.", syntax: ":::enjeux\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps intégré\n:::" },
+      { name: ":::breakdown", desc: "Multi-card deliverables view. Uses `:::item TITLE | PHASE` sub-headers with a bulleted body per card.", syntax: ":::breakdown\n:::item Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::item Implémentation | Phase 2\n- Dev itératif\n- Tests\n:::" },
+      { name: ":::planning", desc: "Contract-lifecycle heat matrix. Config block (columns/milestones) + `---` + data rows `Title | T T T …` where T is X/■ = on, o/• = event, else off.", syntax: ":::planning\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev     | . X X X .\n:::" },
+      { name: ":::quote", desc: "Blockquote with author/role attribution.", syntax: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::' },
+      { name: ":::timeline", desc: "Vertical timeline. Each `:::step TITLE | META` starts a new step with markdown body.", syntax: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::" },
+      { name: "12-column grid (`ao-grid`)", desc: "Fenced code block of kind `ao-grid`. Each `:::col-N` opens a column spanning N/12.", syntax: "```ao-grid\n:::col-8\nColonne principale\n:::col-4\nColonne latérale\n```" },
+    ],
+  },
+  {
+    title: "Style directive",
+    items: [
+      { name: "{:style …}", desc: "Inline per-block spacing override. Goes at the end of the block's first source line. Keys: mt/mr/mb/ml/pt/pr/pb/pl. Values are raw px (0–500). Use the Style Mode toggle for a visual editor.", syntax: "## Heading {:style mt=16 pb=8}\n\nParagraph. {:style mt=24}\n\n--- {:style mt=32 mb=32}" },
+    ],
+  },
+  {
+    title: "Frontmatter",
+    items: [
+      { name: "Document metadata", desc: "Optional YAML-like frontmatter at the top of each file. Read by the renderer for document-wide settings.", syntax: "---\ntitle: \"Document title\"\ndoctype: \"Mémoire technique\"\n---" },
+    ],
+  },
+];
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+let _helpBuilt = false;
+
+function openHelpModal(): void {
+  const overlay = document.getElementById("helpModal");
+  if (!overlay) return;
+  if (!_helpBuilt) {
+    const body = document.getElementById("helpBody");
+    if (body) {
+      body.innerHTML = HELP_CATEGORIES.map((cat) => `
+        <div class="help-category">
+          <div class="help-category-title">${escapeHtml(cat.title)}</div>
+          ${cat.items.map((item) => `
+            <div class="help-item">
+              <div>
+                <div class="help-item-name">${escapeHtml(item.name)}</div>
+                <div class="help-item-desc">${escapeHtml(item.desc)}</div>
+              </div>
+              <pre class="help-item-syntax">${escapeHtml(item.syntax)}</pre>
+            </div>
+          `).join("")}
+        </div>
+      `).join("");
+    }
+    const closeBtn = document.getElementById("btnHelpClose");
+    closeBtn?.addEventListener("click", closeHelpModal);
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeHelpModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlay.classList.contains("active")) closeHelpModal();
+    });
+    _helpBuilt = true;
+  }
+  overlay.classList.add("active");
+}
+
+function closeHelpModal(): void {
+  const overlay = document.getElementById("helpModal");
+  overlay?.classList.remove("active");
+}
+
 function isSeparatorLine(line: string): boolean {
   return /^\s*\|([\s:]*-[\s:-]*\|)+\s*$/.test(line || "");
 }
@@ -590,6 +860,15 @@ export function initFormattingToolbar(): void {
         break;
       case "mermaid":
         toggleMermaidBlock();
+        break;
+      case "blocks-menu":
+        openBlocksMenu(button);
+        break;
+      case "components-menu":
+        openComponentsMenu(button);
+        break;
+      case "help":
+        openHelpModal();
         break;
       default:
         break;
