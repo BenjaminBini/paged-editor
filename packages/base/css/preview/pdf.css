@@ -495,38 +495,49 @@ h3 + h4 {
 .pdf-content ul {
   list-style: none;
   display: grid;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   margin: var(--space-md) 0;
   padding-left: 0;
 }
 .pdf-content ul li {
   position: relative;
-  padding-left: 1rem;
+  padding-left: 1.6rem;
   margin: 0;
   line-height: 1.6;
+  font-size: 14px;
 }
 .pdf-content ul li::before {
-  content: "\203A";
+  content: "\2192"; /* → rightwards arrow */
   position: absolute;
   left: 0;
-  font-weight: 900;
-  color: var(--section-color, var(--blue));
-  font-size: 1.35em;
-  line-height: 1.2;
   top: 0;
+  color: var(--section-color, var(--blue));
+  font-weight: 500;
+  font-size: 14px;
 }
 .pdf-content ul ul {
   margin: var(--space-xs) 0 0;
 }
+.pdf-content ul ul li {
+  font-size: 12px;
+}
 .pdf-content ul ul li::before {
-  content: "\2013";
-  color: color-mix(in srgb, var(--section-color, var(--blue)) 50%, white);
+  content: "\21B3"; /* ↳ downwards arrow with tip rightwards */
+  color: color-mix(in srgb, var(--section-color, var(--blue)) 60%, white);
+  top: 0;
+  font-weight: 500;
+  font-size: 14px;
+}
+.pdf-content ul ul ul li {
+  font-size: 10px;
 }
 .pdf-content ul ul ul li::before {
-  content: "\2022";
-  font-size: 0.7em;
-  color: color-mix(in srgb, var(--section-color, var(--blue)) 30%, white);
-  top: 0.25em;
+  content: "\2022"; /* • classic disc */
+  font-size: 14px;
+  color: color-mix(in srgb, var(--section-color, var(--blue)) 60%, white);
+  top: 0;
+  font-weight: 500;
+  line-height: 1 !important;
 }
 .pdf-preview-root ul,
 .pdf-preview-root ol {
@@ -702,23 +713,29 @@ figure.md-image figcaption {
 .md-alert {
   position: relative;
   margin: var(--space-md) 0;
-  padding: var(--space-md) var(--space-lg);
+  /* Extra top padding reserves space for the chip, which is now absolutely
+     anchored at the very top-left of the panel (see .md-alert-chip below). */
+  padding: calc(var(--space-md) + 18px) var(--space-lg) var(--space-md);
   border-radius: 10px;
   break-inside: avoid;
   page-break-inside: avoid;
 }
 .md-alert-chip {
+  position: absolute;
+  top: 0;
+  left: 0;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 3px 10px 3px 8px;
-  border-radius: 999px;
+  /* Round the outer corners (top-left matches the panel's 10px radius)
+     and square the inner corners (bottom-right flush against content). */
+  border-radius: 10px 0 10px 0;
   font-family: "Nunito", sans-serif;
   font-size: 9pt;
   font-weight: 700;
   letter-spacing: 0.06em;
   color: #fff;
-  margin-bottom: 10px;
   line-height: 1;
 }
 .md-alert-icon {
@@ -1023,7 +1040,7 @@ figure.md-image figcaption {
 }
 .md-breakdown-item > ul > li {
   position: relative;
-  padding-left: 12px !important;
+  padding-left: 18px !important;
   margin: 0 !important;
   font-family: "Nunito", sans-serif;
   font-size: 8.75pt;
@@ -1031,14 +1048,7 @@ figure.md-image figcaption {
   color: var(--text);
 }
 .md-breakdown-item > ul > li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.5em;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: currentColor;
+  font-size: 12px;
 }
 
 /* ── Planning heat-matrix (:::planning) ──

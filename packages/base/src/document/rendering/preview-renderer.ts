@@ -14,7 +14,10 @@ let _cssCachePromise: Promise<void> | null = null;
 
 async function fetchCssText(url: string): Promise<string | null> {
   try {
-    const resp = await fetch(url);
+    // Bypass the browser HTTP cache so a hard-reload in the editor tab
+    // picks up CSS edits immediately (was a recurring DX pain during
+    // iterating on pdf.css).
+    const resp = await fetch(url, { cache: "no-store" });
     return resp.ok ? await resp.text() : null;
   } catch { return null; }
 }
