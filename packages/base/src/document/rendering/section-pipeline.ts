@@ -14,6 +14,7 @@ import {
   stripLeadingNumber, slugify, decodeEntities, buildUnderline,
 } from "./markdown-helpers.js";
 import { resetMermaidQueue, pushToMermaidQueue, getMermaidQueue, resolveMermaid } from "./mermaid-renderer.js";
+import { MD_ALERT_KINDS, MD_KNOWN_CONTAINERS } from "./container-registry.js";
 // ── Per-render context (set before each parse, read by renderer) ───────────
 // This is module-scoped, not global — only section-pipeline.js reads/writes it.
 // Safe because renders are awaited sequentially (never concurrent).
@@ -28,16 +29,7 @@ const AO_GRID_COL_HEADER_RE: RegExp = /^:::col-(\d+)[ \t]*\r?\n?/gm;
 const MD_CONTAINER_BLOCK_RE: RegExp =
   /^:::([a-z][a-z0-9-]*)(?:[ \t]+([^\n]*))?\r?\n([\s\S]*?)\r?\n:::[ \t]*(?:\r?\n|$)/;
 const MD_CONTAINER_START_RE: RegExp = /(?:^|\n):::[a-z]/;
-const MD_ALERT_KINDS: Set<string> = new Set(["info", "warning", "danger", "success", "note", "tip"]);
-const MD_KNOWN_CONTAINERS: Set<string> = new Set([
-  ...MD_ALERT_KINDS,
-  "stat-tiles",
-  "numbered-grid",
-  "card-grid",
-  "heatmap",
-  "quote",
-  "timeline",
-]);
+// MD_ALERT_KINDS and MD_KNOWN_CONTAINERS are derived from container-registry.ts.
 const MD_STEP_HEADER_RE: RegExp = /^:::step[ \t]+([^\n]+)\r?\n/gm;
 const MD_CARD_HEADER_RE: RegExp = /^:::card[ \t]+([^\n]+)\r?\n/gm;
 const MD_ATTR_RE: RegExp = /(\w+)="([^"]*)"/g;

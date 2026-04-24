@@ -106,9 +106,10 @@ if [[ "$LOCAL_ONLY" == "1" ]]; then
   c_blue "LOCAL_ONLY mode: build → pack → extract, no git, no registry."
   echo ""
 
-  c_blue "[1/3] Building packages/base (tsc → dist/src → sync to dist/js)"
+  c_blue "[1/3] Building packages/base (tsc → dist/js)"
+  run "rm -rf '$REPO_ROOT/packages/base/dist/src' '$REPO_ROOT/packages/base/dist/js'"
   run "cd '$REPO_ROOT/packages/base' && npx tsc"
-  run "rsync -a --delete '$REPO_ROOT/packages/base/dist/src/' '$REPO_ROOT/packages/base/dist/js/'"
+  run "cd '$REPO_ROOT/packages/base' && node scripts/emit-markdown-features.mjs"
   # web/react skipped — ao-analyser consumes only base + server
   c_green "  ✓ base built"
   echo ""
@@ -171,11 +172,10 @@ echo ""
 # ── 3. Rebuild ────────────────────────────────────────────────────────────
 c_blue "[3/6] Building packages"
 
-echo "  • packages/base (tsc)"
+echo "  • packages/base (tsc → dist/js)"
+run "rm -rf '$REPO_ROOT/packages/base/dist/src' '$REPO_ROOT/packages/base/dist/js'"
 run "cd '$REPO_ROOT/packages/base' && npx tsc"
-# tsconfig emits to dist/src/ but the runtime loads from dist/js/ — keep both
-# in sync (see section-pipeline.ts deployment notes).
-run "rsync -a --delete '$REPO_ROOT/packages/base/dist/src/' '$REPO_ROOT/packages/base/dist/js/'"
+run "cd '$REPO_ROOT/packages/base' && node scripts/emit-markdown-features.mjs"
 
 echo "  • packages/web (vite + tsc)"
 run "cd '$REPO_ROOT/packages/web' && npm run build --silent"
