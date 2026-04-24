@@ -1,6 +1,6 @@
 {
   "name": "@benjaminbini/paged-editor-electron",
-  "version": "1.9.0",
+  "version": "1.9.1",
   "description": "Electron desktop app for paged-editor",
   "main": "main.js",
   "repository": {
