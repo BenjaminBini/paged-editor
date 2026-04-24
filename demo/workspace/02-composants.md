@@ -120,6 +120,29 @@ Conteneur `:::card-grid` avec sous-headers `:::card TITRE | PHASE`.
 - Mise à jour de la documentation PSSI
 :::
 
+## Fiches fonctionnelles
+
+Conteneur `:::feature-grid` avec sous-headers `:::feature title="…" status="…" level="…" image="…" caption="…" layout="row|col"`.
+
+Statut (badge) : `conforme` · `parametrage` · `preciser`. Niveau (pied) : `obligatoire` · `souhaitee` · `information`. Layout `row` (texte + image côte-à-côte, carte pleine largeur) n'est appliqué qu'avec `image=` ; sinon la carte retombe en `col` (demi-largeur).
+
+:::feature-grid
+:::feature title="Éditeur WYSIWYG" status="conforme" level="obligatoire"
+Barre d'outils complète (gras, italique, listes, liens, tables) et styles de paragraphes natifs. Copier-coller depuis Word géré.
+
+:::feature title="Versioning des articles" status="conforme" level="obligatoire"
+Onglet *Versions* automatique à chaque save/publish/archive. Restauration d'une version antérieure via la permission dédiée.
+
+:::feature title="Brouillons d'articles" status="conforme" level="obligatoire" image="assets/cover.svg" caption="Exemple — brouillon en back-office" layout="row"
+Fonction *Save as draft* native sur tous les types de contenu. Statut explicite, visible par les seuls éditeurs. Également disponible sur les posts d'espaces (draft, publish, schedule).
+
+:::feature title="Transfert en masse" status="preciser" level="obligatoire"
+Les actions groupées sont limitées à la suppression multi-sélection. Le transfert d'auteur en masse passe par script d'administration ou API.
+
+:::feature title="Digest hebdomadaire" status="parametrage" level="souhaitee"
+Module *Newsletters* natif avec *Content selection* et *Journeys* pour automatiser les envois récurrents. La politique éditoriale reste à paramétrer côté administrateur.
+:::
+
 ## Heatmap
 
 Conteneur `:::heatmap` : bloc de config YAML-like, séparateur `---`, puis lignes `TITRE | cellules`.

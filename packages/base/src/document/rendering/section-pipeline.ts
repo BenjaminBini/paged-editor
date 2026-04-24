@@ -32,6 +32,7 @@ const MD_CONTAINER_START_RE: RegExp = /(?:^|\n):::[a-z]/;
 // MD_ALERT_KINDS and MD_KNOWN_CONTAINERS are derived from container-registry.ts.
 const MD_STEP_HEADER_RE: RegExp = /^:::step[ \t]+([^\n]+)\r?\n/gm;
 const MD_CARD_HEADER_RE: RegExp = /^:::card[ \t]+([^\n]+)\r?\n/gm;
+const MD_FEATURE_HEADER_RE: RegExp = /^:::feature[ \t]+([^\n]+)\r?\n/gm;
 const MD_ATTR_RE: RegExp = /(\w+)="([^"]*)"/g;
 const IMAGE_ALIGNMENT_VALUES: Set<string> = new Set(["left", "center", "right"]);
 const IMAGE_MAX_WIDTH_RE: RegExp = /^\d+(?:\.\d+)?(?:px|%|em|rem|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cm|mm|in|pt|pc|ch|ex)$/i;
@@ -357,6 +358,107 @@ function renderCardGridContainer(body: string, sl: string): string {
   return `<div class="md-card-grid"${sl}>\n${items}\n</div>\n`;
 }
 
+// `:::feature-grid` with inner `:::feature title="…" status="…" level="…" image="…" caption="…" layout="row|col"`.
+// Each :::feature opens a card (implicit close on next :::feature or end of block).
+// Body after the header is rendered as markdown and becomes the card description.
+// Layout = row (card spans both grid columns, text + image side-by-side);
+// Layout = col or no image (card takes one grid column, text + optional image below).
+// Status → Conforme (green) / Paramétrage (amber) / À préciser (grey).
+// Level  → Obligatoire (red) / Souhaitée (blue) / Information (grey).
+const FEATURE_STATUS_LABELS: Record<string, string> = {
+  conforme: "Conforme",
+  parametrage: "Paramétrage",
+  preciser: "À préciser",
+};
+const FEATURE_LEVEL_LABELS: Record<string, string> = {
+  obligatoire: "Obligatoire",
+  souhaitee: "Souhaitée",
+  information: "Information",
+};
+function normalizeFeatureStatus(value: string): string {
+  const v = value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, "");
+  if (!v) return "";
+  if (v.startsWith("conform")) return "conforme";
+  if (v.startsWith("param") || v === "setup" || v === "config") return "parametrage";
+  if (v.startsWith("preciser") || v.startsWith("apreciser") || v === "tbd" || v === "unknown") return "preciser";
+  return "";
+}
+function normalizeFeatureLevel(value: string): string {
+  const v = value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, "");
+  if (!v) return "";
+  if (v.startsWith("oblig") || v === "required" || v === "mandatory") return "obligatoire";
+  if (v.startsWith("souhait") || v === "desired" || v === "nice") return "souhaitee";
+  if (v.startsWith("info")) return "information";
+  return "";
+}
+function renderFeatureGridContainer(body: string, sl: string): string {
+  MD_FEATURE_HEADER_RE.lastIndex = 0;
+  const headers: Array<{ attrsRaw: string; at: number; end: number }> = [];
+  let hm: RegExpExecArray | null;
+  while ((hm = MD_FEATURE_HEADER_RE.exec(body)) !== null) {
+    headers.push({
+      attrsRaw: hm[1],
+      at: hm.index,
+      end: hm.index + hm[0].length,
+    });
+  }
+  if (!headers.length) return "";
+  const items = headers
+    .map((h, i) => {
+      const start = h.end;
+      const end = i + 1 < headers.length ? headers[i + 1].at : body.length;
+      const content = body.slice(start, end).replace(/\n+$/, "");
+      const attrs = parseContainerAttrs(h.attrsRaw);
+      const title = attrs.title || "";
+      const statusKey = normalizeFeatureStatus(attrs.status || "");
+      const levelKey = normalizeFeatureLevel(attrs.level || "");
+      const image = attrs.image || "";
+      const caption = attrs.caption || "";
+      const wantsRow = (attrs.layout || "").toLowerCase() === "row";
+      const layout = image && wantsRow ? "row" : "col";
+      const innerHtml = content.trim() ? (marked.parse(content) as string) : "";
+
+      const titleHtml = title
+        ? `<div class="md-feature-title">${marked.parseInline(title)}</div>`
+        : "";
+      const statusHtml = statusKey
+        ? `<span class="md-feature-status md-feature-status-${statusKey}">${escapeHtml(FEATURE_STATUS_LABELS[statusKey])}</span>`
+        : "";
+      const headHtml = titleHtml || statusHtml
+        ? `<div class="md-feature-head">${titleHtml}${statusHtml}</div>`
+        : "";
+      const levelHtml = levelKey
+        ? `<div class="md-feature-level md-feature-level-${levelKey}">${escapeHtml(FEATURE_LEVEL_LABELS[levelKey])}</div>`
+        : "";
+      const bodyHtml = innerHtml
+        ? `<div class="md-feature-body">${innerHtml}</div>`
+        : "";
+
+      let mediaHtml = "";
+      if (image) {
+        const href = resolveAssetUrl(image);
+        const captionHtml = caption
+          ? `<div class="md-feature-caption">${marked.parseInline(caption)}</div>`
+          : "";
+        mediaHtml = `<div class="md-feature-media"><img src="${escapeHtml(href)}" alt="${escapeHtml(title)}">${captionHtml}</div>`;
+      }
+
+      const textBlock = `<div class="md-feature-text">${headHtml}${bodyHtml}${levelHtml}</div>`;
+      const layoutClass = `md-feature-${layout}`;
+      return `<div class="md-feature ${layoutClass}">${textBlock}${mediaHtml}</div>`;
+    })
+    .join("\n");
+  return `<div class="md-feature-grid"${sl}>\n${items}\n</div>\n`;
+}
+
 // `:::heatmap` — contract-lifecycle heat-matrix with milestones on top.
 // Syntax (config block + `---` + data rows):
 //   columns: LABEL[:phase], LABEL[:phase], …   (phase = mise|expl|fin, optional)
@@ -617,6 +719,7 @@ marked.use({
         if (name === "stat-tiles") return renderStatTilesContainer(body, rootAttrs);
         if (name === "numbered-grid") return renderNumberedGridContainer(body, rootAttrs);
         if (name === "card-grid") return renderCardGridContainer(body, rootAttrs);
+        if (name === "feature-grid") return renderFeatureGridContainer(body, rootAttrs);
         if (name === "heatmap") return renderHeatmapContainer(body, rootAttrs);
         if (name === "quote") return renderQuoteContainer((token.attrs as string) || "", body, rootAttrs);
         if (name === "timeline") return renderTimelineContainer(body, rootAttrs);

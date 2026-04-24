@@ -1052,6 +1052,136 @@ figure.md-image figcaption {
   font-size: 12px;
 }
 
+/* ── Feature grid (:::feature-grid) ──
+   2-column grid of functional-requirement fiches. Each :::feature carries a
+   status badge (conforme / parametrage / preciser) and a requirement level
+   (obligatoire / souhaitee / information). Layout:
+   - .md-feature-col → takes one grid cell, text stacked above optional image.
+   - .md-feature-row → spans both grid cells, text + image side-by-side (image
+     only — layout=row without image falls back to col). */
+.md-feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin: 0.5rem 0 1rem;
+}
+.md-feature {
+  display: flex;
+  gap: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 9px 11px;
+  background: #fff;
+  font-size: 8pt;
+  line-height: 1.35;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+.md-feature-col {
+  flex-direction: column;
+}
+.md-feature-row {
+  flex-direction: row;
+  align-items: flex-start;
+  grid-column: 1 / -1;
+}
+.md-feature-text {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.md-feature-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.md-feature-title {
+  font-weight: 700;
+  color: #193658;
+  font-size: 8.5pt;
+  line-height: 1.2;
+  flex: 1;
+}
+.md-feature-status {
+  flex-shrink: 0;
+  font-size: 6.5pt;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.md-feature-status-conforme {
+  background: #d1fae5;
+  color: #065f46;
+}
+.md-feature-status-parametrage {
+  background: #fef3c7;
+  color: #92400e;
+}
+.md-feature-status-preciser {
+  background: #e5e7eb;
+  color: #374151;
+}
+.md-feature-body {
+  color: #57606a;
+  font-size: 7.8pt;
+}
+.md-feature-body > :first-child {
+  margin-top: 0;
+}
+.md-feature-body > :last-child {
+  margin-bottom: 0;
+}
+.md-feature-level {
+  margin-top: 6px;
+  font-size: 6.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.md-feature-level-obligatoire {
+  color: #dc2626;
+}
+.md-feature-level-souhaitee {
+  color: #2563eb;
+}
+.md-feature-level-information {
+  color: #6b7280;
+}
+.md-feature-media {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.md-feature-col .md-feature-media {
+  margin-top: 6px;
+  padding-top: 5px;
+  border-top: 1px dashed #e5e7eb;
+}
+.md-feature-row .md-feature-media {
+  align-self: stretch;
+}
+.md-feature-media img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 4px;
+  border: 1px solid #e5e7eb;
+}
+.md-feature-caption {
+  font-size: 6.5pt;
+  color: #6b7280;
+  font-style: italic;
+  line-height: 1.3;
+}
+
 /* ── Heatmap (:::heatmap) ──
    Contract-lifecycle grid: 1 row per series, 1 column per period,
    milestone row (▼ arrows) on top. Column count is dynamic via the

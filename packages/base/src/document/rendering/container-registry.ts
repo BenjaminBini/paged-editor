@@ -90,6 +90,23 @@ const BLOCK_SPECS: readonly ContainerSpec[] = [
       ":::card-grid\n:::card Cadrage | Phase 1\n- Audit de l'existant\n- Cadrage des besoins\n\n:::card Réalisation | Phase 2\n- Développement itératif\n- Recettes intermédiaires\n:::",
   },
   {
+    name: "feature-grid",
+    kind: "block",
+    description:
+      "Grille de fiches de fonctionnalités (titre + statut + niveau + description + illustration optionnelle). Chaque `:::feature` ouvre une fiche. Layout row (texte + image côte à côte, carte pleine largeur) ou col (empilé, demi-largeur). Layout row ignoré sans image.",
+    innerDirectives: ["feature"],
+    attributes: [
+      { name: "title", required: true, description: "Titre de la fiche." },
+      { name: "status", required: false, description: "Badge de couverture : conforme | parametrage | preciser." },
+      { name: "level", required: false, description: "Niveau d'exigence : obligatoire | souhaitee | information." },
+      { name: "image", required: false, description: "Chemin de l'illustration (relatif à assetBaseHref)." },
+      { name: "caption", required: false, description: "Légende sous l'image." },
+      { name: "layout", required: false, description: "row (côte-à-côte, pleine largeur) ou col (empilé, demi-largeur). Défaut col. Row ignoré sans image." },
+    ],
+    example:
+      ':::feature-grid\n:::feature title="Brouillons d\'articles" status="conforme" level="obligatoire" image="assets/slides/slide-112.png" caption="Slide 112" layout="row"\nSave as draft natif sur tous les content types. Statut Draft explicite, visible uniquement par les éditeurs.\n\n:::feature title="Transfert en masse" status="preciser" level="obligatoire"\nActions groupées limitées à la suppression ; le bulk author change passe par API.\n:::',
+  },
+  {
     name: "heatmap",
     kind: "block",
     description:
