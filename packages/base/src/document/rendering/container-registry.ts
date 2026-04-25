@@ -97,14 +97,18 @@ const BLOCK_SPECS: readonly ContainerSpec[] = [
     innerDirectives: ["feature"],
     attributes: [
       { name: "title", required: true, description: "Titre de la fiche." },
-      { name: "status", required: false, description: "Badge de couverture : conforme | parametrage | preciser." },
-      { name: "level", required: false, description: "Niveau d'exigence : obligatoire | souhaitee | information." },
+      { name: "requirement", required: false, description: "Énoncé de l'exigence (repris tel quel de la grille JSON source). Affiché pleine largeur sous le titre." },
+      { name: "status", required: false, description: "Badge de couverture : conforme | non-conforme | parametrage | a-verifier | preciser." },
+      { name: "level", required: false, description: "Niveau d'exigence : obligatoire | souhaitee | information | optionnel." },
+      { name: "ref", required: false, description: "Code de référence (ex. C-401, M-112)." },
       { name: "image", required: false, description: "Chemin de l'illustration (relatif à assetBaseHref)." },
       { name: "caption", required: false, description: "Légende sous l'image." },
-      { name: "layout", required: false, description: "row (côte-à-côte, pleine largeur) ou col (empilé, demi-largeur). Défaut col. Row ignoré sans image." },
+      { name: "coverageSource", required: false, description: "Libellé de la source de couverture (LumApps doc, BEORN expertise, …) issu de coverageSources[] dans la grille JSON. Affiché en pied de carte. Alias : `source`." },
+      { name: "coverageSourceHref", required: false, description: "URL cible si la source de couverture doit être cliquable. Alias : `sourceHref` / `sourceUrl`." },
+      { name: "layout", required: false, description: "row (pleine largeur, méta en colonne gauche, image 200 px à droite) ou col (demi-largeur, méta en rail haut, image 16/9 en bas). Défaut col." },
     ],
     example:
-      ':::feature-grid\n:::feature title="Brouillons d\'articles" status="conforme" level="obligatoire" image="assets/slides/slide-112.png" caption="Slide 112" layout="row"\nSave as draft natif sur tous les content types. Statut Draft explicite, visible uniquement par les éditeurs.\n\n:::feature title="Transfert en masse" status="preciser" level="obligatoire"\nActions groupées limitées à la suppression ; le bulk author change passe par API.\n:::',
+      ':::feature-grid\n:::feature title="Brouillons d\'articles" status="conforme" level="obligatoire" ref="M-112" image="assets/slides/slide-112.png" caption="Slide 112" layout="row"\nSave as draft natif sur tous les content types. Statut Draft explicite, visible uniquement par les éditeurs.\n\n:::feature title="Transfert en masse" status="preciser" level="obligatoire"\nActions groupées limitées à la suppression ; le bulk author change passe par API.\n:::',
   },
   {
     name: "heatmap",

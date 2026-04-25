@@ -366,14 +366,17 @@ function renderCardGridContainer(body: string, sl: string): string {
 // Status → Conforme (green) / Paramétrage (amber) / À préciser (grey).
 // Level  → Obligatoire (red) / Souhaitée (blue) / Information (grey).
 const FEATURE_STATUS_LABELS: Record<string, string> = {
-  conforme: "Conforme",
-  parametrage: "Paramétrage",
-  preciser: "À préciser",
+  conforme: "CONFORME",
+  "non-conforme": "NON CONFORME",
+  parametrage: "PARAMÉTRAGE",
+  "a-verifier": "À VÉRIFIER",
+  preciser: "À PRÉCISER",
 };
 const FEATURE_LEVEL_LABELS: Record<string, string> = {
-  obligatoire: "Obligatoire",
-  souhaitee: "Souhaitée",
-  information: "Information",
+  obligatoire: "OBLIGATOIRE",
+  souhaitee: "SOUHAITÉE",
+  information: "INFORMATION",
+  optionnel: "OPTIONNEL",
 };
 function normalizeFeatureStatus(value: string): string {
   const v = value
@@ -382,8 +385,10 @@ function normalizeFeatureStatus(value: string): string {
     .replace(/[̀-ͯ]/g, "")
     .replace(/\s+/g, "");
   if (!v) return "";
+  if (v.startsWith("nonconform")) return "non-conforme";
   if (v.startsWith("conform")) return "conforme";
   if (v.startsWith("param") || v === "setup" || v === "config") return "parametrage";
+  if (v.startsWith("averifier") || v === "verify") return "a-verifier";
   if (v.startsWith("preciser") || v.startsWith("apreciser") || v === "tbd" || v === "unknown") return "preciser";
   return "";
 }
@@ -396,6 +401,7 @@ function normalizeFeatureLevel(value: string): string {
   if (!v) return "";
   if (v.startsWith("oblig") || v === "required" || v === "mandatory") return "obligatoire";
   if (v.startsWith("souhait") || v === "desired" || v === "nice") return "souhaitee";
+  if (v.startsWith("option") || v === "optional") return "optionnel";
   if (v.startsWith("info")) return "information";
   return "";
 }
@@ -418,42 +424,100 @@ function renderFeatureGridContainer(body: string, sl: string): string {
       const content = body.slice(start, end).replace(/\n+$/, "");
       const attrs = parseContainerAttrs(h.attrsRaw);
       const title = attrs.title || "";
+      const requirement = attrs.requirement || "";
       const statusKey = normalizeFeatureStatus(attrs.status || "");
       const levelKey = normalizeFeatureLevel(attrs.level || "");
+      const refCode = attrs.ref || "";
       const image = attrs.image || "";
       const caption = attrs.caption || "";
+      // Coverage source (LumApps doc, BEORN ref, …) — *not* the requirement source.
+      const coverageSource = attrs.coverageSource || attrs.source || "";
+      const coverageSourceHref = attrs.coverageSourceHref || attrs.coverageSourceUrl || attrs.sourceHref || attrs.sourceUrl || "";
       const wantsRow = (attrs.layout || "").toLowerCase() === "row";
-      const layout = image && wantsRow ? "row" : "col";
+      // row → full-width card, meta column on the left (design "non-compact");
+      // col → half-width card, inline meta rail at top (design "compact").
+      const layout = wantsRow ? "row" : "col";
       const innerHtml = content.trim() ? (marked.parse(content) as string) : "";
 
+      const statusLabel = statusKey ? FEATURE_STATUS_LABELS[statusKey] : "";
+      const levelLabel = levelKey ? FEATURE_LEVEL_LABELS[levelKey] : "";
       const titleHtml = title
-        ? `<div class="md-feature-title">${marked.parseInline(title)}</div>`
+        ? `<span class="md-feature-title">${marked.parseInline(title)}</span>`
         : "";
-      const statusHtml = statusKey
-        ? `<span class="md-feature-status md-feature-status-${statusKey}">${escapeHtml(FEATURE_STATUS_LABELS[statusKey])}</span>`
-        : "";
-      const headHtml = titleHtml || statusHtml
-        ? `<div class="md-feature-head">${titleHtml}${statusHtml}</div>`
-        : "";
-      const levelHtml = levelKey
-        ? `<div class="md-feature-level md-feature-level-${levelKey}">${escapeHtml(FEATURE_LEVEL_LABELS[levelKey])}</div>`
+      const requirementHtml = requirement
+        ? `<div class="md-feature-requirement">${marked.parseInline(requirement)}</div>`
         : "";
       const bodyHtml = innerHtml
         ? `<div class="md-feature-body">${innerHtml}</div>`
+        : "";
+
+      // Status dot (small colored circle) used in both layouts next to the status label.
+      const statusDot = statusKey
+        ? `<span class="md-feature-dot md-feature-dot-${statusKey}"></span>`
+        : "";
+
+      // Meta column (row/non-compact) — stacked Statut / Exigence / Réf.
+      const metaColHtml = (statusLabel || levelLabel || refCode)
+        ? (
+          `<div class="md-feature-meta">` +
+          (statusLabel
+            ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Statut</div>` +
+              `<div class="md-feature-meta-value">${statusDot}${escapeHtml(statusLabel)}</div></div>`
+            : "") +
+          (levelLabel
+            ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Exigence</div>` +
+              `<div class="md-feature-meta-value md-feature-level-${levelKey}">${escapeHtml(levelLabel)}</div></div>`
+            : "") +
+          (refCode
+            ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Réf.</div>` +
+              `<div class="md-feature-meta-value">${escapeHtml(refCode)}</div></div>`
+            : "") +
+          `</div>`
+        )
+        : "";
+
+      // Inline rail (col/compact) — Statut · Exigence · Réf on one line.
+      const railItems: string[] = [];
+      if (statusLabel) railItems.push(`<span class="md-feature-rail-item">${statusDot}${escapeHtml(statusLabel)}</span>`);
+      if (levelLabel) railItems.push(`<span class="md-feature-rail-item"><span class="md-feature-rail-hint">Exig.</span><span class="md-feature-level-${levelKey}">${escapeHtml(levelLabel)}</span></span>`);
+      if (refCode) railItems.push(`<span class="md-feature-rail-item"><span class="md-feature-rail-hint">Réf.</span>${escapeHtml(refCode)}</span>`);
+      const railHtml = railItems.length
+        ? `<div class="md-feature-rail">${railItems.join("")}</div>`
         : "";
 
       let mediaHtml = "";
       if (image) {
         const href = resolveAssetUrl(image);
         const captionHtml = caption
-          ? `<div class="md-feature-caption">${marked.parseInline(caption)}</div>`
+          ? `<figcaption class="md-feature-caption">${marked.parseInline(caption)}</figcaption>`
           : "";
-        mediaHtml = `<div class="md-feature-media"><img src="${escapeHtml(href)}" alt="${escapeHtml(title)}">${captionHtml}</div>`;
+        mediaHtml = `<figure class="md-feature-media"><div class="md-feature-media-frame"><img src="${escapeHtml(href)}" alt="${escapeHtml(title)}"></div>${captionHtml}</figure>`;
       }
 
-      const textBlock = `<div class="md-feature-text">${headHtml}${bodyHtml}${levelHtml}</div>`;
-      const layoutClass = `md-feature-${layout}`;
-      return `<div class="md-feature ${layoutClass}">${textBlock}${mediaHtml}</div>`;
+      const sourceDisplay = coverageSource.length > 25
+        ? coverageSource.slice(0, 24).trimEnd() + "…"
+        : coverageSource;
+      const sourceTitleAttr = coverageSource.length > 25
+        ? ` title="${escapeHtml(coverageSource)}"`
+        : "";
+      const sourceHtml = coverageSource
+        ? (coverageSourceHref
+          ? `<a class="md-feature-source" href="${escapeHtml(coverageSourceHref)}"${sourceTitleAttr}>${marked.parseInline(sourceDisplay)}</a>`
+          : `<span class="md-feature-source"${sourceTitleAttr}>${marked.parseInline(sourceDisplay)}</span>`)
+        : "";
+
+      const statusClass = statusKey ? ` md-feature-status-${statusKey}` : "";
+      const layoutClass = ` md-feature-${layout}`;
+
+      if (layout === "row") {
+        // Non-compact: meta col left, body right; if image, body splits into text+image (image 200px right).
+        const bodyCol = mediaHtml
+          ? `<div class="md-feature-body-split">${bodyHtml}${mediaHtml}</div>`
+          : bodyHtml;
+        return `<div class="md-feature${layoutClass}${statusClass}">${metaColHtml}<div class="md-feature-content">${titleHtml}${requirementHtml}${bodyCol}${sourceHtml}</div></div>`;
+      }
+      // Compact: rail on top, title, requirement, body, optional image below, source link at the foot.
+      return `<div class="md-feature${layoutClass}${statusClass}">${railHtml}${titleHtml}${requirementHtml}${bodyHtml}${mediaHtml}${sourceHtml}</div>`;
     })
     .join("\n");
   return `<div class="md-feature-grid"${sl}>\n${items}\n</div>\n`;
