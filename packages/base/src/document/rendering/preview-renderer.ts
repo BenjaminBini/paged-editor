@@ -149,9 +149,8 @@ export class RenderSupersededError extends Error {
   }
 }
 
-// Tagged console logger.  Toggle by setting `window.__pagedRenderDebug = false`
-// at runtime to silence everything below without touching code.  Default ON
-// while we shake out the cover-on-Firefox issue — flip it off later.
+// Tagged console logger — default OFF.  Enable at runtime via
+// `window.__pagedRenderDebug = true` or `localStorage.pagedRenderDebug = "1"`.
 declare global { interface Window { __pagedRenderDebug?: boolean } }
 function rlog(msg: string, ...rest: any[]): void {
   if ((globalThis as any).window && window.__pagedRenderDebug === false) return;
@@ -421,10 +420,23 @@ export class PreviewRenderer {
     // Paged.js so the queue is guaranteed to drain.
     if (document.visibilityState !== "visible") {
       rlog(`_doRender id=${idForLog} visibilityState=${document.visibilityState} — waiting`);
-      await new Promise<void>((resolve) => {
+      await new Promise<void>((resolve, reject) => {
+        const cleanup = (): void => {
+          document.removeEventListener("visibilitychange", onVisible);
+        };
         const onVisible = (): void => {
+          // If a newer render() call landed while we were waiting, bail so
+          // the chain can advance.  Otherwise the chain (and the closures
+          // it retains: sectionHtml, blockEntries, …) grows unbounded for
+          // every render queued during a long hidden-tab session.
+          if (idForLog !== this._latestRenderId) {
+            cleanup();
+            staging.remove();
+            reject(new RenderSupersededError());
+            return;
+          }
           if (document.visibilityState === "visible") {
-            document.removeEventListener("visibilitychange", onVisible);
+            cleanup();
             resolve();
           }
         };
@@ -433,48 +445,50 @@ export class PreviewRenderer {
       rlog(`_doRender id=${idForLog} visibility now visible`);
     }
 
-    const PreviewerCtor = globalThis.Paged?.Previewer;
-    if (!PreviewerCtor) {
-      staging.remove();
-      throw new Error("Paged.js previewer is not available.");
-    }
-
-    const previewer = new PreviewerCtor();
-    const startedAt = performance.now();
-    rlog(`_doRender id=${idForLog} preview() begin tag=${rootPageName || "(default)"}`);
+    // Wrap *all* the build-time work below in try/finally — if anything
+    // (Previewer constructor, polisher init, preview() rejection) throws
+    // before we get to the swap, we must take staging back out of the DOM
+    // or it leaks as an invisible orphan child of #preview-wrapper.
+    let swapped = false;
+    let previewer: any = null;
     let flow: any;
+    const startedAt = performance.now();
     try {
-      flow = await previewer.preview(
-        previewMarkup,
-        buildPreviewStyles({ rootPageName }) as any,
-        staging,
+      const PreviewerCtor = globalThis.Paged?.Previewer;
+      if (!PreviewerCtor) throw new Error("Paged.js previewer is not available.");
+      previewer = new PreviewerCtor();
+      rlog(`_doRender id=${idForLog} preview() begin tag=${rootPageName || "(default)"}`);
+      rlog(
+        `_doRender id=${idForLog} preview() done pages=${staging.querySelectorAll(".pagedjs_page").length}` +
+        ` flowTotal=${flow?.total} elapsed=${(performance.now() - startedAt).toFixed(0)}ms`,
       );
+
+      // Render succeeded.  Atomic swap: dispose the previous previewer, then
+      // replace the live surface with the (now fully-painted) staging div.
+      const previous = this.currentPreviewer;
+      this.currentPreviewer = previewer;
+      this._disposePreviewer(previous);
+
+      // Reset the off-screen positioning so the staged surface drops into place
+      // exactly where the previous one was.
+      staging.style.cssText = "";
+      staging.className = live.className;
+      live.replaceWith(staging);
+      swapped = true;
+      this.previewPages = staging;
+      rlog(`_doRender id=${idForLog} swapped staging→live tag=${rootPageName || "(default)"}`);
     } catch (e) {
-      rlog(`_doRender id=${idForLog} preview() THREW: ${(e as any)?.message || e}`);
-      // Render failed — drop the staging container and the half-built
-      // previewer so the live surface keeps showing whatever it had.
-      this._disposePreviewer(previewer);
-      staging.remove();
+      rlog(`_doRender id=${idForLog} build/preview THREW: ${(e as any)?.message || e}`);
+      // Tear down the half-built previewer so it doesn't keep its polisher
+      // styles in document head.
+      if (previewer) this._disposePreviewer(previewer);
       throw e;
+    } finally {
+      // If we never swapped, staging is still parented to wrapper as an
+      // invisible orphan — strip it.  When swap succeeded, staging IS the
+      // live surface now, so leave it.
+      if (!swapped && staging.parentNode) staging.remove();
     }
-    rlog(
-      `_doRender id=${idForLog} preview() done pages=${staging.querySelectorAll(".pagedjs_page").length}` +
-      ` flowTotal=${flow?.total} elapsed=${(performance.now() - startedAt).toFixed(0)}ms`,
-    );
-
-    // Render succeeded.  Atomic swap: dispose the previous previewer, then
-    // replace the live surface with the (now fully-painted) staging div.
-    const previous = this.currentPreviewer;
-    this.currentPreviewer = previewer;
-    this._disposePreviewer(previous);
-
-    // Reset the off-screen positioning so the staged surface drops into place
-    // exactly where the previous one was.
-    staging.style.cssText = "";
-    staging.className = live.className;
-    live.replaceWith(staging);
-    this.previewPages = staging;
-    rlog(`_doRender id=${idForLog} swapped staging→live tag=${rootPageName || "(default)"}`);
 
     await new Promise((resolve) => globalThis.requestAnimationFrame(resolve));
 
