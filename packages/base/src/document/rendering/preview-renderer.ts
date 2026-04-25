@@ -37,6 +37,25 @@ function prefetchCss(): Promise<void> {
 // Start prefetch immediately on module load.
 prefetchCss();
 
+// Expose cached pdf.css text so other modules (e.g. toolbar tooltips) can
+// inline it instead of relying on `<link rel=stylesheet>` — which fails
+// under Electron's file:// origin where relative URLs can't resolve.
+export async function getCachedPdfCss(): Promise<string | null> {
+  await prefetchCss();
+  return _cssCache?.pdfCss ?? null;
+}
+
+export async function getCachedGoogleFonts(): Promise<string | null> {
+  await prefetchCss();
+  return _cssCache?.googleFonts ?? null;
+}
+
+// Sync access to cached CSS — returns null if prefetch hasn't resolved yet.
+// Callers should fall back to a `<link>` tag in that case.
+export function getCachedPdfCssSync(): string | null {
+  return _cssCache?.pdfCss ?? null;
+}
+
 function buildPreviewDocument({ bodyHtml, headerText, rootPageName = "" }: { bodyHtml: string; headerText: string; rootPageName?: string }): string {
   const isCover = rootPageName === "cover";
   const isSommaire = rootPageName === "sommaire";

@@ -7,6 +7,7 @@ const status = _status!;
 import { getActiveTab } from "../workspace/tabs/tab-bar-controller.js";
 import { getTableRangeAt, insertTable } from "./table-widget.js";
 import { saveImageAsset } from "../workspace/files/asset-manager.js";
+import { getCachedPdfCssSync } from "../document/rendering/preview-renderer.js";
 
 const WORD_CHAR_RE: RegExp = /[\p{L}\p{N}_-]/u;
 const SYMBOLS: { value: string; label: string }[] = [
@@ -411,7 +412,15 @@ function escapeHtmlAttr(s: string): string {
 }
 
 function buildPreviewSrcdoc(renderedHtml: string): string {
-  return `<!DOCTYPE html><html><head><base href="${location.origin}/"><link rel="stylesheet" href="css/preview/pdf.css"><link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono&family=Source+Serif+4&display=swap" rel="stylesheet"><style>html,body{margin:0;padding:0;background:#fff;}body{padding:10px;font-size:7.5pt;}@page{margin:0;}.pdf-content{padding:0;}section.level2{padding:0;}section.level2>:first-child{margin-top:0;}section.level2>:last-child{margin-bottom:0;}.md-heatmap{font-size:6.5pt;}.md-stat-tiles-value{font-size:12pt;}.md-numbered-grid-num{font-size:14pt;}</style></head><body><section class="level2" style="${PREVIEW_SECTION_VARS}"><div class="pdf-content" style="${PREVIEW_SECTION_VARS}">${renderedHtml}</div></section></body></html>`;
+  // Inline cached pdf.css instead of <link rel=stylesheet href="...">.
+  // Under Electron's file:// origin, relative URLs in srcdoc iframes don't
+  // resolve (base href = file:/// can't reach the bundled assets). The
+  // preview-renderer prefetches pdf.css on app load; we reuse that cache.
+  const cachedCss = getCachedPdfCssSync();
+  const pdfCssTag = cachedCss
+    ? `<style>${cachedCss}</style>`
+    : `<link rel="stylesheet" href="css/preview/pdf.css">`;
+  return `<!DOCTYPE html><html><head><base href="${location.origin}/">${pdfCssTag}<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono&family=Source+Serif+4&display=swap" rel="stylesheet"><style>html,body{margin:0;padding:0;background:#fff;}body{padding:10px;font-size:7.5pt;}@page{margin:0;}.pdf-content{padding:0;}section.level2{padding:0;}section.level2>:first-child{margin-top:0;}section.level2>:last-child{margin-bottom:0;}.md-heatmap{font-size:6.5pt;}.md-stat-tiles-value{font-size:12pt;}.md-numbered-grid-num{font-size:14pt;}</style></head><body><section class="level2" style="${PREVIEW_SECTION_VARS}"><div class="pdf-content" style="${PREVIEW_SECTION_VARS}">${renderedHtml}</div></section></body></html>`;
 }
 
 function blockItem(label: string, action: () => void): { label: string; action: () => void; preview?: string } {
@@ -517,11 +526,15 @@ function makePreviewIframe(renderedHtml: string, maxWidthPx = 260): HTMLIFrameEl
   iframe.className = "help-preview-frame";
   iframe.style.cssText =
     `width:100%;border:none;background:#fff;border-radius:4px;min-height:60px;`;
+  const cachedCss = getCachedPdfCssSync();
+  const pdfCssTag = cachedCss
+    ? `<style>${cachedCss}</style>`
+    : `<link rel="stylesheet" href="css/preview/pdf.css">`;
   const src = `<!DOCTYPE html>
 <html>
 <head>
 <base href="${location.origin}/">
-<link rel="stylesheet" href="css/preview/pdf.css">
+${pdfCssTag}
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&family=JetBrains+Mono&family=Source+Serif+4&display=swap" rel="stylesheet">
 <style>
   html, body { margin:0; padding:0; background:#fff; }
