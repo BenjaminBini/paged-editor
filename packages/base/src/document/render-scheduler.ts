@@ -2,6 +2,14 @@
 
 import { editor, previewContainer as _previewContainer, status as _status } from "../editor/codemirror-editor.js";
 
+// Tagged logger — mirrors the one in preview-renderer.ts.  Same toggle.
+function rsl(msg: string, ...rest: any[]): void {
+  if (typeof window !== "undefined" && (window as any).__pagedRenderDebug === false) return;
+  const t = typeof performance !== "undefined" ? performance.now().toFixed(1) : "?";
+  // eslint-disable-next-line no-console
+  console.log(`[render +${t}ms] ${msg}`, ...rest);
+}
+
 // These DOM elements are guaranteed to exist when this module loads.
 const previewContainer: HTMLElement = _previewContainer!;
 const status: HTMLElement = _status!;
@@ -9,7 +17,7 @@ import { getActiveFileName, getActiveFilePath } from "../workspace/files/active-
 import { getActiveTab } from "../workspace/tabs/tab-bar-controller.js";
 import { getFolderPath } from "../workspace/files/file-manager.js";
 import { renderMarkdown } from "./rendering/section-pipeline.js";
-import { PreviewRenderer } from "./rendering/preview-renderer.js";
+import { PreviewRenderer, RenderSupersededError } from "./rendering/preview-renderer.js";
 import { emit } from "../infrastructure/event-bus.js";
 import { getAssetBaseHref } from "../workspace/files/asset-manager.js";
 import { buildHeaderText } from "./export/html-document-wrapper.js";
@@ -47,6 +55,12 @@ let _userZoom: number = 1;
 let renderTimeout: ReturnType<typeof setTimeout> | null = null;
 let renderStartTime: number = 0;
 let renderGeneration: number = 0;
+// Separate counter for cover renders so that a cover render does NOT bump
+// renderGeneration and invalidate a freshly-queued markdown pending request
+// (Firefox bug: active-tab activation can fire triggerRender before cover's
+// bump, then cover's bump caused renderRequest to gen-mismatch and bail,
+// stranding the active-tab render and leaving the cover visible).
+let coverGeneration: number = 0;
 let pendingMarkdown: { markdown: string; generation: number } | null = null;
 let isRendering: boolean = false;
 let lastRenderStats: { elapsed: number; totalPages: number } = {
@@ -261,6 +275,12 @@ async function renderRequest(request: { markdown: string; generation: number }):
   const previewScrollState = capturePreviewScrollState();
 
   const activeTab = getActiveTab();
+  rsl(
+    `renderRequest enter gen=${generation}/${renderGeneration}` +
+    ` activeTabKind=${(activeTab as any)?.kind || "md"}` +
+    ` activePath=${getActiveFilePath()}` +
+    ` mdLen=${markdown?.length || 0}`,
+  );
   const assetBaseTarget = isTocTab(activeTab) || isCoverTab(activeTab)
     ? getFolderPath()
     : getActiveFilePath();
@@ -291,7 +311,10 @@ async function renderRequest(request: { markdown: string; generation: number }):
     });
   }
 
-  if (generation !== renderGeneration) return false;
+  if (generation !== renderGeneration) {
+    rsl(`renderRequest gen-mismatch pre-render gen=${generation} latest=${renderGeneration} → bail`);
+    return false;
+  }
 
   // Skip Paged.js entirely if HTML output hasn't changed since last render
   // AND the preview is currently showing the same target (cover renders go
@@ -306,13 +329,22 @@ async function renderRequest(request: { markdown: string; generation: number }):
       : `md:${getActiveFilePath() || ""}`;
   if (html != null && html === _lastRenderedHtml && currentTarget === _lastDisplayedTarget) {
     const elapsed = Math.round(performance.now() - renderStartTime);
+    rsl(`renderRequest cache-hit target=${currentTarget} elapsed=${elapsed}ms`);
     status.textContent = `${lastRenderStats.totalPages} pages — ${elapsed}ms (cached)`;
     unlockEditorScroll();
     return true;
   }
+  rsl(
+    `renderRequest invoking previewRenderer.render` +
+    ` target=${currentTarget} prevTarget=${_lastDisplayedTarget}` +
+    ` htmlChanged=${html !== _lastRenderedHtml}`,
+  );
 
   lastRenderStats = await previewRenderer.render(renderResult);
-  if (generation !== renderGeneration) return false;
+  if (generation !== renderGeneration) {
+    rsl(`renderRequest gen-mismatch post-render gen=${generation} latest=${renderGeneration} → bail`);
+    return false;
+  }
 
   _lastRenderedHtml = html ?? null;
   _lastDisplayedTarget = currentTarget;
@@ -339,12 +371,16 @@ async function renderRequest(request: { markdown: string; generation: number }):
 }
 
 async function flushRenderQueue(): Promise<void> {
-  if (isRendering || !pendingMarkdown) return;
+  if (isRendering || !pendingMarkdown) {
+    rsl(`flushRenderQueue noop isRendering=${isRendering} pending=${!!pendingMarkdown}`);
+    return;
+  }
 
   isRendering = true;
   while (pendingMarkdown) {
     const request = pendingMarkdown;
     pendingMarkdown = null;
+    rsl(`flushRenderQueue iterate gen=${request.generation} mdLen=${request.markdown.length}`);
 
     try {
       const rendered = await renderRequest(request);
@@ -352,6 +388,14 @@ async function flushRenderQueue(): Promise<void> {
         status.textContent = "Rendering...";
       }
     } catch (error) {
+      // A newer render has already taken over — leave the preview alone and
+      // let the newer call finish.  Clearing here would wipe a freshly-
+      // rendered preview belonging to a different (still-running) request.
+      // Still unlock the editor scroll so subsequent re-locks balance.
+      if (error instanceof RenderSupersededError) {
+        unlockEditorScroll();
+        continue;
+      }
       console.error(error);
       previewRenderer.clear();
       scaleSurface();
@@ -365,11 +409,18 @@ async function flushRenderQueue(): Promise<void> {
 export async function triggerRender(): Promise<void> {
   const markdown = editor.value;
   const activeTab = getActiveTab();
+  rsl(
+    `triggerRender activeTabKind=${(activeTab as any)?.kind || "md"}` +
+    ` activePath=${getActiveFilePath()}` +
+    ` mdLen=${markdown?.length || 0}` +
+    ` renderGenBefore=${renderGeneration}`,
+  );
   if (!markdown.trim() && !isTocTab(activeTab) && !isCoverTab(activeTab)) {
     pendingMarkdown = null;
     previewRenderer.clear();
     scaleSurface();
     status.textContent = "Empty";
+    rsl(`triggerRender → empty (no content, not TOC/cover)`);
     return;
   }
 
@@ -378,6 +429,7 @@ export async function triggerRender(): Promise<void> {
     markdown,
     generation: renderGeneration,
   };
+  rsl(`triggerRender queued gen=${renderGeneration}`);
   await flushRenderQueue();
 }
 
@@ -450,11 +502,32 @@ export function handlePreviewLayoutChange(): void {
 // Re-render the cover page from an already-normalized project object, bypassing
 // the full triggerRender pipeline (no markdown parse, no async asset-href lookup).
 export async function renderCoverFromProject(project: Record<string, any>): Promise<void> {
+  // Use a private counter — must NOT bump renderGeneration (see comment near
+  // its declaration).  Cover renders are sequenced by PreviewRenderer's
+  // id-based supersede, so concurrent cover/markdown calls are safe.
+  const myCoverGen = ++coverGeneration;
+  const pendingAtEntry = pendingMarkdown;
+  rsl(
+    `renderCoverFromProject ENTER coverGen=${myCoverGen} renderGen=${renderGeneration}` +
+    ` pending=${!!pendingMarkdown} pendingGen=${pendingMarkdown?.generation}` +
+    ` isRendering=${isRendering}`,
+  );
   const assetBaseHref = _cachedCoverAssetBaseHref ?? await getAssetBaseHref(getFolderPath() || "");
   _cachedCoverAssetBaseHref = assetBaseHref;
 
-  renderGeneration += 1;
-  const generation = renderGeneration;
+  // If a newer triggerRender came in during our await, yield to it — the
+  // active tab is no longer the cover (or a fresher cover refresh exists).
+  if (myCoverGen !== coverGeneration) {
+    rsl(`renderCoverFromProject newer cover gen=${coverGeneration} → yield`);
+    return;
+  }
+  if (pendingMarkdown && pendingMarkdown !== pendingAtEntry) {
+    rsl(
+      `renderCoverFromProject newer pending markdown gen=${pendingMarkdown.generation}` +
+      ` (pendingAtEntry=${pendingAtEntry?.generation ?? "null"}) → yield`,
+    );
+    return;
+  }
 
   let renderResult;
   try {
@@ -463,7 +536,10 @@ export async function renderCoverFromProject(project: Record<string, any>): Prom
     renderResult = buildCoverErrorRenderResult(error);
   }
 
-  if (generation !== renderGeneration) return;
+  if (myCoverGen !== coverGeneration) {
+    rsl(`renderCoverFromProject pre-render newer cover gen=${coverGeneration} → bail`);
+    return;
+  }
 
   // Mark cover as currently displayed so the markdown render path's
   // cache-skip won't fire on the next markdown tab activation (it requires
@@ -473,6 +549,11 @@ export async function renderCoverFromProject(project: Record<string, any>): Prom
   try {
     lastRenderStats = await previewRenderer.render(renderResult);
   } catch (error: any) {
+    // Newer render has taken over — no-op so we don't clobber it.
+    if (error instanceof RenderSupersededError) {
+      rsl(`renderCoverFromProject SUPERSEDED coverGen=${myCoverGen}`);
+      return;
+    }
     console.error("Cover preview render failed:", error);
     previewRenderer.clear();
     scaleSurface();
@@ -480,7 +561,11 @@ export async function renderCoverFromProject(project: Record<string, any>): Prom
     return;
   }
 
-  if (generation !== renderGeneration) return;
+  if (myCoverGen !== coverGeneration) {
+    rsl(`renderCoverFromProject post-render newer cover gen=${coverGeneration} → bail`);
+    return;
+  }
+  rsl(`renderCoverFromProject COMPLETE coverGen=${myCoverGen} pages=${lastRenderStats.totalPages}`);
 
   scaleSurface();
   previewRenderer.rebuildLineMap();

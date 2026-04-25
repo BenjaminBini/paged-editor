@@ -16,6 +16,14 @@ import {
 
 export async function tryRestore(): Promise<boolean> {
   const state = await platform.getAppState() as Record<string, any>;
+  if (typeof window !== "undefined" && (window as any).__pagedRenderDebug !== false) {
+    // eslint-disable-next-line no-console
+    console.log("[render +0.0ms] tryRestore state:", JSON.stringify({
+      lastFolder: state.lastFolder,
+      openTabs: state.openTabs,
+      activeTab: state.activeTab,
+    }));
+  }
 
   if (state.lastFolder) {
     try {

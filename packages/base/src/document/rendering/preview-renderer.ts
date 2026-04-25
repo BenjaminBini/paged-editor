@@ -139,12 +139,43 @@ function sanitizePreviewHtml(html: string): string {
   });
 }
 
+// Thrown when a render() call is preempted by a newer one before it has
+// started running. Callers should treat this as a no-op (do not clear the
+// preview, do not log) — a more recent render is already on its way.
+export class RenderSupersededError extends Error {
+  constructor() {
+    super("Render superseded by newer request");
+    this.name = "RenderSupersededError";
+  }
+}
+
+// Tagged console logger.  Toggle by setting `window.__pagedRenderDebug = false`
+// at runtime to silence everything below without touching code.  Default ON
+// while we shake out the cover-on-Firefox issue — flip it off later.
+declare global { interface Window { __pagedRenderDebug?: boolean } }
+function rlog(msg: string, ...rest: any[]): void {
+  if ((globalThis as any).window && window.__pagedRenderDebug === false) return;
+  // performance.now() gives sub-ms resolution which matters for ordering races.
+  const t = typeof performance !== "undefined" ? performance.now().toFixed(1) : "?";
+  // eslint-disable-next-line no-console
+  console.log(`[render +${t}ms] ${msg}`, ...rest);
+}
+if (typeof window !== "undefined" && window.__pagedRenderDebug === undefined) {
+  // Default OFF.  Flip on at runtime via `window.__pagedRenderDebug = true`
+  // (or in localStorage by setting key `pagedRenderDebug` to `"1"`).
+  window.__pagedRenderDebug =
+    typeof localStorage !== "undefined" && localStorage.getItem("pagedRenderDebug") === "1";
+}
+
 export class PreviewRenderer {
   previewFrame: Element;
   previewPages: Element;
   currentPreviewer: any;
   lineMap: any[];
   pendingLineMapData: boolean | null;
+  // Serialization state — see render() below.
+  private _renderChain: Promise<unknown>;
+  private _latestRenderId: number;
 
   constructor({ previewFrame, previewPages }: { previewFrame: Element; previewPages: Element }) {
     this.previewFrame = previewFrame;
@@ -152,6 +183,8 @@ export class PreviewRenderer {
     this.currentPreviewer = null;
     this.lineMap = [];
     this.pendingLineMapData = null;
+    this._renderChain = Promise.resolve();
+    this._latestRenderId = 0;
   }
 
   getLineMap(): any[] {
@@ -169,14 +202,23 @@ export class PreviewRenderer {
     if (!this.currentPreviewer) return;
     const prev = this.currentPreviewer;
     this.currentPreviewer = null;
-    try { prev.chunker?.removePages?.(0); } catch {}
-    try { prev.chunker?.destroy?.(); } catch {}
-    try { prev.polisher?.destroy?.(); } catch {}
-    // Remove any orphaned Paged.js styles that the polisher's own destroy()
-    // may have missed (e.g. from a prior crash or concurrent renders).
+    this._disposePreviewer(prev);
+    // Belt-and-braces: remove any orphaned Paged.js styles that the polisher's
+    // own destroy() may have missed (prior crash, etc.).  Only safe here
+    // because dispose() is invoked between renders, never alongside one.
     for (const el of document.querySelectorAll("style[data-pagedjs-inserted-styles]")) {
       el.remove();
     }
+  }
+
+  // Tear down a *specific* previewer without sweeping all pagedjs styles in
+  // the document head.  Used by the staged render path so we don't accidentally
+  // strip the styles of a freshly-rendered (and now-current) previewer.
+  private _disposePreviewer(prev: any): void {
+    if (!prev) return;
+    try { prev.chunker?.removePages?.(0); } catch {}
+    try { prev.chunker?.destroy?.(); } catch {}
+    try { prev.polisher?.destroy?.(); } catch {}
   }
 
   /**
@@ -275,8 +317,43 @@ export class PreviewRenderer {
     return patched;
   }
 
+  // Public entry point — serializes concurrent render() calls. When several
+  // renders fire in quick succession (e.g. session restore opens 4 tabs back
+  // to back), we MUST NOT let them run concurrently: dispose() detaches the
+  // previous chunker's pagesArea mid-flight, and Paged.js's Layout class then
+  // throws "Cannot read properties of null (reading 'getBoundingClientRect')"
+  // on the now-orphaned page element.
+  //
+  // Strategy: each call gets a monotonically increasing id and queues behind
+  // the previous chain entry. When its turn comes, it checks whether a newer
+  // render has been requested in the meantime — if so, it throws
+  // RenderSupersededError so callers can no-op instead of clearing the
+  // preview. Only the latest queued render actually runs Paged.js.
   async render(renderResult: Record<string, any>): Promise<{ elapsed: number; totalPages: number }> {
+    const myId = ++this._latestRenderId;
+    const prev = this._renderChain;
+    const tag = renderResult?.rootPageName || "(default)";
+    rlog(`render() enqueued id=${myId} latestId=${this._latestRenderId} tag=${tag}`);
+    const promise = (async () => {
+      try { await prev; } catch { /* prior render's failure is its own concern */ }
+      if (myId !== this._latestRenderId) {
+        rlog(`render() id=${myId} SUPERSEDED (latestId=${this._latestRenderId}) tag=${tag}`);
+        throw new RenderSupersededError();
+      }
+      rlog(`render() id=${myId} starting _doRender tag=${tag}`);
+      const r = await this._doRender(renderResult, myId);
+      rlog(`render() id=${myId} done tag=${tag} pages=${r.totalPages} elapsed=${r.elapsed}ms`);
+      return r;
+    })();
+    // Always advance the chain, even on rejection, so the next caller can
+    // proceed.  Use a swallowed copy to avoid unhandled-rejection warnings.
+    this._renderChain = promise.catch(() => undefined);
+    return promise;
+  }
+
+  private async _doRender(renderResult: Record<string, any>, idForLog: number = -1): Promise<{ elapsed: number; totalPages: number }> {
     const rootPageName = renderResult.rootPageName || "";
+    rlog(`_doRender id=${idForLog} tag=${rootPageName || "(default)"} bodyLen=${(renderResult.sectionHtml || "").length}`);
     const previewMarkup = sanitizePreviewHtml(
       buildPreviewDocument({
         bodyHtml: renderResult.sectionHtml,
@@ -289,22 +366,42 @@ export class PreviewRenderer {
     // render after hard refresh when Polisher would need to fetch CSS).
     await prefetchCss();
 
-    this.dispose();
-    // Replace the container with a fresh element so no stale Paged.js DOM state
-    // (data-ref attributes, orphaned chunker fragments) leaks between renders.
-    const fresh: HTMLDivElement = document.createElement("div");
-    fresh.className = (this.previewPages as HTMLElement).className;
-    (this.previewPages as HTMLElement).replaceWith(fresh);
-    this.previewPages = fresh;
+    // Render into an OFF-SCREEN staging container, swap into the live
+    // surface only once Paged.js has produced all pages.  Without this the
+    // user sees a blank flash during every render (file switch, restore,
+    // edit re-render) because the previous DOM is wiped before the new one
+    // is built.  Off-screen positioning still gives Paged.js valid layout
+    // metrics (offsetParent / getBoundingClientRect work as long as no
+    // ancestor is display:none).
+    const live = this.previewPages as HTMLElement;
+    const wrapper: HTMLElement | null = live.parentElement;
+    if (!wrapper) throw new Error("Preview surface has no parent — cannot render.");
 
-    // Paged.js requires the render target to be attached to a visible part of the
-    // DOM (it calls getBoundingClientRect on internal elements whose offsetParent
-    // must be non-null).  During session restore, renders fire before the preview
-    // pane is visible.  Insert a probe element and wait until it has layout.
+    const staging: HTMLDivElement = document.createElement("div");
+    staging.className = live.className;
+    // Stage on top of the live surface but hidden — same coordinate space so
+    // layout metrics match exactly, but invisible to the user until the swap.
+    // visibility:hidden preserves layout (offsetParent valid, getBoundingClientRect
+    // returns real dimensions) in every engine, unlike off-screen translation
+    // (top:-100000px) which Firefox sometimes treats as having zero size for
+    // layout measurement during async flow ticks.
+    staging.style.cssText =
+      "position:absolute;top:0;left:0;visibility:hidden;pointer-events:none;";
+    wrapper.appendChild(staging);
+    rlog(
+      `_doRender id=${idForLog} staging-attached wrapper=${wrapper.tagName}#${wrapper.id}` +
+      ` liveRect=${JSON.stringify(live.getBoundingClientRect())}`,
+    );
+
+    // Paged.js requires the render target to be attached to a visible part of
+    // the DOM (getBoundingClientRect / offsetParent on internal elements).
+    // During session restore renders fire before the preview pane is visible.
+    // Insert a probe element and wait until it has layout.
     const probe: HTMLDivElement = document.createElement("div");
     probe.style.cssText = "position:absolute;width:1px;height:1px;pointer-events:none;";
-    this.previewPages.appendChild(probe);
+    staging.appendChild(probe);
     if (!(probe as HTMLElement).offsetParent) {
+      rlog(`_doRender id=${idForLog} probe.offsetParent=null — waiting for layout`);
       await new Promise<void>((resolve) => {
         const check = (): void => {
           if ((probe as HTMLElement).offsetParent) { resolve(); return; }
@@ -312,19 +409,72 @@ export class PreviewRenderer {
         };
         requestAnimationFrame(check);
       });
+      rlog(`_doRender id=${idForLog} probe.offsetParent now valid`);
     }
     probe.remove();
 
-    const PreviewerCtor = globalThis.Paged?.Previewer;
-    if (!PreviewerCtor) throw new Error("Paged.js previewer is not available.");
+    // Paged.js's internal Queue ticks via requestAnimationFrame. When the tab is
+    // hidden (refresh in a background tab, minimized window, occluded), browsers
+    // throttle rAF to ~0Hz and the chunker render loop never advances —
+    // `previewer.preview()` hangs forever and the preview is stuck on
+    // "Rendering...". Wait for the document to be visible before kicking off
+    // Paged.js so the queue is guaranteed to drain.
+    if (document.visibilityState !== "visible") {
+      rlog(`_doRender id=${idForLog} visibilityState=${document.visibilityState} — waiting`);
+      await new Promise<void>((resolve) => {
+        const onVisible = (): void => {
+          if (document.visibilityState === "visible") {
+            document.removeEventListener("visibilitychange", onVisible);
+            resolve();
+          }
+        };
+        document.addEventListener("visibilitychange", onVisible);
+      });
+      rlog(`_doRender id=${idForLog} visibility now visible`);
+    }
 
-    this.currentPreviewer = new PreviewerCtor();
+    const PreviewerCtor = globalThis.Paged?.Previewer;
+    if (!PreviewerCtor) {
+      staging.remove();
+      throw new Error("Paged.js previewer is not available.");
+    }
+
+    const previewer = new PreviewerCtor();
     const startedAt = performance.now();
-    const flow = await this.currentPreviewer.preview(
-      previewMarkup,
-      buildPreviewStyles({ rootPageName }) as any,
-      this.previewPages,
+    rlog(`_doRender id=${idForLog} preview() begin tag=${rootPageName || "(default)"}`);
+    let flow: any;
+    try {
+      flow = await previewer.preview(
+        previewMarkup,
+        buildPreviewStyles({ rootPageName }) as any,
+        staging,
+      );
+    } catch (e) {
+      rlog(`_doRender id=${idForLog} preview() THREW: ${(e as any)?.message || e}`);
+      // Render failed — drop the staging container and the half-built
+      // previewer so the live surface keeps showing whatever it had.
+      this._disposePreviewer(previewer);
+      staging.remove();
+      throw e;
+    }
+    rlog(
+      `_doRender id=${idForLog} preview() done pages=${staging.querySelectorAll(".pagedjs_page").length}` +
+      ` flowTotal=${flow?.total} elapsed=${(performance.now() - startedAt).toFixed(0)}ms`,
     );
+
+    // Render succeeded.  Atomic swap: dispose the previous previewer, then
+    // replace the live surface with the (now fully-painted) staging div.
+    const previous = this.currentPreviewer;
+    this.currentPreviewer = previewer;
+    this._disposePreviewer(previous);
+
+    // Reset the off-screen positioning so the staged surface drops into place
+    // exactly where the previous one was.
+    staging.style.cssText = "";
+    staging.className = live.className;
+    live.replaceWith(staging);
+    this.previewPages = staging;
+    rlog(`_doRender id=${idForLog} swapped staging→live tag=${rootPageName || "(default)"}`);
 
     await new Promise((resolve) => globalThis.requestAnimationFrame(resolve));
 

@@ -46,6 +46,11 @@ function storeActiveEditorState(): void {
 }
 
 export function openTab(path: string, name: string, content: string | undefined, modTime: number | undefined, options: { kind?: string; readOnly?: boolean; editorDisabled?: boolean } = {}): number {
+  if (typeof window !== "undefined" && (window as any).__pagedRenderDebug !== false) {
+    const t = typeof performance !== "undefined" ? performance.now().toFixed(1) : "?";
+    // eslint-disable-next-line no-console
+    console.log(`[render +${t}ms] openTab path=${path} name=${name} kind=${options.kind || "file"} contentDefined=${content !== undefined}`);
+  }
   const existing = tabs.value.findIndex((t) => t.path && t.path === path);
   if (existing >= 0) {
     switchToTab(existing);
@@ -138,6 +143,11 @@ export function switchToTab(idx: number): void {
 
   activeTabIdx.value = idx;
   const tab = tabs.value[idx];
+  if (typeof window !== "undefined" && (window as any).__pagedRenderDebug !== false) {
+    const t = typeof performance !== "undefined" ? performance.now().toFixed(1) : "?";
+    // eslint-disable-next-line no-console
+    console.log(`[render +${t}ms] switchToTab idx=${idx} kind=${tab.kind} path=${tab.path}`);
+  }
   if (_onBeforeSwap) _onBeforeSwap();
   setEditorReadOnly(!!tab.readOnly);
   restoreEditorSnapshot(tab.editorState || blankEditorState());
