@@ -458,6 +458,11 @@ export class PreviewRenderer {
       if (!PreviewerCtor) throw new Error("Paged.js previewer is not available.");
       previewer = new PreviewerCtor();
       rlog(`_doRender id=${idForLog} preview() begin tag=${rootPageName || "(default)"}`);
+      flow = await previewer.preview(
+        previewMarkup,
+        buildPreviewStyles({ rootPageName }) as any,
+        staging,
+      );
       rlog(
         `_doRender id=${idForLog} preview() done pages=${staging.querySelectorAll(".pagedjs_page").length}` +
         ` flowTotal=${flow?.total} elapsed=${(performance.now() - startedAt).toFixed(0)}ms`,
@@ -498,7 +503,7 @@ export class PreviewRenderer {
     return {
       elapsed: Math.round(performance.now() - startedAt),
       totalPages:
-        flow.total ||
+        flow?.total ||
         this.previewPages.querySelectorAll(".pagedjs_page").length ||
         0,
     };
