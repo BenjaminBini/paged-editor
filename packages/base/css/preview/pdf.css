@@ -1072,22 +1072,22 @@ figure.md-image figcaption {
    - col (half-width, compact): rail of Statut · Exigence · Réf at top, title with
      bottom hairline, body, image below (16/9) if present. */
 .md-feature-grid {
-  --mf-fg-1: #0E1722;
-  --mf-fg-2: #34404E;
-  --mf-fg-3: #6A7787;
-  --mf-navy: #10314F;
+  --mf-fg-1: #0e1722;
+  --mf-fg-2: #34404e;
+  --mf-fg-3: #6a7787;
+  --mf-navy: #10314f;
   --mf-rule: rgba(14, 23, 34, 0.12);
   --mf-rule-soft: rgba(14, 23, 34, 0.08);
-  --mf-arrow: #C43E62;
-  --mf-status-conforme: #2F9E6B;
-  --mf-status-non-conforme: #C43E62;
-  --mf-status-parametrage: #E88433;
-  --mf-status-a-verifier: #6A7787;
-  --mf-status-preciser: #4354A2;
-  --mf-level-obligatoire: #C43E62;
-  --mf-level-souhaitee: #4354A2;
-  --mf-level-information: #0095B5;
-  --mf-level-optionnel: #6A7787;
+  --mf-arrow: #c43e62;
+  --mf-status-conforme: #2f9e6b;
+  --mf-status-non-conforme: #c43e62;
+  --mf-status-parametrage: #e88433;
+  --mf-status-a-verifier: #6a7787;
+  --mf-status-preciser: #4354a2;
+  --mf-level-obligatoire: #c43e62;
+  --mf-level-souhaitee: #4354a2;
+  --mf-level-information: #0095b5;
+  --mf-level-optionnel: #6a7787;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 14px;
@@ -1102,11 +1102,21 @@ figure.md-image figcaption {
   background: transparent;
 }
 /* Status-tinted backgrounds */
-.md-feature.md-feature-status-conforme     { background: rgba(47, 158, 107, 0.05); }
-.md-feature.md-feature-status-non-conforme { background: rgba(196, 62, 98, 0.055); }
-.md-feature.md-feature-status-parametrage  { background: rgba(232, 132, 51, 0.06); }
-.md-feature.md-feature-status-a-verifier   { background: rgba(106, 119, 135, 0.05); }
-.md-feature.md-feature-status-preciser     { background: rgba(67, 84, 162, 0.05); }
+.md-feature.md-feature-status-conforme {
+  background: rgba(47, 158, 107, 0.05);
+}
+.md-feature.md-feature-status-non-conforme {
+  background: rgba(196, 62, 98, 0.055);
+}
+.md-feature.md-feature-status-parametrage {
+  background: rgba(232, 132, 51, 0.06);
+}
+.md-feature.md-feature-status-a-verifier {
+  background: rgba(106, 119, 135, 0.05);
+}
+.md-feature.md-feature-status-preciser {
+  background: rgba(67, 84, 162, 0.05);
+}
 
 /* Status dot (small colored circle) */
 .md-feature-dot {
@@ -1119,17 +1129,35 @@ figure.md-image figcaption {
   vertical-align: middle;
   background: var(--mf-fg-3);
 }
-.md-feature-dot-conforme     { background: var(--mf-status-conforme); }
-.md-feature-dot-non-conforme { background: var(--mf-status-non-conforme); }
-.md-feature-dot-parametrage  { background: var(--mf-status-parametrage); }
-.md-feature-dot-a-verifier   { background: var(--mf-status-a-verifier); }
-.md-feature-dot-preciser     { background: var(--mf-status-preciser); }
+.md-feature-dot-conforme {
+  background: var(--mf-status-conforme);
+}
+.md-feature-dot-non-conforme {
+  background: var(--mf-status-non-conforme);
+}
+.md-feature-dot-parametrage {
+  background: var(--mf-status-parametrage);
+}
+.md-feature-dot-a-verifier {
+  background: var(--mf-status-a-verifier);
+}
+.md-feature-dot-preciser {
+  background: var(--mf-status-preciser);
+}
 
 /* Requirement-level color on text (meta value / rail label) */
-.md-feature-level-obligatoire { color: var(--mf-level-obligatoire); }
-.md-feature-level-souhaitee   { color: var(--mf-level-souhaitee); }
-.md-feature-level-information { color: var(--mf-level-information); }
-.md-feature-level-optionnel   { color: var(--mf-level-optionnel); }
+.md-feature-level-obligatoire {
+  color: var(--mf-level-obligatoire);
+}
+.md-feature-level-souhaitee {
+  color: var(--mf-level-souhaitee);
+}
+.md-feature-level-information {
+  color: var(--mf-level-information);
+}
+.md-feature-level-optionnel {
+  color: var(--mf-level-optionnel);
+}
 
 /* ── Row / non-compact (full-width card, meta column on the left) ── */
 .md-feature-row {
@@ -1233,9 +1261,15 @@ figure.md-image figcaption {
   line-height: 1.5;
   color: var(--mf-fg-2);
 }
-.md-feature-body > :first-child { margin-top: 0; }
-.md-feature-body > :last-child  { margin-bottom: 0; }
-.md-feature-body p { margin: 0 0 4px 0; }
+.md-feature-body > :first-child {
+  margin-top: 0;
+}
+.md-feature-body > :last-child {
+  margin-bottom: 0;
+}
+.md-feature-body p {
+  margin: 0 0 4px 0;
+}
 
 .pdf-content .md-feature-body ul li {
   font-size: 13px;
@@ -1261,7 +1295,7 @@ figure.md-image figcaption {
 .md-feature-media-frame {
   width: 100%;
   overflow: hidden;
-  background: #F7F9FC;
+  background: #f7f9fc;
   aspect-ratio: 4 / 3;
 }
 .md-feature-col .md-feature-media-frame {
@@ -1283,8 +1317,9 @@ figure.md-image figcaption {
   font-style: italic;
 }
 
-/* Source link / label — verbatim ref from the grid JSON, foot of the card. */
-.md-feature-source {
+/* Source link / label — verbatim ref from the grid JSON, foot of the card.
+   Layout: wrapper is the block; label (a/span) + url (span) are inline siblings. */
+.md-feature-source-line {
   display: block;
   margin-top: 10px;
   font-size: 7pt;
@@ -1292,8 +1327,15 @@ figure.md-image figcaption {
   color: var(--mf-fg-3);
   letter-spacing: 0.04em;
   line-height: 1.4;
+  /* Long URLs / labels must wrap inside the card without expanding it.
+     overflow-wrap:anywhere lets the browser break mid-token (URLs etc.)
+     when no whitespace is available. word-break:break-word is a fallback
+     for older engines. */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
-.md-feature-source::before {
+.md-feature-source-line::before {
   content: "Source : ";
   color: var(--mf-fg-3);
   font-weight: 700;
@@ -1302,6 +1344,9 @@ figure.md-image figcaption {
   font-size: 6.5pt;
   margin-right: 4px;
 }
+.md-feature-source {
+  display: inline;
+}
 a.md-feature-source {
   color: var(--mf-status-preciser);
   text-decoration: none;
@@ -1309,6 +1354,11 @@ a.md-feature-source {
 }
 a.md-feature-source:hover {
   border-bottom-style: solid;
+}
+/* Disable the global a[href^="http"]::after URL injection on the source link —
+   the URL is rendered as an actual DOM sibling (.md-feature-source-url). */
+a.md-feature-source::after {
+  content: none;
 }
 
 /* ── Heatmap (:::heatmap) ──

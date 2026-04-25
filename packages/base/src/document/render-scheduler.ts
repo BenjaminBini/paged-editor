@@ -55,6 +55,12 @@ let lastRenderStats: { elapsed: number; totalPages: number } = {
 };
 let _cachedCoverAssetBaseHref: string | null = null;
 let _lastRenderedHtml: string | null = null;
+// Tracks WHAT is currently shown in previewPages — independent of the html
+// cache (which only updates from the markdown render path). Cache-skip in
+// renderRequest must require BOTH html match AND target match, otherwise a
+// cover render that swapped previewPages will be ignored when switching
+// back to a markdown tab whose html happens to match _lastRenderedHtml.
+let _lastDisplayedTarget: string | null = null;
 let _patchTimeout: ReturnType<typeof setTimeout> | null = null;
 let _lastSourceBlocks: Array<{ start: number; end: number; kind: string; text: string }> = [];
 let _lastBlockEntries: BlockEntry[] = [];
@@ -287,9 +293,18 @@ async function renderRequest(request: { markdown: string; generation: number }):
 
   if (generation !== renderGeneration) return false;
 
-  // Skip Paged.js entirely if HTML output hasn't changed since last render.
+  // Skip Paged.js entirely if HTML output hasn't changed since last render
+  // AND the preview is currently showing the same target (cover renders go
+  // through a different path and swap previewPages without touching
+  // _lastRenderedHtml — without the target check we'd skip rendering and
+  // leave cover visible when switching back to a markdown tab).
   const html = renderResult.sectionHtml;
-  if (html != null && html === _lastRenderedHtml) {
+  const currentTarget = isCoverTab(activeTab)
+    ? "cover"
+    : isTocTab(activeTab)
+      ? "toc"
+      : `md:${getActiveFilePath() || ""}`;
+  if (html != null && html === _lastRenderedHtml && currentTarget === _lastDisplayedTarget) {
     const elapsed = Math.round(performance.now() - renderStartTime);
     status.textContent = `${lastRenderStats.totalPages} pages — ${elapsed}ms (cached)`;
     unlockEditorScroll();
@@ -300,6 +315,7 @@ async function renderRequest(request: { markdown: string; generation: number }):
   if (generation !== renderGeneration) return false;
 
   _lastRenderedHtml = html ?? null;
+  _lastDisplayedTarget = currentTarget;
   _lastSourceBlocks = (renderResult.sourceBlocks || []) as typeof _lastSourceBlocks;
   // Only renderMarkdown emits blockEntries/styleErrors; cover/TOC pipelines
   // don't carry stylable blocks, so default to empty.
@@ -448,6 +464,11 @@ export async function renderCoverFromProject(project: Record<string, any>): Prom
   }
 
   if (generation !== renderGeneration) return;
+
+  // Mark cover as currently displayed so the markdown render path's
+  // cache-skip won't fire on the next markdown tab activation (it requires
+  // BOTH html match and target match — see renderRequest).
+  _lastDisplayedTarget = "cover";
 
   try {
     lastRenderStats = await previewRenderer.render(renderResult);

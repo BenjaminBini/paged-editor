@@ -2,7 +2,10 @@
 // Configures marked once at load time; sets per-render context before each parse.
 // Used by render-scheduler.js (preview) and pdf-export-service.js (export).
 
-import { parseFrontmatter, escapeHtml } from "../../infrastructure/text-utils.js";
+import {
+  parseFrontmatter,
+  escapeHtml,
+} from "../../infrastructure/text-utils.js";
 import {
   buildBlockEntries,
   type BlockEntry,
@@ -10,10 +13,21 @@ import {
 } from "./block-model.js";
 import { renderStyleAttr, type StyleValues } from "./style-directive.js";
 import {
-  COLOR_PAIRS, detectPartieNum, getColorIndex, wrapSection,
-  stripLeadingNumber, slugify, decodeEntities, buildUnderline,
+  COLOR_PAIRS,
+  detectPartieNum,
+  getColorIndex,
+  wrapSection,
+  stripLeadingNumber,
+  slugify,
+  decodeEntities,
+  buildUnderline,
 } from "./markdown-helpers.js";
-import { resetMermaidQueue, pushToMermaidQueue, getMermaidQueue, resolveMermaid } from "./mermaid-renderer.js";
+import {
+  resetMermaidQueue,
+  pushToMermaidQueue,
+  getMermaidQueue,
+  resolveMermaid,
+} from "./mermaid-renderer.js";
 import { MD_ALERT_KINDS, MD_KNOWN_CONTAINERS } from "./container-registry.js";
 // ── Per-render context (set before each parse, read by renderer) ───────────
 // This is module-scoped, not global — only section-pipeline.js reads/writes it.
@@ -23,7 +37,8 @@ let _ctx: Record<string, any> | null = null;
 
 const PAGE_BREAK_TEXT_RE: RegExp = /\n[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
 const PAGE_BREAK_RAW_RE: RegExp = /\n\n?[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
-const STANDALONE_PAGE_BREAK_RE: RegExp = /^[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
+const STANDALONE_PAGE_BREAK_RE: RegExp =
+  /^[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
 const AO_GRID_COL_HEADER_RE: RegExp = /^:::col-(\d+)[ \t]*\r?\n?/gm;
 // Generic `:::name [attrs]\n…body…\n:::` container. Dispatched by name.
 const MD_CONTAINER_BLOCK_RE: RegExp =
@@ -34,8 +49,13 @@ const MD_STEP_HEADER_RE: RegExp = /^:::step[ \t]+([^\n]+)\r?\n/gm;
 const MD_CARD_HEADER_RE: RegExp = /^:::card[ \t]+([^\n]+)\r?\n/gm;
 const MD_FEATURE_HEADER_RE: RegExp = /^:::feature[ \t]+([^\n]+)\r?\n/gm;
 const MD_ATTR_RE: RegExp = /(\w+)="([^"]*)"/g;
-const IMAGE_ALIGNMENT_VALUES: Set<string> = new Set(["left", "center", "right"]);
-const IMAGE_MAX_WIDTH_RE: RegExp = /^\d+(?:\.\d+)?(?:px|%|em|rem|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cm|mm|in|pt|pc|ch|ex)$/i;
+const IMAGE_ALIGNMENT_VALUES: Set<string> = new Set([
+  "left",
+  "center",
+  "right",
+]);
+const IMAGE_MAX_WIDTH_RE: RegExp =
+  /^\d+(?:\.\d+)?(?:px|%|em|rem|vw|vh|vmin|vmax|svw|svh|lvw|lvh|dvw|dvh|cm|mm|in|pt|pc|ch|ex)$/i;
 
 function getLineStarts(source = ""): number[] {
   const lineStarts = [0];
@@ -52,16 +72,22 @@ function isStandalonePageBreak(value = ""): boolean {
 function getTableText(token: MarkedToken): string {
   const rows = [
     (token.header || []).map((cell: MarkedToken) => cell.text || "").join(" "),
-    ...((token.rows || []).map((row: MarkedToken[]) => row.map((cell: MarkedToken) => cell.text || "").join(" "))),
+    ...(token.rows || []).map((row: MarkedToken[]) =>
+      row.map((cell: MarkedToken) => cell.text || "").join(" "),
+    ),
   ];
   return rows.join("\n");
 }
 
 function getListText(token: MarkedToken): string {
-  return (token.items || []).map((item: MarkedToken) => item.text || "").join("\n");
+  return (token.items || [])
+    .map((item: MarkedToken) => item.text || "")
+    .join("\n");
 }
 
-function buildSourceBlocks(tokens: MarkedToken[]): Array<{ start: number; end: number; kind: string; text: string }> {
+function buildSourceBlocks(
+  tokens: MarkedToken[],
+): Array<{ start: number; end: number; kind: string; text: string }> {
   const blocks = [];
   let offset = 0;
 
@@ -90,7 +116,9 @@ function buildSourceBlocks(tokens: MarkedToken[]): Array<{ start: number; end: n
         blocks.push({
           start,
           end,
-          kind: isStandalonePageBreak(token.text || "") ? "pageBreak" : "paragraph",
+          kind: isStandalonePageBreak(token.text || "")
+            ? "pageBreak"
+            : "paragraph",
           text: token.text || "",
         });
         break;
@@ -131,7 +159,11 @@ function resolveAssetUrl(href = ""): string {
   }
 }
 
-function parseImageOptions(rawHref = ""): { href: string; align: string | null; maxWidth: string | null } {
+function parseImageOptions(rawHref = ""): {
+  href: string;
+  align: string | null;
+  maxWidth: string | null;
+} {
   const href = String(rawHref || "");
   if (!href.includes("|")) {
     return { href, align: null, maxWidth: null };
@@ -173,7 +205,13 @@ function parseImageOptions(rawHref = ""): { href: string; align: string | null; 
   return { href: baseHref, align, maxWidth };
 }
 
-function renderImageTag(parser: { parseInline: (tokens: MarkedToken[], renderer?: unknown) => string; textRenderer?: unknown }, token: MarkedToken): { html: string; text: string; align: string | null } {
+function renderImageTag(
+  parser: {
+    parseInline: (tokens: MarkedToken[], renderer?: unknown) => string;
+    textRenderer?: unknown;
+  },
+  token: MarkedToken,
+): { html: string; text: string; align: string | null } {
   const text = token.tokens
     ? parser.parseInline(token.tokens, parser.textRenderer)
     : token.text || "";
@@ -181,7 +219,8 @@ function renderImageTag(parser: { parseInline: (tokens: MarkedToken[], renderer?
   const href = resolveAssetUrl(options.href);
   let html = `<img src="${escapeHtml(href)}" alt="${escapeHtml(text)}"`;
   if (token.title) html += ` title="${escapeHtml(token.title as string)}"`;
-  if (options.maxWidth) html += ` style="max-width:min(100%, ${options.maxWidth})"`;
+  if (options.maxWidth)
+    html += ` style="max-width:min(100%, ${options.maxWidth})"`;
   html += ">";
   return { html, text, align: options.align };
 }
@@ -191,7 +230,8 @@ function pruneEmptyTrailingTokens(tokens: MarkedToken[]): void {
     const last = tokens[tokens.length - 1];
     const emptyText = typeof last.text === "string" && last.text.length === 0;
     const emptyRaw = typeof last.raw === "string" && last.raw.length === 0;
-    const emptyChildren = Array.isArray(last.tokens) && last.tokens.length === 0;
+    const emptyChildren =
+      Array.isArray(last.tokens) && last.tokens.length === 0;
     if (!emptyText && !emptyRaw && !emptyChildren) break;
     tokens.pop();
   }
@@ -199,8 +239,10 @@ function pruneEmptyTrailingTokens(tokens: MarkedToken[]): void {
 
 function stripTrailingPageBreakFromToken(token: MarkedToken): void {
   if (!token) return;
-  if (typeof token.raw === "string") token.raw = stripTrailingPageBreakRaw(token.raw);
-  if (typeof token.text === "string") token.text = stripTrailingPageBreakText(token.text);
+  if (typeof token.raw === "string")
+    token.raw = stripTrailingPageBreakRaw(token.raw);
+  if (typeof token.text === "string")
+    token.text = stripTrailingPageBreakText(token.text);
   if (Array.isArray(token.tokens) && token.tokens.length) {
     stripTrailingPageBreakFromToken(token.tokens[token.tokens.length - 1]);
     pruneEmptyTrailingTokens(token.tokens);
@@ -212,18 +254,26 @@ function extractTrailingListPageBreak(listToken: MarkedToken): number | null {
   if (!lastItem || !PAGE_BREAK_TEXT_RE.test(lastItem.text || "")) return null;
 
   let sourceLine = null;
-  if (typeof listToken._sourceLine === "number" && typeof listToken.raw === "string") {
+  if (
+    typeof listToken._sourceLine === "number" &&
+    typeof listToken.raw === "string"
+  ) {
     const rawBeforeBreak = stripTrailingPageBreakRaw(listToken.raw);
-    sourceLine = listToken._sourceLine + (rawBeforeBreak.split("\n").length - 1);
+    sourceLine =
+      listToken._sourceLine + (rawBeforeBreak.split("\n").length - 1);
   }
 
   lastItem.text = stripTrailingPageBreakText(lastItem.text);
-  if (typeof lastItem.raw === "string") lastItem.raw = stripTrailingPageBreakRaw(lastItem.raw);
+  if (typeof lastItem.raw === "string")
+    lastItem.raw = stripTrailingPageBreakRaw(lastItem.raw);
   if (Array.isArray(lastItem.tokens) && lastItem.tokens.length) {
-    stripTrailingPageBreakFromToken(lastItem.tokens[lastItem.tokens.length - 1]);
+    stripTrailingPageBreakFromToken(
+      lastItem.tokens[lastItem.tokens.length - 1],
+    );
     pruneEmptyTrailingTokens(lastItem.tokens);
   }
-  if (typeof listToken.raw === "string") listToken.raw = stripTrailingPageBreakRaw(listToken.raw);
+  if (typeof listToken.raw === "string")
+    listToken.raw = stripTrailingPageBreakRaw(listToken.raw);
 
   return sourceLine;
 }
@@ -232,7 +282,10 @@ function extractTrailingListPageBreak(listToken: MarkedToken): number | null {
 // Reads token._blockId / token._style attached by renderMarkdown and returns
 // the `data-block-id` attribute fragment + an inline CSS string. The CSS is
 // appended to whatever `style=""` the renderer already builds.
-function blockAnnotations(token: any): { blockIdAttr: string; styleCss: string } {
+function blockAnnotations(token: any): {
+  blockIdAttr: string;
+  styleCss: string;
+} {
   const blockIdAttr = token?._blockId
     ? ` data-block-id="${token._blockId}"`
     : "";
@@ -279,13 +332,21 @@ function renderStatTilesContainer(body: string, sl: string): string {
     .filter(Boolean)
     .map((line) => {
       const parts = line.split("|").map((p) => p.trim());
-      return { value: parts[0] || "", label: parts[1] || "", note: parts[2] || "" };
+      return {
+        value: parts[0] || "",
+        label: parts[1] || "",
+        note: parts[2] || "",
+      };
     });
   if (!items.length) return "";
   const tiles = items
     .map((it) => {
-      const label = it.label ? `<div class="md-stat-tiles-label">${marked.parseInline(it.label)}</div>` : "";
-      const note = it.note ? `<div class="md-stat-tiles-note">${marked.parseInline(it.note)}</div>` : "";
+      const label = it.label
+        ? `<div class="md-stat-tiles-label">${marked.parseInline(it.label)}</div>`
+        : "";
+      const note = it.note
+        ? `<div class="md-stat-tiles-note">${marked.parseInline(it.note)}</div>`
+        : "";
       return `<div class="md-stat-tiles-item">\n<div class="md-stat-tiles-value">${marked.parseInline(it.value)}</div>\n${label}${note}</div>`;
     })
     .join("\n");
@@ -330,7 +391,12 @@ function renderNumberedGridContainer(body: string, sl: string): string {
 // or similar "N deliverables with sub-bullets" views.
 function renderCardGridContainer(body: string, sl: string): string {
   MD_CARD_HEADER_RE.lastIndex = 0;
-  const headers: Array<{ title: string; phase: string; at: number; end: number }> = [];
+  const headers: Array<{
+    title: string;
+    phase: string;
+    at: number;
+    end: number;
+  }> = [];
   let hm: RegExpExecArray | null;
   while ((hm = MD_CARD_HEADER_RE.exec(body)) !== null) {
     const parts = hm[1].split("|").map((p) => p.trim());
@@ -387,9 +453,16 @@ function normalizeFeatureStatus(value: string): string {
   if (!v) return "";
   if (v.startsWith("nonconform")) return "non-conforme";
   if (v.startsWith("conform")) return "conforme";
-  if (v.startsWith("param") || v === "setup" || v === "config") return "parametrage";
+  if (v.startsWith("param") || v === "setup" || v === "config")
+    return "parametrage";
   if (v.startsWith("averifier") || v === "verify") return "a-verifier";
-  if (v.startsWith("preciser") || v.startsWith("apreciser") || v === "tbd" || v === "unknown") return "preciser";
+  if (
+    v.startsWith("preciser") ||
+    v.startsWith("apreciser") ||
+    v === "tbd" ||
+    v === "unknown"
+  )
+    return "preciser";
   return "";
 }
 function normalizeFeatureLevel(value: string): string {
@@ -399,8 +472,10 @@ function normalizeFeatureLevel(value: string): string {
     .replace(/[̀-ͯ]/g, "")
     .replace(/\s+/g, "");
   if (!v) return "";
-  if (v.startsWith("oblig") || v === "required" || v === "mandatory") return "obligatoire";
-  if (v.startsWith("souhait") || v === "desired" || v === "nice") return "souhaitee";
+  if (v.startsWith("oblig") || v === "required" || v === "mandatory")
+    return "obligatoire";
+  if (v.startsWith("souhait") || v === "desired" || v === "nice")
+    return "souhaitee";
   if (v.startsWith("option") || v === "optional") return "optionnel";
   if (v.startsWith("info")) return "information";
   return "";
@@ -432,7 +507,12 @@ function renderFeatureGridContainer(body: string, sl: string): string {
       const caption = attrs.caption || "";
       // Coverage source (LumApps doc, BEORN ref, …) — *not* the requirement source.
       const coverageSource = attrs.coverageSource || attrs.source || "";
-      const coverageSourceHref = attrs.coverageSourceHref || attrs.coverageSourceUrl || attrs.sourceHref || attrs.sourceUrl || "";
+      const coverageSourceHref =
+        attrs.coverageSourceHref ||
+        attrs.coverageSourceUrl ||
+        attrs.sourceHref ||
+        attrs.sourceUrl ||
+        "";
       const wantsRow = (attrs.layout || "").toLowerCase() === "row";
       // row → full-width card, meta column on the left (design "non-compact");
       // col → half-width card, inline meta rail at top (design "compact").
@@ -457,30 +537,38 @@ function renderFeatureGridContainer(body: string, sl: string): string {
         : "";
 
       // Meta column (row/non-compact) — stacked Statut / Exigence / Réf.
-      const metaColHtml = (statusLabel || levelLabel || refCode)
-        ? (
-          `<div class="md-feature-meta">` +
-          (statusLabel
-            ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Statut</div>` +
-              `<div class="md-feature-meta-value">${statusDot}${escapeHtml(statusLabel)}</div></div>`
-            : "") +
-          (levelLabel
-            ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Exigence</div>` +
-              `<div class="md-feature-meta-value md-feature-level-${levelKey}">${escapeHtml(levelLabel)}</div></div>`
-            : "") +
-          (refCode
-            ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Réf.</div>` +
-              `<div class="md-feature-meta-value">${escapeHtml(refCode)}</div></div>`
-            : "") +
-          `</div>`
-        )
-        : "";
+      const metaColHtml =
+        statusLabel || levelLabel || refCode
+          ? `<div class="md-feature-meta">` +
+            (statusLabel
+              ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Statut</div>` +
+                `<div class="md-feature-meta-value">${statusDot}${escapeHtml(statusLabel)}</div></div>`
+              : "") +
+            (levelLabel
+              ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Exigence</div>` +
+                `<div class="md-feature-meta-value md-feature-level-${levelKey}">${escapeHtml(levelLabel)}</div></div>`
+              : "") +
+            (refCode
+              ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Réf.</div>` +
+                `<div class="md-feature-meta-value">${escapeHtml(refCode)}</div></div>`
+              : "") +
+            `</div>`
+          : "";
 
       // Inline rail (col/compact) — Statut · Exigence · Réf on one line.
       const railItems: string[] = [];
-      if (statusLabel) railItems.push(`<span class="md-feature-rail-item">${statusDot}${escapeHtml(statusLabel)}</span>`);
-      if (levelLabel) railItems.push(`<span class="md-feature-rail-item"><span class="md-feature-rail-hint">Exig.</span><span class="md-feature-level-${levelKey}">${escapeHtml(levelLabel)}</span></span>`);
-      if (refCode) railItems.push(`<span class="md-feature-rail-item"><span class="md-feature-rail-hint">Réf.</span>${escapeHtml(refCode)}</span>`);
+      if (statusLabel)
+        railItems.push(
+          `<span class="md-feature-rail-item">${statusDot}${escapeHtml(statusLabel)}</span>`,
+        );
+      if (levelLabel)
+        railItems.push(
+          `<span class="md-feature-rail-item"><span class="md-feature-rail-hint">Exig.</span><span class="md-feature-level-${levelKey}">${escapeHtml(levelLabel)}</span></span>`,
+        );
+      if (refCode)
+        railItems.push(
+          `<span class="md-feature-rail-item"><span class="md-feature-rail-hint">Réf.</span>${escapeHtml(refCode)}</span>`,
+        );
       const railHtml = railItems.length
         ? `<div class="md-feature-rail">${railItems.join("")}</div>`
         : "";
@@ -494,16 +582,15 @@ function renderFeatureGridContainer(body: string, sl: string): string {
         mediaHtml = `<figure class="md-feature-media"><div class="md-feature-media-frame"><img src="${escapeHtml(href)}" alt="${escapeHtml(title)}"></div>${captionHtml}</figure>`;
       }
 
-      const sourceDisplay = coverageSource.length > 25
-        ? coverageSource.slice(0, 24).trimEnd() + "…"
-        : coverageSource;
-      const sourceTitleAttr = coverageSource.length > 25
-        ? ` title="${escapeHtml(coverageSource)}"`
+      // Show full source text/URL — no truncation. CSS word-break handles
+      // overflow without expanding card width.
+      const sourceLabelHtml = coverageSource
+        ? coverageSourceHref
+          ? `<a class="md-feature-source" href="${escapeHtml(coverageSourceHref)}">${marked.parseInline(coverageSource)}</a>`
+          : `<span class="md-feature-source">${marked.parseInline(coverageSource)}</span>`
         : "";
       const sourceHtml = coverageSource
-        ? (coverageSourceHref
-          ? `<a class="md-feature-source" href="${escapeHtml(coverageSourceHref)}"${sourceTitleAttr}>${marked.parseInline(sourceDisplay)}</a>`
-          : `<span class="md-feature-source"${sourceTitleAttr}>${marked.parseInline(sourceDisplay)}</span>`)
+        ? `<div class="md-feature-source-line">${sourceLabelHtml}</div>`
         : "";
 
       const statusClass = statusKey ? ` md-feature-status-${statusKey}` : "";
@@ -588,7 +675,10 @@ function renderHeatmapContainer(body: string, sl: string): string {
       const pipe = line.indexOf("|");
       if (pipe < 0) return null;
       const title = line.slice(0, pipe).trim();
-      const tokens = line.slice(pipe + 1).trim().split(/\s+/);
+      const tokens = line
+        .slice(pipe + 1)
+        .trim()
+        .split(/\s+/);
       const cells: string[] = [];
       for (let i = 0; i < ncols; i++) {
         const tok = tokens[i] || ".";
@@ -665,20 +755,35 @@ function renderHeatmapContainer(body: string, sl: string): string {
 }
 
 // `:::quote author="…" role="…"` — blockquote with attribution footer.
-function renderQuoteContainer(attrsRaw: string, body: string, sl: string): string {
+function renderQuoteContainer(
+  attrsRaw: string,
+  body: string,
+  sl: string,
+): string {
   const attrs = parseContainerAttrs(attrsRaw);
   const inner = marked.parse(body) as string;
   const parts: string[] = [];
-  if (attrs.author) parts.push(`<cite class="md-quote-author">${escapeHtml(attrs.author)}</cite>`);
-  if (attrs.role) parts.push(`<span class="md-quote-role">${escapeHtml(attrs.role)}</span>`);
-  const footer = parts.length ? `<footer class="md-quote-footer">${parts.join("")}</footer>\n` : "";
+  if (attrs.author)
+    parts.push(
+      `<cite class="md-quote-author">${escapeHtml(attrs.author)}</cite>`,
+    );
+  if (attrs.role)
+    parts.push(`<span class="md-quote-role">${escapeHtml(attrs.role)}</span>`);
+  const footer = parts.length
+    ? `<footer class="md-quote-footer">${parts.join("")}</footer>\n`
+    : "";
   return `<blockquote class="md-quote"${sl}>\n${inner}${footer}</blockquote>\n`;
 }
 
 // `:::timeline` with inner `:::step TITLE | META` headers (no per-step closer).
 function renderTimelineContainer(body: string, sl: string): string {
   MD_STEP_HEADER_RE.lastIndex = 0;
-  const headers: Array<{ title: string; meta: string; at: number; end: number }> = [];
+  const headers: Array<{
+    title: string;
+    meta: string;
+    at: number;
+    end: number;
+  }> = [];
   let hm: RegExpExecArray | null;
   while ((hm = MD_STEP_HEADER_RE.exec(body)) !== null) {
     const parts = hm[1].split("|").map((p) => p.trim());
@@ -696,7 +801,9 @@ function renderTimelineContainer(body: string, sl: string): string {
       const end = i + 1 < headers.length ? headers[i + 1].at : body.length;
       const content = body.slice(start, end).replace(/\n+$/, "");
       const inner = marked.parse(content) as string;
-      const meta = h.meta ? `<span class="md-step-meta">${marked.parseInline(h.meta)}</span>` : "";
+      const meta = h.meta
+        ? `<span class="md-step-meta">${marked.parseInline(h.meta)}</span>`
+        : "";
       return `<div class="md-step">\n<div class="md-step-dot"></div>\n<div class="md-step-head"><span class="md-step-title">${marked.parseInline(h.title)}</span>${meta}</div>\n<div class="md-step-body">\n${inner}</div>\n</div>`;
     })
     .join("\n");
@@ -718,11 +825,18 @@ function renderAoGridBlock(
   styleAttr = "",
 ): string {
   AO_GRID_COL_HEADER_RE.lastIndex = 0;
-  const headers: Array<{ span: number; headerStart: number; contentStart: number }> = [];
+  const headers: Array<{
+    span: number;
+    headerStart: number;
+    contentStart: number;
+  }> = [];
   let hm: RegExpExecArray | null;
   while ((hm = AO_GRID_COL_HEADER_RE.exec(body)) !== null) {
     const rawSpan = parseInt(hm[1], 10);
-    const span = Math.max(1, Math.min(12, Number.isFinite(rawSpan) ? rawSpan : 6));
+    const span = Math.max(
+      1,
+      Math.min(12, Number.isFinite(rawSpan) ? rawSpan : 6),
+    );
     headers.push({
       span,
       headerStart: hm.index,
@@ -732,7 +846,8 @@ function renderAoGridBlock(
   if (!headers.length) return "";
   const cols = headers.map((h, i) => {
     const start = h.contentStart;
-    const end = i + 1 < headers.length ? headers[i + 1].headerStart : body.length;
+    const end =
+      i + 1 < headers.length ? headers[i + 1].headerStart : body.length;
     const content = body.slice(start, end).replace(/\n+$/, "");
     const inner = marked.parse(content) as string;
     return `<div class="ao-grid-col" style="grid-column: span ${h.span}">\n${inner}</div>`;
@@ -770,7 +885,10 @@ marked.use({
         } as unknown as MarkedToken;
       },
       renderer(token: MarkedToken): string {
-        const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+        const sl =
+          token._sourceLine != null
+            ? ` data-source-line="${token._sourceLine}"`
+            : "";
         const { blockIdAttr, styleCss } = blockAnnotations(token);
         // Every mdContainer sub-renderer takes a single "attrs" string that
         // is inserted into the root element after its class list. Including
@@ -779,14 +897,25 @@ marked.use({
         const rootAttrs = `${sl}${blockIdAttr}${styleAttr}`;
         const name = (token.name as string) || "";
         const body = (token.text as string) || "";
-        if (MD_ALERT_KINDS.has(name)) return renderAlertContainer(name, body, rootAttrs);
-        if (name === "stat-tiles") return renderStatTilesContainer(body, rootAttrs);
-        if (name === "numbered-grid") return renderNumberedGridContainer(body, rootAttrs);
-        if (name === "card-grid") return renderCardGridContainer(body, rootAttrs);
-        if (name === "feature-grid") return renderFeatureGridContainer(body, rootAttrs);
+        if (MD_ALERT_KINDS.has(name))
+          return renderAlertContainer(name, body, rootAttrs);
+        if (name === "stat-tiles")
+          return renderStatTilesContainer(body, rootAttrs);
+        if (name === "numbered-grid")
+          return renderNumberedGridContainer(body, rootAttrs);
+        if (name === "card-grid")
+          return renderCardGridContainer(body, rootAttrs);
+        if (name === "feature-grid")
+          return renderFeatureGridContainer(body, rootAttrs);
         if (name === "heatmap") return renderHeatmapContainer(body, rootAttrs);
-        if (name === "quote") return renderQuoteContainer((token.attrs as string) || "", body, rootAttrs);
-        if (name === "timeline") return renderTimelineContainer(body, rootAttrs);
+        if (name === "quote")
+          return renderQuoteContainer(
+            (token.attrs as string) || "",
+            body,
+            rootAttrs,
+          );
+        if (name === "timeline")
+          return renderTimelineContainer(body, rootAttrs);
         return "";
       },
     },
@@ -797,8 +926,10 @@ marked.use({
       const ctx = _ctx;
       if (!ctx) return "";
       const { tokens, depth } = token;
-      const sl = token._sourceLine != null
-        ? ` data-source-line="${token._sourceLine}"` : "";
+      const sl =
+        token._sourceLine != null
+          ? ` data-source-line="${token._sourceLine}"`
+          : "";
       const { blockIdAttr, styleCss } = blockAnnotations(token);
       const text = this.parser.parseInline(tokens);
       const pair = COLOR_PAIRS[ctx.colorIdx % COLOR_PAIRS.length];
@@ -820,17 +951,26 @@ marked.use({
           ? `Partie ${ctx.partieNum} ${disc} ${stripped}`
           : clean;
         if (ctx.headingCollector) {
-          const tocTitle = decodeEntities((stripped || clean).replace(/<[^>]+>/g, ""));
+          const tocTitle = decodeEntities(
+            (stripped || clean).replace(/<[^>]+>/g, ""),
+          );
           ctx.headingCollector.push({
-            depth: 1, id: hid, title: tocTitle,
-            num: ctx.partieNum || null, colorPair: pair,
+            depth: 1,
+            id: hid,
+            title: tocTitle,
+            num: ctx.partieNum || null,
+            colorPair: pair,
           });
         }
         return `<h1${idAttr}${sl}${blockIdAttr} data-color-index="${ctx.colorIdx % 5}" style="color:${primary};${vars};${styleCss}">${title}${buildUnderline(pair as [string, string])}</h1>\n`;
       }
 
-      if (depth === 2) { ctx.h2Count++; ctx.h3Count = 0; }
-      else if (depth === 3) { ctx.h3Count++; }
+      if (depth === 2) {
+        ctx.h2Count++;
+        ctx.h3Count = 0;
+      } else if (depth === 3) {
+        ctx.h3Count++;
+      }
 
       const clean = stripLeadingNumber(text);
 
@@ -838,9 +978,10 @@ marked.use({
         return `<h${depth}${idAttr}${sl}${blockIdAttr} style="color:${primary};${vars};${styleCss}">${clean}</h${depth}>\n`;
       }
 
-      const num = depth === 2
-        ? `${ctx.partieNum}.${ctx.h2Count}`
-        : `${ctx.partieNum}.${ctx.h2Count}.${ctx.h3Count}`;
+      const num =
+        depth === 2
+          ? `${ctx.partieNum}.${ctx.h2Count}`
+          : `${ctx.partieNum}.${ctx.h2Count}.${ctx.h3Count}`;
       const disc = '<span class="beorn-disc">&#x25CF;</span>';
 
       if (depth === 2) {
@@ -853,12 +994,16 @@ marked.use({
     },
 
     paragraph(this: any, token): string {
-      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const sl =
+        token._sourceLine != null
+          ? ` data-source-line="${token._sourceLine}"`
+          : "";
       const { blockIdAttr, styleCss } = blockAnnotations(token);
       const styleAttr = styleCss ? ` style="${styleCss}"` : "";
-      const standaloneImage = token.tokens?.length === 1 && token.tokens[0]?.type === "image"
-        ? token.tokens[0]
-        : null;
+      const standaloneImage =
+        token.tokens?.length === 1 && token.tokens[0]?.type === "image"
+          ? token.tokens[0]
+          : null;
       if (standaloneImage) {
         const image = renderImageTag(this.parser, standaloneImage);
         const caption = image.text
@@ -878,9 +1023,12 @@ marked.use({
       const spacerMatch = stripped.match(/^[\\/]spacer\[([^\]]*)\]$/);
       if (spacerMatch) {
         const rawHeight = spacerMatch[1].trim();
-        const safeHeight = /^-?\d+(?:\.\d+)?(?:px|rem|em|%|vh|vw|cm|mm|in|pt|pc)$/.test(rawHeight)
-          ? rawHeight
-          : "0";
+        const safeHeight =
+          /^-?\d+(?:\.\d+)?(?:px|rem|em|%|vh|vw|cm|mm|in|pt|pc)$/.test(
+            rawHeight,
+          )
+            ? rawHeight
+            : "0";
         const mergedStyle = `height:${safeHeight};width:100%;${styleCss}`;
         return `<div class="md-spacer"${sl}${blockIdAttr} style="${mergedStyle}" aria-hidden="true"></div>\n`;
       }
@@ -888,7 +1036,10 @@ marked.use({
     },
 
     blockquote(this: any, token): string {
-      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const sl =
+        token._sourceLine != null
+          ? ` data-source-line="${token._sourceLine}"`
+          : "";
       const { blockIdAttr, styleCss } = blockAnnotations(token);
       const styleAttr = styleCss ? ` style="${styleCss}"` : "";
       const body = this.parser.parse(token.tokens);
@@ -896,35 +1047,44 @@ marked.use({
     },
 
     list(this: any, token): string {
-      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const sl =
+        token._sourceLine != null
+          ? ` data-source-line="${token._sourceLine}"`
+          : "";
       const { blockIdAttr, styleCss } = blockAnnotations(token);
       const styleAttr = styleCss ? ` style="${styleCss}"` : "";
       const tag = token.ordered ? "ol" : "ul";
-      const startAttr = token.ordered && token.start !== 1 ? ` start="${token.start}"` : "";
+      const startAttr =
+        token.ordered && token.start !== 1 ? ` start="${token.start}"` : "";
       const trailingPageBreakLine = extractTrailingListPageBreak(token);
       let body = "";
-      for (const item of (token.items ?? [])) body += this.listitem(item);
-      const pbSl = trailingPageBreakLine != null
-        ? ` data-source-line="${trailingPageBreakLine}"`
-        : "";
-      const pageBreakHtml = trailingPageBreakLine != null
-        ? `<div class="page-break"${pbSl}></div>\n`
-        : "";
+      for (const item of token.items ?? []) body += this.listitem(item);
+      const pbSl =
+        trailingPageBreakLine != null
+          ? ` data-source-line="${trailingPageBreakLine}"`
+          : "";
+      const pageBreakHtml =
+        trailingPageBreakLine != null
+          ? `<div class="page-break"${pbSl}></div>\n`
+          : "";
       return `<${tag}${startAttr}${sl}${blockIdAttr}${styleAttr}>\n${body}</${tag}>\n${pageBreakHtml}`;
     },
 
     table(this: any, token): string {
-      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const sl =
+        token._sourceLine != null
+          ? ` data-source-line="${token._sourceLine}"`
+          : "";
       const { blockIdAttr, styleCss } = blockAnnotations(token);
       const styleAttr = styleCss ? ` style="${styleCss}"` : "";
       let header = "";
-      for (const cell of (token.header ?? [])) {
+      for (const cell of token.header ?? []) {
         const align = cell.align ? ` align="${cell.align}"` : "";
         header += `<th${align}>${this.parser.parseInline(cell.tokens)}</th>\n`;
       }
       header = `<tr>\n${header}</tr>\n`;
       let body = "";
-      for (const row of (token.rows ?? [])) {
+      for (const row of token.rows ?? []) {
         let rowContent = "";
         for (const cell of row) {
           const align = cell.align ? ` align="${cell.align}"` : "";
@@ -936,7 +1096,10 @@ marked.use({
     },
 
     hr(token): string {
-      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const sl =
+        token._sourceLine != null
+          ? ` data-source-line="${token._sourceLine}"`
+          : "";
       const { blockIdAttr, styleCss } = blockAnnotations(token);
       const styleAttr = styleCss ? ` style="${styleCss}"` : "";
       return `<hr${sl}${blockIdAttr}${styleAttr} />\n`;
@@ -944,7 +1107,10 @@ marked.use({
 
     code(token): string {
       const { text, lang } = token;
-      const sl = token._sourceLine != null ? ` data-source-line="${token._sourceLine}"` : "";
+      const sl =
+        token._sourceLine != null
+          ? ` data-source-line="${token._sourceLine}"`
+          : "";
       const { blockIdAttr, styleCss } = blockAnnotations(token);
       const styleAttr = styleCss ? ` style="${styleCss}"` : "";
       if (lang === "mermaid") {
@@ -988,7 +1154,25 @@ marked.use({
  * @param {string} [options.headerText="Document — Memoire technique"] - Running header text
  * @param {string} [options.language="fr"] - Output language
  */
-export async function renderMarkdown(md: string, options: Record<string, any> = {}): Promise<{ sectionHtml: string; headerText: string; language: string; headingIdCounter: number; lineNumberOffset: number; lineStarts: number[]; sourceBlocks: Array<{ start: number; end: number; kind: string; text: string }>; blockEntries: BlockEntry[]; styleErrors: StyleError[] }> {
+export async function renderMarkdown(
+  md: string,
+  options: Record<string, any> = {},
+): Promise<{
+  sectionHtml: string;
+  headerText: string;
+  language: string;
+  headingIdCounter: number;
+  lineNumberOffset: number;
+  lineStarts: number[];
+  sourceBlocks: Array<{
+    start: number;
+    end: number;
+    kind: string;
+    text: string;
+  }>;
+  blockEntries: BlockEntry[];
+  styleErrors: StyleError[];
+}> {
   const {
     assetBaseHref = "",
     fileName = "",
@@ -1045,7 +1229,8 @@ export async function renderMarkdown(md: string, options: Record<string, any> = 
     for (const token of tokens) {
       const idx = cleanedBody.indexOf(token.raw, cursor);
       if (idx >= 0) {
-        const lineInSection = cleanedBody.substring(0, idx).split("\n").length - 1;
+        const lineInSection =
+          cleanedBody.substring(0, idx).split("\n").length - 1;
         const editorLine = startLine + lineInSection;
         token._sourceLine = editorLine;
         cursor = idx + token.raw.length;
