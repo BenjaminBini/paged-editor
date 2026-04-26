@@ -1,7 +1,6 @@
 // tab-bar.js — Multi-tab state and tab bar UI
 
-import { captureEditorSnapshot, cm, restoreEditorSnapshot, setEditorReadOnly, previewContainer as _previewContainer } from "../../editor/codemirror-editor.js";
-const previewContainer: HTMLElement | null = _previewContainer ?? null;
+import { captureEditorSnapshot, cm, restoreEditorSnapshot, setEditorReadOnly } from "../../editor/codemirror-editor.js";
 import { showContextMenu } from "../../shell/ui/context-menu.js";
 import { canShowInFinder, showInFinder } from "../../infrastructure/platform-adapter.js";
 import { signal, effect, batch } from "../../infrastructure/signal.js";
@@ -43,12 +42,7 @@ function blankEditorState(): { content: string; selection: { anchor: { line: num
 
 function storeActiveEditorState(): void {
   if (activeTabIdx.value < 0 || activeTabIdx.value >= tabs.value.length) return;
-  const tab = tabs.value[activeTabIdx.value];
-  tab.editorState = captureEditorSnapshot();
-  // Remember the preview scroll position per tab so each tab snaps back to
-  // where the user left it.  Newly-opened tabs have no stored value and will
-  // start at 0 (top) when restored.
-  if (previewContainer) tab.previewScrollTop = previewContainer.scrollTop;
+  tabs.value[activeTabIdx.value].editorState = captureEditorSnapshot();
 }
 
 export function openTab(

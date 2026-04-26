@@ -1,6 +1,6 @@
 {
   "name": "@benjaminbini/paged-editor-web",
-  "version": "1.9.12",
+  "version": "1.9.13",
   "description": "Vanilla JS iframe embed for paged-editor — no React required",
   "repository": {
     "type": "git",

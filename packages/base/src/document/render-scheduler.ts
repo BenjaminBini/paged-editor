@@ -17,7 +17,8 @@ import { getActiveFileName, getActiveFilePath } from "../workspace/files/active-
 import { getActiveTab } from "../workspace/tabs/tab-bar-controller.js";
 import { getFolderPath } from "../workspace/files/file-manager.js";
 import { renderMarkdown } from "./rendering/section-pipeline.js";
-import { PreviewRenderer, RenderSupersededError } from "./rendering/preview-renderer.js";
+import { RenderSupersededError } from "./rendering/preview-renderer.js";
+import { PreviewPool } from "./rendering/preview-pool.js";
 import { emit } from "../infrastructure/event-bus.js";
 import { getAssetBaseHref } from "../workspace/files/asset-manager.js";
 import { buildHeaderText } from "./export/html-document-wrapper.js";
@@ -36,19 +37,33 @@ import {
 const A4_WIDTH_PX: number = 794;
 const previewWrapper: HTMLElement = document.getElementById("preview-wrapper")!;
 
-const initialSurface: HTMLDivElement = document.createElement("div");
-initialSurface.className = "preview-surface";
-previewWrapper.appendChild(initialSurface);
+// Pool of per-tab preview surfaces inside the wrapper.  Switching tabs only
+// toggles `display`; the rendered DOM stays alive so re-activation is
+// instant and scroll position is preserved naturally per tab.
+const previewPool: PreviewPool = new PreviewPool(previewWrapper, previewContainer);
 
-const previewRenderer: PreviewRenderer = new PreviewRenderer({
-  previewFrame: previewContainer!,
-  previewPages: initialSurface,
-});
+// Stable identifiers used as pool keys — covers + TOC are virtual and don't
+// have a workspace path.
+const COVER_KEY = "__paged_editor_pool_cover__";
+const TOC_KEY = "__paged_editor_pool_toc__";
 
-// The renderer replaces the previewPages element on each render (fresh DOM).
-// Always read the current element via this getter.
+function activePoolKey(): string {
+  const tab = getActiveTab();
+  if (tab && isCoverTab(tab)) return COVER_KEY;
+  if (tab && isTocTab(tab)) return TOC_KEY;
+  return getActiveFilePath() || "";
+}
+
+// Returns the surface element currently visible — allocates an empty surface
+// for the active tab key on demand so callers (resize, scaleSurface, …) can
+// run safely even before the first render.
 function previewSurface(): HTMLDivElement {
-  return previewRenderer.previewPages as HTMLDivElement;
+  const active = previewPool.getActiveSurface();
+  if (active) return active;
+  const key = activePoolKey() || "__placeholder__";
+  previewPool.ensure(key);
+  previewPool.setActive(key);
+  return previewPool.getActiveSurface()!;
 }
 
 let _userZoom: number = 1;
@@ -239,28 +254,28 @@ async function patchRequest(): Promise<void> {
     const visibleRange = getVisiblePageRange();
     if (visibleRange.first < 0) return;
 
-    const patched = previewRenderer.patchVisiblePages(newHtml, changedLines, visibleRange);
+    const activeRenderer = previewPool.getActiveRenderer();
+    if (!activeRenderer) return;
+    const { patched, heightChanged } = activeRenderer.patchVisiblePages(newHtml, changedLines, visibleRange);
     if (patched > 0) {
       const elapsed = Math.round(performance.now() - startedAt);
       status.textContent = `Patched ${patched} — ${elapsed}ms`;
 
-      // The patch covered all visible changes. Advance the cached baseline
-      // (HTML, sourceBlocks, blockEntries, styleErrors) so the next diff
-      // starts from the patched state, and CANCEL the pending full-render
-      // timer — the preview is already correct; firing triggerRender would
-      // cause a visible flicker from the Paged.js re-layout.
-      _lastRenderedHtml = newHtml;
-      _lastSourceBlocks = newBlocks as typeof _lastSourceBlocks;
       _lastBlockEntries = ((renderResult as any).blockEntries || []) as BlockEntry[];
       _lastStyleErrors = ((renderResult as any).styleErrors || []) as StyleError[];
       setBlockEntries(_lastBlockEntries);
       setStyleErrors(_lastStyleErrors);
       restoreSelection(_lastBlockEntries);
-      // Notify listeners so editor decorations + inspector reflect the new
-      // blockEntries without waiting for a full render.
       emit("section-ready");
-      clearTimeout(renderTimeout ?? undefined);
-      renderTimeout = null;
+
+      if (!heightChanged) {
+        _lastRenderedHtml = newHtml;
+        _lastSourceBlocks = newBlocks as typeof _lastSourceBlocks;
+        clearTimeout(renderTimeout ?? undefined);
+        renderTimeout = null;
+      }
+      // Height changed: leave _lastRenderedHtml / _lastSourceBlocks stale and
+      // the renderTimeout running so the scheduled full render re-paginates.
     }
   } finally {
     _isPatching = false;
@@ -327,20 +342,35 @@ async function renderRequest(request: { markdown: string; generation: number }):
     : isTocTab(activeTab)
       ? "toc"
       : `md:${getActiveFilePath() || ""}`;
-  if (html != null && html === _lastRenderedHtml && currentTarget === _lastDisplayedTarget) {
+
+  const poolKey = activePoolKey();
+  previewPool.setActive(poolKey);
+
+  // Cache check uses the per-tab pool entry, not the global last-render.
+  // Switching back to a tab whose surface still holds the rendered DOM
+  // (and whose new HTML matches what's pooled) is a no-op — we just need
+  // the pool to have made it visible, which setActive() above did.
+  const pooledHtml = previewPool.getLastRenderedHtml(poolKey);
+  if (html != null && pooledHtml != null && html === pooledHtml) {
     const elapsed = Math.round(performance.now() - renderStartTime);
-    rsl(`renderRequest cache-hit target=${currentTarget} elapsed=${elapsed}ms`);
+    rsl(`renderRequest pool cache-hit key=${poolKey} elapsed=${elapsed}ms`);
+    lastRenderStats.totalPages = previewPool.getLastTotalPages(poolKey);
     status.textContent = `${lastRenderStats.totalPages} pages — ${elapsed}ms (cached)`;
     unlockEditorScroll();
+    // The pool surface may have just been swapped in — emit so anchor map
+    // and scroll sync pick up the new layout.
+    scaleSurface();
+    previewPool.getActiveRenderer()?.rebuildLineMap();
+    emit("section-ready");
     return true;
   }
   rsl(
-    `renderRequest invoking previewRenderer.render` +
-    ` target=${currentTarget} prevTarget=${_lastDisplayedTarget}` +
-    ` htmlChanged=${html !== _lastRenderedHtml}`,
+    `renderRequest invoking pool.render` +
+    ` key=${poolKey} target=${currentTarget} prevTarget=${_lastDisplayedTarget}` +
+    ` htmlChanged=${html !== pooledHtml}`,
   );
 
-  lastRenderStats = await previewRenderer.render(renderResult);
+  lastRenderStats = await previewPool.render(poolKey, renderResult);
   if (generation !== renderGeneration) {
     rsl(`renderRequest gen-mismatch post-render gen=${generation} latest=${renderGeneration} → bail`);
     return false;
@@ -358,7 +388,7 @@ async function renderRequest(request: { markdown: string; generation: number }):
   restoreSelection(_lastBlockEntries);
 
   scaleSurface();
-  previewRenderer.rebuildLineMap();
+  previewPool.getActiveRenderer()?.rebuildLineMap();
   restorePreviewScrollState(previewScrollState);
   const elapsed = Math.round(performance.now() - renderStartTime);
   lastRenderStats.elapsed = elapsed;
@@ -397,7 +427,7 @@ async function flushRenderQueue(): Promise<void> {
         continue;
       }
       console.error(error);
-      previewRenderer.clear();
+      previewPool.clearActive();
       scaleSurface();
       status.textContent = "Preview failed";
       unlockEditorScroll();
@@ -417,7 +447,7 @@ export async function triggerRender(): Promise<void> {
   );
   if (!markdown.trim() && !isTocTab(activeTab) && !isCoverTab(activeTab)) {
     pendingMarkdown = null;
-    previewRenderer.clear();
+    previewPool.clearActive();
     scaleSurface();
     status.textContent = "Empty";
     rsl(`triggerRender → empty (no content, not TOC/cover)`);
@@ -475,6 +505,36 @@ export function scheduleRender(_ms?: number): void {
   renderTimeout = setTimeout(() => {
     void triggerRender();
   }, PAGED_DEBOUNCE_MS);
+}
+
+// Activate the per-tab preview surface for the given tab key without rendering.
+// Used by tab-integration on tab switch to flip visibility — the pool keeps
+// each tab's rendered DOM around so re-activation is instant.
+export function activatePreviewForTab(key: string): void {
+  if (!key) return;
+  previewPool.setActive(key);
+  // Pool toggles `display`; the wrapper geometry follows the active surface.
+  scaleSurface();
+}
+
+// Drop a tab's pooled preview (called when the tab is closed).
+export function disposePreviewForTab(key: string): void {
+  if (!key) return;
+  previewPool.dispose(key);
+}
+
+// Whether the pool already has a rendered surface for this key — caller can
+// skip a triggerRender() if the cached HTML matches the new content.
+export function poolHasTab(key: string): boolean {
+  return previewPool.has(key);
+}
+
+export function poolKeyForCover(): string {
+  return COVER_KEY;
+}
+
+export function poolKeyForToc(): string {
+  return TOC_KEY;
 }
 
 export function getPreviewFrame(): HTMLDivElement {
@@ -547,7 +607,8 @@ export async function renderCoverFromProject(project: Record<string, any>): Prom
   _lastDisplayedTarget = "cover";
 
   try {
-    lastRenderStats = await previewRenderer.render(renderResult);
+    previewPool.setActive(COVER_KEY);
+    lastRenderStats = await previewPool.render(COVER_KEY, renderResult);
   } catch (error: any) {
     // Newer render has taken over — no-op so we don't clobber it.
     if (error instanceof RenderSupersededError) {
@@ -555,7 +616,7 @@ export async function renderCoverFromProject(project: Record<string, any>): Prom
       return;
     }
     console.error("Cover preview render failed:", error);
-    previewRenderer.clear();
+    previewPool.clearActive();
     scaleSurface();
     status.textContent = "Preview failed";
     return;
@@ -568,7 +629,7 @@ export async function renderCoverFromProject(project: Record<string, any>): Prom
   rsl(`renderCoverFromProject COMPLETE coverGen=${myCoverGen} pages=${lastRenderStats.totalPages}`);
 
   scaleSurface();
-  previewRenderer.rebuildLineMap();
+  previewPool.getActiveRenderer()?.rebuildLineMap();
   const elapsed: number = Math.round(performance.now() - renderStartTime);
   lastRenderStats.elapsed = elapsed;
   status.textContent = `${lastRenderStats.totalPages} pages — ${elapsed}ms`;

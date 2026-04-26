@@ -222,15 +222,18 @@ export class PreviewRenderer {
 
   /**
    * Patch visible pages in-place by replacing changed elements identified
-   * by their data-source-line attribute. Much faster than a full Paged.js
-   * re-render since it only touches the DOM elements that actually changed.
+   * by their data-source-line attribute. Skips a full Paged.js re-render.
+   *
+   * Returns `{ patched, heightChanged }`. `heightChanged` is true when at
+   * least one patched element's offsetHeight differs pre→post — the caller
+   * must then keep a full render scheduled so Paged.js re-paginates.
    */
   patchVisiblePages(
     newHtml: string,
     changedLines: Set<string>,
     visibleRange: { first: number; last: number },
-  ): number {
-    if (changedLines.size === 0) return 0;
+  ): { patched: number; heightChanged: boolean } {
+    if (changedLines.size === 0) return { patched: 0, heightChanged: false };
 
     // Parse the new section HTML to get fresh elements.
     const tmp = document.createElement("div");
@@ -247,6 +250,7 @@ export class PreviewRenderer {
     ]);
 
     let patched = 0;
+    let heightChanged = false;
     for (const line of changedLines) {
       const newEl = tmp.querySelector(`[data-source-line="${line}"]`) as HTMLElement | null;
       if (!newEl) continue;
@@ -270,6 +274,8 @@ export class PreviewRenderer {
         const pageNum = parseInt(page.dataset.pageNumber || "0", 10);
         if (pageNum < visibleRange.first || pageNum > visibleRange.last) continue;
 
+        const beforeH = el.offsetHeight;
+
         // If the element has no Paged.js ref state, a clean replace is safe
         // and cheapest.
         const hasPagedRef =
@@ -284,6 +290,7 @@ export class PreviewRenderer {
           if (el.classList.contains("style-hovered")) fresh.classList.add("style-hovered");
           if (el.classList.contains("style-selected")) fresh.classList.add("style-selected");
           el.replaceWith(fresh);
+          if (fresh.offsetHeight !== beforeH) heightChanged = true;
           patched++;
           continue;
         }
@@ -309,11 +316,12 @@ export class PreviewRenderer {
         if (hadSelected) el.classList.add("style-selected");
 
         el.innerHTML = newEl.innerHTML;
+        if (el.offsetHeight !== beforeH) heightChanged = true;
         patched++;
       }
     }
 
-    return patched;
+    return { patched, heightChanged };
   }
 
   // Public entry point — serializes concurrent render() calls. When several
@@ -481,9 +489,14 @@ export class PreviewRenderer {
       // caller's next scaleSurface() call, which the user perceives as a
       // flicker on every render.
       const liveTransform = (live as HTMLElement).style.transform;
+      const liveDisplay = (live as HTMLElement).style.display;
       staging.style.cssText = "";
       staging.className = live.className;
       if (liveTransform) (staging as HTMLElement).style.transform = liveTransform;
+      // Preserve display:none so a render fired against a hidden (background)
+      // tab surface stays hidden post-swap; otherwise the CSS class default
+      // (block) wins and the user sees the surface flash in.
+      if (liveDisplay) (staging as HTMLElement).style.display = liveDisplay;
       live.replaceWith(staging);
       swapped = true;
       this.previewPages = staging;

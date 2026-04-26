@@ -13,37 +13,23 @@ import {
   triggerRender,
   updateCoverPreview,
   renderCoverFromProject,
+  activatePreviewForTab,
+  disposePreviewForTab,
+  poolHasTab,
+  poolKeyForCover,
+  poolKeyForToc,
 } from "../document/render-scheduler.js";
-import { suppressScrollSync } from "../document/sync/preview-sync-setup.js";
-import { on as onEvent, off as offEvent } from "../infrastructure/event-bus.js";
-import { previewContainer as _previewContainer } from "../editor/codemirror-editor.js";
-const _tabPreviewContainer: HTMLElement | null = _previewContainer ?? null;
 
-// Snap the preview scroll to the active tab's remembered position once the
-// next render finishes.  Newly-opened tabs have `previewScrollTop` undefined
-// → snap to 0 (top).
-function snapPreviewScrollOnNextRender(target: number): void {
-  if (!_tabPreviewContainer) return;
-  const handler = (): void => {
-    offEvent("section-ready", handler);
-    if (!_tabPreviewContainer) return;
-    // Suppress sync long enough to cover app-orchestrator's deferred
-    // rebuildAnchorMap (350ms) which would otherwise call
-    // setScrollTop("preview", mapEditorToPreview(...)) and overwrite us.
-    suppressScrollSync(900);
-    const container = _tabPreviewContainer;
-    const apply = (): void => {
-      const max = Math.max(0, container.scrollHeight - container.clientHeight);
-      container.scrollTop = Math.min(target, max);
-    };
-    apply();
-    // Re-apply after rebuildAnchorMap (350ms) and scalePreview (300ms) have
-    // run.  Their syncFromCurrentSource may have nudged the scroll back to
-    // the editor-mapped position; we want the tab's remembered position to
-    // win.
-    setTimeout(apply, 400);
-  };
-  onEvent("section-ready", handler);
+// Each tab owns a pooled preview surface keyed by its workspace path (or a
+// virtual id for cover/TOC).  Computing the key here keeps the convention
+// in one place.
+function poolKeyForTab(tab: any): string {
+  if (!tab) return "";
+  if (tab.kind === "cover" || (typeof tab.path === "string" && tab.path.endsWith("project.json"))) {
+    return poolKeyForCover();
+  }
+  if (tab.kind === "toc") return poolKeyForToc();
+  return tab.path || "";
 }
 import {
   refreshTableWidgets,
@@ -172,12 +158,13 @@ export function wireTabCallbacks({
   detachCmListeners: () => void;
 }): void {
   onTabSwitch((tab: any) => {
-    // Snap (don't animate) the preview to the new tab's remembered position.
-    // Suppress the editor↔preview scroll-sync briefly so CodeMirror's snapshot
-    // restore doesn't drive `followScrollTop` into an animation, then jump to
-    // the tab's stored preview scroll once the render completes.
-    suppressScrollSync(600);
-    snapPreviewScrollOnNextRender(typeof tab.previewScrollTop === "number" ? tab.previewScrollTop : 0);
+    // Activate the per-tab preview surface BEFORE we trigger any render —
+    // the pool toggles `display`, so the user sees the new tab's last
+    // rendered DOM (with its scroll position intact) instantly.  If the tab
+    // has never been rendered, the surface is a fresh empty one and the
+    // triggerRender below will populate it.
+    const poolKey = poolKeyForTab(tab);
+    if (poolKey) activatePreviewForTab(poolKey);
     hideLoading();
     reattachCmListeners();
     updateTitle(tab.name, tab.dirty);
