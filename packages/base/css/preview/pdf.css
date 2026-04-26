@@ -1684,8 +1684,11 @@ ul:has(> li input[type="checkbox"]) > li input[type="checkbox"] {
   grid-template-columns: repeat(12, 1fr);
   gap: var(--space-md);
   margin: var(--space-md) 0;
-  break-inside: avoid;
-  page-break-inside: avoid;
+  /* Don't force the whole grid onto one page — long card/feature lists
+     would overflow and Paged.js would log "Unable to layout item".
+     Individual cards still keep their own break-inside: avoid below. */
+  break-inside: auto;
+  page-break-inside: auto;
 }
 .ao-grid-col {
   min-width: 0;
