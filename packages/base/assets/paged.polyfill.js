@@ -1,5 +1,5 @@
 /**
- * @license Paged.js v0.4.3 | MIT | https://gitlab.coko.foundation/pagedjs/pagedjs
+ * @license Paged.js v0.5.0-beta.2 | MIT | https://github.com/pagedjs/pagedjs
  */
 
 (function (global, factory) {
@@ -468,6 +468,13 @@
 		}
 	}
 
+	/**
+	 * Gets the bounding client rectangle of an element.
+	 * Falls back to using Range if element.getBoundingClientRect is undefined.
+	 *
+	 * @param {Element} element - The DOM element to get the bounding rectangle for.
+	 * @returns {DOMRect | undefined} The bounding client rectangle or undefined if no element.
+	 */
 	function getBoundingClientRect(element) {
 		if (!element) {
 			return;
@@ -483,38 +490,34 @@
 		return rect;
 	}
 
-	function getClientRects(element) {
-		if (!element) {
-			return;
-		}
-		let rect;
-		if (typeof element.getClientRects !== "undefined") {
-			rect = element.getClientRects();
-		} else {
-			let range = document.createRange();
-			range.selectNode(element);
-			rect = range.getClientRects();
-		}
-		return rect;
-	}
-
 	/**
-	 * Generates a UUID
-	 * based on: http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
-	 * @returns {string} uuid
+	 * Generates a UUID (version 4).
+	 * Based on: http://stackoverflow.com/questions/105034/how-to-create-a-guid-uuid-in-javascript
+	 *
+	 * @returns {string} A UUID string.
 	 */
 	function UUID() {
 		var d = new Date().getTime();
-		if (typeof performance !== "undefined" && typeof performance.now === "function") {
+		if (
+			typeof performance !== "undefined" &&
+			typeof performance.now === "function"
+		) {
 			d += performance.now(); //use high-precision timer if available
 		}
 		return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
 			var r = (d + Math.random() * 16) % 16 | 0;
 			d = Math.floor(d / 16);
-			return (c === "x" ? r : (r & 0x3 | 0x8)).toString(16);
+			return (c === "x" ? r : (r & 0x3) | 0x8).toString(16);
 		});
 	}
 
+	/**
+	 * Returns the value of the first attribute found from the given list on the element.
+	 *
+	 * @param {Element} element - The element to check attributes on.
+	 * @param {string[]} attributes - Array of attribute names to look for.
+	 * @returns {string | null | undefined} The attribute value, or undefined if none found.
+	 */
 	function attr(element, attributes) {
 		for (var i = 0; i < attributes.length; i++) {
 			if (element.hasAttribute(attributes[i])) {
@@ -523,8 +526,13 @@
 		}
 	}
 
-	/* Based on by https://mths.be/cssescape v1.5.1 by @mathias | MIT license
-	 * Allows # and .
+	/**
+	 * Escapes a string for use in a CSS selector.
+	 * Allows # and . characters.
+	 *
+	 * @param {string} value - The string to escape.
+	 * @returns {string} The escaped string.
+	 * @throws {TypeError} If no argument is provided.
 	 */
 	function querySelectorEscape(value) {
 		if (arguments.length == 0) {
@@ -540,95 +548,67 @@
 		while (++index < length) {
 			codeUnit = string.charCodeAt(index);
 
-
-
-			// Note: there’s no need to special-case astral symbols, surrogate
-			// pairs, or lone surrogates.
-
-			// If the character is NULL (U+0000), then the REPLACEMENT CHARACTER
-			// (U+FFFD).
 			if (codeUnit == 0x0000) {
 				result += "\uFFFD";
 				continue;
 			}
 
 			if (
-				// If the character is in the range [\1-\1F] (U+0001 to U+001F) or is
-				// U+007F, […]
-				(codeUnit >= 0x0001 && codeUnit <= 0x001F) || codeUnit == 0x007F ||
-				// If the character is the first character and is in the range [0-9]
-				// (U+0030 to U+0039), […]
+				(codeUnit >= 0x0001 && codeUnit <= 0x001f) ||
+				codeUnit == 0x007f ||
 				(index == 0 && codeUnit >= 0x0030 && codeUnit <= 0x0039) ||
-				// If the character is the second character and is in the range [0-9]
-				// (U+0030 to U+0039) and the first character is a `-` (U+002D), […]
-				(
-					index == 1 &&
-					codeUnit >= 0x0030 && codeUnit <= 0x0039 &&
-					firstCodeUnit == 0x002D
-				)
+				(index == 1 &&
+					codeUnit >= 0x0030 &&
+					codeUnit <= 0x0039 &&
+					firstCodeUnit == 0x002d)
 			) {
-				// https://drafts.csswg.org/cssom/#escape-a-character-as-code-point
 				result += "\\" + codeUnit.toString(16) + " ";
 				continue;
 			}
 
-			if (
-				// If the character is the first character and is a `-` (U+002D), and
-				// there is no second character, […]
-				index == 0 &&
-				length == 1 &&
-				codeUnit == 0x002D
-			) {
+			if (index == 0 && length == 1 && codeUnit == 0x002d) {
 				result += "\\" + string.charAt(index);
 				continue;
 			}
 
-			// support for period character in id
-			if (codeUnit == 0x002E) {
+			if (codeUnit == 0x002e) {
 				if (string.charAt(0) == "#") {
 					result += "\\.";
 					continue;
 				}
 			}
 
-
-			// If the character is not handled by one of the above rules and is
-			// greater than or equal to U+0080, is `-` (U+002D) or `_` (U+005F), or
-			// is in one of the ranges [0-9] (U+0030 to U+0039), [A-Z] (U+0041 to
-			// U+005A), or [a-z] (U+0061 to U+007A), […]
 			if (
 				codeUnit >= 0x0080 ||
-				codeUnit == 0x002D ||
-				codeUnit == 0x005F ||
+				codeUnit == 0x002d ||
+				codeUnit == 0x005f ||
 				codeUnit == 35 || // Allow #
 				codeUnit == 46 || // Allow .
-				codeUnit >= 0x0030 && codeUnit <= 0x0039 ||
-				codeUnit >= 0x0041 && codeUnit <= 0x005A ||
-				codeUnit >= 0x0061 && codeUnit <= 0x007A
+				(codeUnit >= 0x0030 && codeUnit <= 0x0039) ||
+				(codeUnit >= 0x0041 && codeUnit <= 0x005a) ||
+				(codeUnit >= 0x0061 && codeUnit <= 0x007a)
 			) {
-				// the character itself
 				result += string.charAt(index);
 				continue;
 			}
 
-			// Otherwise, the escaped character.
-			// https://drafts.csswg.org/cssom/#escape-a-character
 			result += "\\" + string.charAt(index);
-
 		}
 		return result;
 	}
 
 	/**
-	 * Creates a new pending promise and provides methods to resolve or reject it.
-	 * From: https://developer.mozilla.org/en-US/docs/Mozilla/JavaScript_code_modules/Promise.jsm/Deferred#backwards_forwards_compatible
-	 * @returns {object} defered
+	 * Creates a deferred object with promise, resolve, and reject.
+	 *
+	 * @returns {object} Deferred object with properties:
+	 *   - promise: {Promise} The promise object.
+	 *   - resolve: {function} Function to resolve the promise.
+	 *   - reject: {function} Function to reject the promise.
+	 *   - id: {string} Unique identifier.
 	 */
 	function defer() {
 		this.resolve = null;
-
 		this.reject = null;
-
 		this.id = UUID();
 
 		this.promise = new Promise((resolve, reject) => {
@@ -638,25 +618,57 @@
 		Object.freeze(this);
 	}
 
-	const requestIdleCallback = typeof window !== "undefined" && ("requestIdleCallback" in window ? window.requestIdleCallback : window.requestAnimationFrame);
+	/**
+	 * Uses requestIdleCallback if available, otherwise falls back to requestAnimationFrame.
+	 */
+	const requestIdleCallback =
+		typeof window !== "undefined" &&
+		("requestIdleCallback" in window
+			? window.requestIdleCallback
+			: window.requestAnimationFrame);
 
+	/**
+	 * Converts a CSSValue object to a string representation.
+	 *
+	 * @param {Object} obj - The CSSValue object.
+	 * @returns {string} The combined CSS value and unit string.
+	 */
 	function CSSValueToString(obj) {
 		return obj.value + (obj.unit || "");
 	}
 
+	/**
+	 * Checks if a given node is an Element node.
+	 *
+	 * @param {Node} node - The node to check.
+	 * @returns {boolean} True if the node is an Element (nodeType === 1), else false.
+	 */
 	function isElement(node) {
 		return node && node.nodeType === 1;
 	}
 
+	/**
+	 * Checks if a given node is a Text node.
+	 *
+	 * @param {Node} node - The node to check.
+	 * @returns {boolean} True if the node is a Text node (nodeType === 3), else false.
+	 */
 	function isText(node) {
 		return node && node.nodeType === 3;
 	}
 
+	/**
+	 * Generator function that walks the DOM tree starting from the given node,
+	 * traversing depth-first and yielding nodes until the limiter node is reached (if provided).
+	 *
+	 * @param {Node} start - The starting node for traversal.
+	 * @param {Node} [limiter] - Optional node at which traversal stops.
+	 * @yields {Node} Nodes in the DOM tree in depth-first order.
+	 */
 	function* walk$2(start, limiter) {
 		let node = start;
 
 		while (node) {
-
 			yield node;
 
 			if (node.childNodes.length) {
@@ -678,15 +690,32 @@
 						node = node.nextSibling;
 						break;
 					}
-
 				}
 			}
 		}
 	}
 
-	function nodeAfter(node, limiter) {
+	/**
+	 * Finds the next significant node after the given node, optionally descending into children.
+	 * Returns undefined if the limiter node is reached.
+	 *
+	 * @param {Node} node - The reference node.
+	 * @param {Node} [limiter] - Optional node at which traversal stops.
+	 * @param {boolean} [descend=false] - Whether to descend into child nodes.
+	 * @returns {Node|undefined} The next significant node or undefined if none found.
+	 */
+	function nodeAfter(node, limiter, descend = false) {
 		if (limiter && node === limiter) {
 			return;
+		}
+		if (descend && node.childNodes.length) {
+			let child = node.firstChild;
+			if (isIgnorable(child)) {
+				child = nextSignificantNode(child);
+			}
+			if (child) {
+				return child;
+			}
 		}
 		let significantNode = nextSignificantNode(node);
 		if (significantNode) {
@@ -705,67 +734,469 @@
 		}
 	}
 
-	function nodeBefore(node, limiter) {
-		if (limiter && node === limiter) {
-			return;
-		}
-		let significantNode = previousSignificantNode(node);
-		if (significantNode) {
-			return significantNode;
-		}
-		if (node.parentNode) {
-			while ((node = node.parentNode)) {
-				if (limiter && node === limiter) {
-					return;
-				}
-				significantNode = previousSignificantNode(node);
-				if (significantNode) {
-					return significantNode;
-				}
+	/**
+	 * Finds the last significant descendant of a node.
+	 * Descends the last child path, skipping ignorable nodes.
+	 *
+	 * @param {Node} node - The node to find the last significant descendant for.
+	 * @returns {Node} The last significant descendant node.
+	 * @private
+	 */
+	function findLastSignificantDescendant(node) {
+		let done = false;
+
+		while (!done) {
+			let child = node.lastChild;
+			if (child && isIgnorable(child)) {
+				child = previousSignificantNode(child);
+			}
+			if (child && isElement(child)) {
+				node = child;
+			} else {
+				done = true;
 			}
 		}
+
+		return node;
 	}
 
-	function elementAfter(node, limiter) {
-		let after = nodeAfter(node, limiter);
+	/**
+	 * Finds the previous significant node before the given node, optionally descending into children.
+	 * Returns undefined if the limiter node is reached.
+	 *
+	 * @param {Node} node - The reference node.
+	 * @param {Node} [limiter] - Optional node at which traversal stops.
+	 * @param {boolean} [descend=false] - Whether to descend into child nodes.
+	 * @returns {Node|undefined} The previous significant node or undefined if none found.
+	 */
+	function nodeBefore(node, limiter, descend = false) {
+		do {
+			if (limiter && node === limiter) {
+				return;
+			}
+
+			let significantNode = previousSignificantNode(node);
+			if (significantNode) {
+				if (descend) {
+					significantNode = findLastSignificantDescendant(significantNode);
+				}
+				return significantNode;
+			}
+
+			node = node.parentNode;
+		} while (node);
+	}
+
+	/**
+	 * Finds the next Element node after the given node.
+	 * Skips non-element nodes.
+	 *
+	 * @param {Node} node - The reference node.
+	 * @param {Node} [limiter] - Optional node at which traversal stops.
+	 * @param {boolean} [descend=false] - Whether to descend into child nodes.
+	 * @returns {Element|undefined} The next Element node or undefined if none found.
+	 */
+	function elementAfter(node, limiter, descend = false) {
+		let after = nodeAfter(node, limiter, descend);
 
 		while (after && after.nodeType !== 1) {
-			after = nodeAfter(after, limiter);
+			after = nodeAfter(after, limiter, descend);
 		}
 
 		return after;
 	}
 
-	function elementBefore(node, limiter) {
-		let before = nodeBefore(node, limiter);
+	/**
+	 * Finds the previous Element node before the given node.
+	 * Skips non-element nodes.
+	 *
+	 * @param {Node} node - The reference node.
+	 * @param {Node} [limiter] - Optional node at which traversal stops.
+	 * @param {boolean} [descend=false] - Whether to descend into child nodes.
+	 * @returns {Element|undefined} The previous Element node or undefined if none found.
+	 */
+	function elementBefore(node, limiter, descend = false) {
+		let before = nodeBefore(node, limiter, descend);
 
 		while (before && before.nodeType !== 1) {
-			before = nodeBefore(before, limiter);
+			before = nodeBefore(before, limiter, descend);
 		}
 
 		return before;
 	}
 
-	function displayedElementAfter(node, limiter) {
-		let after = elementAfter(node, limiter);
+	/**
+	 * Finds the next displayed Element node after the given node.
+	 * Skips elements marked as undisplayed via `dataset.undisplayed`.
+	 *
+	 * @param {Node} node - The reference node.
+	 * @param {Node} [limiter] - Optional node at which traversal stops.
+	 * @param {boolean} [descend=false] - Whether to descend into child nodes.
+	 * @returns {Element|undefined} The next displayed Element node or undefined if none found.
+	 */
+	function displayedElementAfter(node, limiter, descend = false) {
+		let after = elementAfter(node, limiter, descend);
 
 		while (after && after.dataset.undisplayed) {
-			after = elementAfter(after, limiter);
+			after = elementAfter(after, limiter, descend);
 		}
 
 		return after;
 	}
 
-	function displayedElementBefore(node, limiter) {
-		let before = elementBefore(node, limiter);
+	/**
+	 * Finds the previous displayed Element node before the given node.
+	 * Skips elements marked as undisplayed via `dataset.undisplayed`.
+	 *
+	 * @param {Node} node - The reference node.
+	 * @param {Node} [limiter] - Optional node at which traversal stops.
+	 * @param {boolean} [descend=false] - Whether to descend into child nodes.
+	 * @returns {Element|undefined} The previous displayed Element node or undefined if none found.
+	 */
+	function displayedElementBefore(node, limiter, descend = false) {
+		let before = elementBefore(node, limiter, descend);
 
 		while (before && before.dataset.undisplayed) {
-			before = elementBefore(before, limiter);
+			before = elementBefore(before, limiter, descend);
 		}
 
 		return before;
 	}
 
+	/**
+	 * Copies the width style from an original element to a destination element.
+	 * The width is computed using getComputedStyle and fallback bounding rect if needed.
+	 *
+	 * @param {Element} originalElement - The element to copy width from.
+	 * @param {Element} destElement - The element to apply the copied width to.
+	 */
+	function copyWidth(originalElement, destElement) {
+		let originalStyle = getComputedStyle(originalElement);
+		let bounds = getBoundingClientRect(originalElement);
+		let width = parseInt(originalStyle.width || bounds.width);
+		if (width) {
+			destElement.style.width = width + "px";
+		}
+	}
+
+	/**
+	 * Rebuilds a table row element by cloning and adjusting its columns, including handling rowspans.
+	 * Uses an existing rendered DOM tree to maintain styles and structure.
+	 *
+	 * @param {HTMLTableRowElement} node - The table row element to rebuild.
+	 * @param {Element} alreadyRendered - The root element containing the already rendered content for reference.
+	 * @param {number} [existingChildren] - Number of existing children in the container (optional).
+	 * @returns {HTMLTableRowElement} A new cloned and rebuilt table row element.
+	 */
+	function rebuildTableRow(node, alreadyRendered, existingChildren) {
+		let currentCol = 0,
+			maxCols = 0,
+			nextInitialColumn = 0;
+		let rebuilt = node.cloneNode(false);
+		const initialColumns = Array.from(node.children);
+
+		// Find the max number of columns.
+		let earlierRow = node.parentElement.children[0];
+		while (earlierRow && earlierRow !== node) {
+			if (earlierRow.children.length > maxCols) {
+				maxCols = earlierRow.children.length;
+			}
+			earlierRow = earlierRow.nextElementSibling;
+		}
+
+		if (!maxCols) {
+			let existing = findElement(node, alreadyRendered);
+			maxCols = existing?.children.length || 0;
+		}
+
+		// The next td to use in each tr.
+		// Doesn't take account of rowspans above that might make extra columns.
+		let rowOffsets = Array(maxCols).fill(0);
+
+		// Duplicate rowspans and our initial columns.
+		while (currentCol < maxCols) {
+			let earlierRow = node.parentElement.children[0];
+			let rowspan, column;
+			// Find the nth column we'll duplicate (rowspan) or use.
+			while (earlierRow && earlierRow !== node) {
+				if (rowspan == undefined) {
+					column =
+						earlierRow.children[currentCol - rowOffsets[nextInitialColumn]];
+					if (column && column.rowSpan !== undefined && column.rowSpan > 1) {
+						rowspan = column.rowSpan;
+					}
+				}
+				// If rowspan === 0 the entire remainder of the table row is used.
+				if (rowspan) {
+					// Tracking how many rows in the overflow.
+					if (rowspan < 2) {
+						rowspan = undefined;
+					} else {
+						rowspan--;
+					}
+				}
+				earlierRow = earlierRow.nextElementSibling;
+			}
+
+			let destColumn;
+			if (rowspan) {
+				if (!existingChildren) {
+					destColumn = column.cloneNode(false);
+					// Adjust rowspan value.
+					destColumn.rowSpan = !column.rowSpan ? 0 : rowspan;
+				}
+			} else {
+				// Fill the gap with the initial columns (if exists).
+				destColumn = column =
+					initialColumns[nextInitialColumn++]?.cloneNode(false);
+			}
+			if (column && destColumn) {
+				if (alreadyRendered) {
+					let existing = findElement(column, alreadyRendered);
+					if (existing) {
+						column = existing;
+					}
+				}
+				copyWidth(column, destColumn);
+				if (destColumn) {
+					rebuilt.appendChild(destColumn);
+				}
+			}
+			currentCol++;
+		}
+		return rebuilt;
+	}
+
+	/**
+	 * Rebuilds the ancestor tree for a given node, appending clones or existing elements to a document fragment.
+	 * Handles table rows, siblings duplication, and other special cases.
+	 *
+	 * @param {Node} node - The starting node for rebuilding.
+	 * @param {DocumentFragment} [fragment] - Optional document fragment to append rebuilt nodes to. Created if omitted.
+	 * @param {Element} [alreadyRendered] - Root element with already rendered DOM for reference and style copying.
+	 * @returns {DocumentFragment} The fragment containing the rebuilt ancestor tree.
+	 */
+	function rebuildTree(node, fragment, alreadyRendered) {
+		let parent, subject;
+		let ancestors = [];
+		let added = [];
+		let dupSiblings = false;
+		let freshPage = !fragment;
+		let numListItems = 0;
+
+		if (!fragment) {
+			fragment = document.createDocumentFragment();
+		}
+
+		// Gather all ancestors
+		let element = node;
+
+		if (!isText(node)) {
+			ancestors.unshift(node);
+			if (node.tagName == "LI") {
+				numListItems++;
+			}
+		}
+		while (element.parentNode && element.parentNode.nodeType === 1) {
+			ancestors.unshift(element.parentNode);
+			if (element.parentNode.tagName == "LI") {
+				numListItems++;
+			}
+			element = element.parentNode;
+		}
+
+		for (var i = 0; i < ancestors.length; i++) {
+			subject = ancestors[i];
+
+			let container, split;
+			if (added.length) {
+				container = added[added.length - 1];
+			} else {
+				container = fragment;
+			}
+
+			if (subject.nodeName == "TR") {
+				parent = findElement(subject, container);
+				if (!parent) {
+					parent = rebuildTableRow(
+						subject,
+						alreadyRendered,
+						container.childElementCount,
+					);
+					container.appendChild(parent);
+				}
+			} else if (dupSiblings) {
+				let sibling = subject.parentElement
+					? subject.parentElement.children[0]
+					: subject;
+
+				while (sibling) {
+					let existing = findElement(sibling, container),
+						siblingClone;
+					if (!existing) {
+						inIndexOfRefs(subject, alreadyRendered);
+						siblingClone = cloneNodeAncestor(sibling);
+						if (alreadyRendered) {
+							let originalElement = findElement(sibling, alreadyRendered);
+							if (originalElement) {
+								copyWidth(originalElement, siblingClone);
+							}
+						}
+						container.appendChild(siblingClone);
+					}
+
+					if (sibling == subject) {
+						parent = siblingClone || existing;
+					}
+					sibling = sibling.nextElementSibling;
+				}
+			} else {
+				parent = findElement(subject, container);
+				if (!parent) {
+					parent = cloneNodeAncestor(subject);
+					if (alreadyRendered) {
+						let originalElement = findElement(subject, alreadyRendered);
+						if (originalElement) {
+							copyWidth(originalElement, parent);
+
+							// Colgroup to clone?
+							Array.from(originalElement.children).forEach((child) => {
+								if (child.tagName == "COLGROUP") {
+									parent.append(child.cloneNode(true));
+								}
+							});
+						}
+					}
+					container.appendChild(parent);
+				}
+			}
+
+			if (subject.previousElementSibling?.nodeName == "THEAD") {
+				// Clone the THEAD too.
+				let sibling = subject.previousElementSibling;
+
+				let existing = findElement(sibling, container),
+					siblingClone;
+				if (!existing) {
+					siblingClone = cloneNodeAncestor(sibling, true);
+					if (alreadyRendered) {
+						let originalElement = findElement(sibling, alreadyRendered);
+						if (originalElement) {
+							let walker = walk$2(siblingClone, siblingClone);
+							let next, pos, done;
+							while (!done) {
+								next = walker.next();
+								pos = next.value;
+								done = next.done;
+
+								if (isElement(pos)) {
+									originalElement = findElement(pos, alreadyRendered);
+									copyWidth(originalElement, pos);
+
+									// I've tried to make the THEAD invisible; this is the best
+									// I could achieve. It gets a zero height but still somehow
+									// affects the container height by a couple of pixels in my
+									// testing. :(
+									// Next step is to change the "true" below to use a custom
+									// attribute that lets you control whether the header is shown.
+									{
+										pos.style.visibility = "collapse";
+										pos.style.marginTop = "0px";
+										pos.style.marginBottom = "0px";
+										pos.style.paddingTop = "0px";
+										pos.style.paddingBottom = "0px";
+										pos.style.borderTop = "0px";
+										pos.style.borderBottom = "0px";
+										pos.style.lineHeight = "0px";
+										pos.style.opacity = 0;
+									}
+								}
+							}
+						}
+					}
+					container.insertBefore(siblingClone, container.firstChild);
+				}
+
+				if (sibling == subject) {
+					parent = siblingClone || existing;
+				}
+				sibling = sibling.nextElementSibling;
+			}
+
+			split = inIndexOfRefs(subject, alreadyRendered);
+			if (split) {
+				setSplit(split, parent);
+			}
+
+			dupSiblings =
+				subject.dataset.clonesiblings == true ||
+				["grid", "flex", "table-row"].indexOf(subject.style.display) > -1;
+			added.push(parent);
+
+			if (subject.tagName == "LI") {
+				numListItems--;
+			}
+
+			if (freshPage && (isText(node) || numListItems)) {
+				// Flag the first node on the page so we can suppress list styles on
+				// a continued item and list item numbers except the list one
+				// if an item number should be printed.
+				parent.dataset.suppressListStyle = true;
+			}
+		}
+
+		added = undefined;
+		return fragment;
+	}
+	/**
+	 * Sets split attributes between original and clone elements for table splitting.
+	 *
+	 * @param {HTMLElement} orig The original element to be split.
+	 * @param {HTMLElement} clone The cloned element that receives attributes.
+	 */
+	function setSplit(orig, clone) {
+		if (orig.dataset.splitTo) {
+			clone.setAttribute("data-split-from", clone.getAttribute("data-ref"));
+		}
+
+		// This will let us split a table with multiple columns correctly.
+		orig.setAttribute("data-split-to", clone.getAttribute("data-ref"));
+	}
+
+	/**
+	 * Clones a node and removes certain attributes like 'id' and break-related attributes.
+	 *
+	 * @param {Node} node The node to clone.
+	 * @param {boolean} [deep=false] Whether to perform a deep clone.
+	 * @returns {Node} The cloned node with adjusted attributes.
+	 */
+	function cloneNodeAncestor(node, deep = false) {
+		let result = node.cloneNode(deep);
+
+		if (result.hasAttribute("id")) {
+			let dataID = result.getAttribute("id");
+			result.setAttribute("data-id", dataID);
+			result.removeAttribute("id");
+		}
+
+		// This is handled by css :not, but also tidied up here
+		if (result.hasAttribute("data-break-before")) {
+			result.removeAttribute("data-break-before");
+		}
+
+		if (result.hasAttribute("data-previous-break-after")) {
+			result.removeAttribute("data-previous-break-after");
+		}
+
+		return result;
+	}
+
+	/**
+	 * Rebuilds the ancestor tree of a given node as a document fragment.
+	 *
+	 * @param {Node} node The node for which ancestors are rebuilt.
+	 * @returns {DocumentFragment} A fragment containing cloned ancestors of the node.
+	 */
 	function rebuildAncestors(node) {
 		let parent, ancestor;
 		let ancestors = [];
@@ -773,44 +1204,9 @@
 
 		let fragment = document.createDocumentFragment();
 
-		// Handle rowspan on table
-		if (node.nodeName === "TR") {
-			let previousRow = node.previousElementSibling;
-			let previousRowDistance = 1;
-			while (previousRow) {
-				// previous row has more columns, might indicate a rowspan.
-				if (previousRow.childElementCount > node.childElementCount) {
-					const initialColumns = Array.from(node.children);
-					while (node.firstChild) {
-						node.firstChild.remove();
-					}
-					let k = 0;
-					for (let j = 0; j < previousRow.children.length; j++) {
-						let column = previousRow.children[j];
-						if (column.rowSpan && column.rowSpan > previousRowDistance) {
-							const duplicatedColumn = column.cloneNode(true);
-							// Adjust rowspan value
-							duplicatedColumn.rowSpan = column.rowSpan - previousRowDistance;
-							// Add the column to the row
-							node.appendChild(duplicatedColumn);
-						} else {
-							// Fill the gap with the initial columns (if exists)
-							const initialColumn = initialColumns[k++];
-							// The initial column can be undefined if the newly created table has less columns than the original table
-							if (initialColumn) {
-								node.appendChild(initialColumn);
-							}
-						}
-					}
-				}
-				previousRow = previousRow.previousElementSibling;
-				previousRowDistance++;
-			}
-		}
-
 		// Gather all ancestors
 		let element = node;
-		while(element.parentNode && element.parentNode.nodeType === 1) {
+		while (element.parentNode && element.parentNode.nodeType === 1) {
 			ancestors.unshift(element.parentNode);
 			element = element.parentNode;
 		}
@@ -818,9 +1214,8 @@
 		for (var i = 0; i < ancestors.length; i++) {
 			ancestor = ancestors[i];
 			parent = ancestor.cloneNode(false);
-		
+
 			parent.setAttribute("data-split-from", parent.getAttribute("data-ref"));
-			// ancestor.setAttribute("data-split-to", parent.getAttribute("data-ref"));
 
 			if (parent.hasAttribute("id")) {
 				let dataID = parent.getAttribute("id");
@@ -838,7 +1233,7 @@
 			}
 
 			if (added.length) {
-				let container = added[added.length-1];
+				let container = added[added.length - 1];
 				container.appendChild(parent);
 			} else {
 				fragment.appendChild(parent);
@@ -854,7 +1249,6 @@
 					parent.parentElement.insertBefore(sib, prev);
 					prev = sib;
 				}
-				
 			}
 		}
 
@@ -875,7 +1269,7 @@
 			}
 
 			// Create a fragment with rebuilt ancestors
-			let fragment = rebuildAncestors(cutElement);
+			let fragment = rebuildTree(cutElement);
 
 			// Clone cut
 			if (!breakAfter) {
@@ -910,48 +1304,75 @@
 	}
 	*/
 
+	/**
+	 * Checks if a node requires a break before it according to dataset.breakBefore attribute.
+	 *
+	 * @param {Node} node The node to check.
+	 * @returns {boolean} True if a break before is needed, false otherwise.
+	 */
 	function needsBreakBefore(node) {
-		if( typeof node !== "undefined" &&
-				typeof node.dataset !== "undefined" &&
-				typeof node.dataset.breakBefore !== "undefined" &&
-				(node.dataset.breakBefore === "always" ||
-				 node.dataset.breakBefore === "page" ||
-				 node.dataset.breakBefore === "left" ||
-				 node.dataset.breakBefore === "right" ||
-				 node.dataset.breakBefore === "recto" ||
-				 node.dataset.breakBefore === "verso")
-			 ) {
+		if (
+			typeof node !== "undefined" &&
+			typeof node.dataset !== "undefined" &&
+			typeof node.dataset.breakBefore !== "undefined" &&
+			(node.dataset.breakBefore === "always" ||
+				node.dataset.breakBefore === "page" ||
+				node.dataset.breakBefore === "left" ||
+				node.dataset.breakBefore === "right" ||
+				node.dataset.breakBefore === "recto" ||
+				node.dataset.breakBefore === "verso")
+		) {
 			return true;
 		}
 
 		return false;
 	}
 
+	/**
+	 * Checks if a node's previous sibling requires a break after it according to dataset.previousBreakAfter attribute.
+	 *
+	 * @param {Node} node The node to check.
+	 * @returns {boolean} True if the previous break after is needed, false otherwise.
+	 */
 	function needsPreviousBreakAfter(node) {
-		if( typeof node !== "undefined" &&
-				typeof node.dataset !== "undefined" &&
-				typeof node.dataset.previousBreakAfter !== "undefined" &&
-				(node.dataset.previousBreakAfter === "always" ||
-				 node.dataset.previousBreakAfter === "page" ||
-				 node.dataset.previousBreakAfter === "left" ||
-				 node.dataset.previousBreakAfter === "right" ||
-				 node.dataset.previousBreakAfter === "recto" ||
-				 node.dataset.previousBreakAfter === "verso")
-			 ) {
+		if (
+			typeof node !== "undefined" &&
+			typeof node.dataset !== "undefined" &&
+			typeof node.dataset.previousBreakAfter !== "undefined" &&
+			(node.dataset.previousBreakAfter === "always" ||
+				node.dataset.previousBreakAfter === "page" ||
+				node.dataset.previousBreakAfter === "left" ||
+				node.dataset.previousBreakAfter === "right" ||
+				node.dataset.previousBreakAfter === "recto" ||
+				node.dataset.previousBreakAfter === "verso")
+		) {
 			return true;
 		}
 
 		return false;
 	}
 
+	/**
+	 * Determines if a page break is needed between the given node and the previous significant node.
+	 *
+	 * @param {Node} node The current node.
+	 * @param {Node} previousSignificantNode The previous significant node.
+	 * @returns {boolean} True if a page break is needed, false otherwise.
+	 */
 	function needsPageBreak(node, previousSignificantNode) {
-		if (typeof node === "undefined" || !previousSignificantNode || isIgnorable(node)) {
+		if (
+			typeof node === "undefined" ||
+			!previousSignificantNode ||
+			isIgnorable(node)
+		) {
 			return false;
 		}
 		if (node.dataset && node.dataset.undisplayed) {
 			return false;
 		}
-		let previousSignificantNodePage = previousSignificantNode.dataset ? previousSignificantNode.dataset.page : undefined;
+		let previousSignificantNodePage = previousSignificantNode.dataset
+			? previousSignificantNode.dataset.page
+			: undefined;
 		if (typeof previousSignificantNodePage === "undefined") {
 			const nodeWithNamedPage = getNodeWithNamedPage(previousSignificantNode);
 			if (nodeWithNamedPage) {
@@ -960,7 +1381,10 @@
 		}
 		let currentNodePage = node.dataset ? node.dataset.page : undefined;
 		if (typeof currentNodePage === "undefined") {
-			const nodeWithNamedPage = getNodeWithNamedPage(node, previousSignificantNode);
+			const nodeWithNamedPage = getNodeWithNamedPage(
+				node,
+				previousSignificantNode,
+			);
 			if (nodeWithNamedPage) {
 				currentNodePage = nodeWithNamedPage.dataset.page;
 			}
@@ -968,14 +1392,21 @@
 		return currentNodePage !== previousSignificantNodePage;
 	}
 
-	function *words(node) {
+	/**
+	 * Generator function to yield word ranges from a text node.
+	 *
+	 * @param {Text} node The text node to extract words from.
+	 * @yields {Range} A Range object for each word found.
+	 */
+	function* words(node) {
 		let currentText = node.nodeValue;
 		let max = currentText.length;
 		let currentOffset = 0;
 		let currentLetter;
 
 		let range;
-		const significantWhitespaces = node.parentElement && node.parentElement.nodeName === "PRE";
+		const significantWhitespaces =
+			node.parentElement && node.parentElement.nodeName === "PRE";
 
 		while (currentOffset < max) {
 			currentLetter = currentText[currentOffset];
@@ -1001,7 +1432,13 @@
 		}
 	}
 
-	function *letters(wordRange) {
+	/**
+	 * Generator function to yield letter ranges from a word range.
+	 *
+	 * @param {Range} wordRange The Range object representing a word.
+	 * @yields {Range} A Range object for each letter in the word.
+	 */
+	function* letters(wordRange) {
 		let currentText = wordRange.startContainer;
 		let max = currentText.length;
 		let currentOffset = wordRange.startOffset;
@@ -1009,18 +1446,23 @@
 
 		let range;
 
-		while(currentOffset < max) {
-			 // currentLetter = currentText[currentOffset];
-			 range = document.createRange();
-			 range.setStart(currentText, currentOffset);
-			 range.setEnd(currentText, currentOffset+1);
+		while (currentOffset < max) {
+			// currentLetter = currentText[currentOffset];
+			range = document.createRange();
+			range.setStart(currentText, currentOffset);
+			range.setEnd(currentText, currentOffset + 1);
 
-			 yield range;
+			yield range;
 
-			 currentOffset += 1;
+			currentOffset += 1;
 		}
 	}
-
+	/**
+	 * Determines if a node is considered a container (block) element.
+	 *
+	 * @param {Node} node The node to check.
+	 * @returns {boolean} True if the node is a container, false if it is inline or hidden.
+	 */
 	function isContainer(node) {
 		let container;
 
@@ -1091,15 +1533,73 @@
 		return container;
 	}
 
-	function cloneNode(n, deep=false) {
+	/**
+	 * Clones a node.
+	 *
+	 * @param {Node} n The node to clone.
+	 * @param {boolean} [deep=false] Whether to clone deeply.
+	 * @returns {Node} The cloned node.
+	 */
+	function cloneNode(n, deep = false) {
 		return n.cloneNode(deep);
 	}
 
+	/**
+	 * Retrieves the index of a node's reference in the document's indexOfRefs.
+	 *
+	 * @param {Node} node The node with a data-ref attribute.
+	 * @param {Document} doc The document containing indexOfRefs.
+	 * @returns {number|undefined} The index of the reference, or undefined if not found.
+	 */
+	function inIndexOfRefs(node, doc) {
+		if (!doc || !doc.indexOfRefs) return;
+		const ref = node.getAttribute("data-ref");
+		return doc.indexOfRefs[ref];
+	}
+
+	/**
+	 * Replaces a child element in the parent node if a child with the same data-ref exists,
+	 * otherwise appends the child.
+	 *
+	 * @param {HTMLElement} parentNode The parent element.
+	 * @param {Node} child The child element to replace or append.
+	 */
+	function replaceOrAppendElement(parentNode, child) {
+		if (!isText(child)) {
+			let childRef = child.getAttribute("data-ref");
+			for (let index = 0; index < parentNode.children.length; index++) {
+				if (parentNode.children[index].getAttribute("data-ref") == childRef) {
+					parentNode.replaceChild(child, parentNode.childNodes[index]);
+					return;
+				}
+			}
+		}
+
+		parentNode.appendChild(child);
+	}
+
+	/**
+	 * Finds an element in the document by the node's data-ref attribute.
+	 *
+	 * @param {Node} node The node with a data-ref attribute.
+	 * @param {Document} doc The document to search in.
+	 * @param {boolean} [forceQuery=false] Whether to force a querySelector search.
+	 * @returns {Element|undefined} The found element or undefined.
+	 */
 	function findElement(node, doc, forceQuery) {
+		if (!doc) return;
 		const ref = node.getAttribute("data-ref");
 		return findRef(ref, doc, forceQuery);
 	}
 
+	/**
+	 * Finds an element in the document by data-ref value.
+	 *
+	 * @param {string} ref The data-ref string to find.
+	 * @param {Document} doc The document to search in.
+	 * @param {boolean} [forceQuery=false] Whether to force querySelector search.
+	 * @returns {Element|null} The found element or null.
+	 */
 	function findRef(ref, doc, forceQuery) {
 		if (!forceQuery && doc.indexOfRefs && doc.indexOfRefs[ref]) {
 			return doc.indexOfRefs[ref];
@@ -1108,6 +1608,12 @@
 		}
 	}
 
+	/**
+	 * Validates if a node is either a text node or an element with a data-ref attribute.
+	 *
+	 * @param {Node} node The node to validate.
+	 * @returns {boolean} True if valid, false otherwise.
+	 */
 	function validNode(node) {
 		if (isText(node)) {
 			return true;
@@ -1120,6 +1626,12 @@
 		return false;
 	}
 
+	/**
+	 * Finds the previous valid node in the sibling/parent chain.
+	 *
+	 * @param {Node} node The starting node.
+	 * @returns {Node|null} The previous valid node or null.
+	 */
 	function prevValidNode(node) {
 		while (!validNode(node)) {
 			if (node.previousSibling) {
@@ -1135,8 +1647,12 @@
 
 		return node;
 	}
-
-
+	/**
+	 * Gets the index of a node among its siblings.
+	 *
+	 * @param {Node} node The node to find the index for.
+	 * @returns {number} The index of the node.
+	 */
 	function indexOf$2(node) {
 		let parent = node.parentNode;
 		if (!parent) {
@@ -1144,26 +1660,68 @@
 		}
 		return Array.prototype.indexOf.call(parent.childNodes, node);
 	}
-
+	/**
+	 * Returns the child node at a specific index.
+	 *
+	 * @param {Node} node The parent node.
+	 * @param {number} index The index of the child.
+	 * @returns {Node} The child node.
+	 */
 	function child(node, index) {
 		return node.childNodes[index];
 	}
 
+	/**
+	 * Checks if a node has any content.
+	 * Returns true for element nodes or non-empty text nodes.
+	 *
+	 * @param {Node} node The node to check.
+	 * @returns {boolean} True if the node has content, false otherwise.
+	 */
 	function hasContent(node) {
 		if (isElement(node)) {
 			return true;
-		} else if (isText(node) &&
-				node.textContent.trim().length) {
+		} else if (isText(node) && node.textContent.trim().length) {
 			return true;
 		}
 		return false;
 	}
 
-	function indexOfTextNode(node, parent) {
+	/**
+	 * Finds the index of a text node within its parent's child nodes.
+	 * If the text node has a previous sibling, tries to find the matching element by data-ref attribute
+	 * and returns its index + 1. Otherwise, matches by text content.
+	 * Optionally considers hyphenation removal in the text.
+	 *
+	 * @param {Node} node The text node to find the index for.
+	 * @param {Node} parent The parent node containing the child nodes.
+	 * @param {string} hyphen The hyphenation string to remove if present at the end of the text.
+	 * @returns {number} The index of the text node within the parent's child nodes, or -1 if not found.
+	 */
+	function indexOfTextNode(node, parent, hyphen) {
 		if (!isText(node)) {
 			return -1;
 		}
+
+		// Use previous element's dataref to match if possible. Matching the text
+		// will potentially return the wrong node.
+		if (node.previousSibling) {
+			let matchingNode = parent.querySelector(
+				`[data-ref='${node.previousSibling.dataset.ref}']`,
+			);
+			return Array.prototype.indexOf.call(parent.childNodes, matchingNode) + 1;
+		}
+
 		let nodeTextContent = node.textContent;
+		// Remove hyphenation if necessary.
+		if (
+			nodeTextContent.substring(nodeTextContent.length - hyphen.length) == hyphen
+		) {
+			nodeTextContent = nodeTextContent.substring(
+				0,
+				nodeTextContent.length - hyphen.length,
+			);
+		}
 		let child;
 		let index = -1;
 		for (var i = 0; i < parent.childNodes.length; i++) {
@@ -1179,7 +1737,6 @@
 
 		return index;
 	}
-
 
 	/**
 	 * Throughout, whitespace is defined as one of the characters
@@ -1203,8 +1760,10 @@
 	 *  and otherwise false.
 	 */
 	function isIgnorable(node) {
-		return (node.nodeType === 8) || // A comment node
-			((node.nodeType === 3) && isAllWhitespace(node)); // a text node, all whitespace
+		return (
+			node.nodeType === 8 || // A comment node
+			(node.nodeType === 3 && isAllWhitespace(node))
+		); // a text node, all whitespace
 	}
 
 	/**
@@ -1214,7 +1773,7 @@
 	 * @return {boolean} true if all of the text content of |nod| is whitespace, otherwise false.
 	 */
 	function isAllWhitespace(node) {
-		return !(/[^\t\n\r ]/.test(node.textContent));
+		return !/[^\t\n\r ]/.test(node.textContent);
 	}
 
 	/**
@@ -1236,6 +1795,15 @@
 		return null;
 	}
 
+	/**
+	 * Finds the closest ancestor (including the node itself) that has a dataset.page attribute.
+	 * Traverses up the DOM tree until the optional limiter node is reached.
+	 *
+	 * @param {Node} node - The starting node to search from.
+	 * @param {Node} [limiter] - Optional ancestor node to stop the search at (exclusive).
+	 * @returns {Node|null|undefined} The closest node with dataset.page, null if none found,
+	 *                               or undefined if limiter is reached without finding.
+	 */
 	function getNodeWithNamedPage(node, limiter) {
 		if (node && node.dataset && node.dataset.page) {
 			return node;
@@ -1248,15 +1816,6 @@
 				if (node.dataset && node.dataset.page) {
 					return node;
 				}
-			}
-		}
-		return null;
-	}
-
-	function breakInsideAvoidParentNode(node) {
-		while ((node = node.parentNode)) {
-			if (node && node.dataset && node.dataset.breakInside === "avoid") {
-				return node;
 			}
 		}
 		return null;
@@ -1303,18 +1862,29 @@
 		return null;
 	}
 
+	/**
+	 * Traverses a DOM subtree and removes nodes that match a filter function.
+	 *
+	 * @param {Node} content - The root node to start traversal from. If falsy, defaults to `this.dom`.
+	 * @param {function(Node): number} [func] - Optional filter function used by the TreeWalker.
+	 *        Should return one of the constants from NodeFilter:
+	 *        - NodeFilter.FILTER_ACCEPT to keep the node,
+	 *        - NodeFilter.FILTER_REJECT or FILTER_SKIP to exclude it.
+	 * @param {number} [what=NodeFilter.SHOW_ALL] - Optional mask specifying which node types to show.
+	 *        Defaults to all nodes.
+	 */
 	function filterTree(content, func, what) {
 		const treeWalker = document.createTreeWalker(
 			content || this.dom,
 			what || NodeFilter.SHOW_ALL,
 			func ? { acceptNode: func } : null,
-			false
+			false,
 		);
 
 		let node;
 		let current;
 		node = treeWalker.nextNode();
-		while(node) {
+		while (node) {
 			current = node;
 			node = treeWalker.nextNode();
 			current.parentNode.removeChild(current);
@@ -1322,73 +1892,195 @@
 	}
 
 	/**
-	 * BreakToken
+	 * Represents a token used to manage breaks (e.g., page or line breaks) in layout rendering.
+	 * Holds information about the current node, overflow content, and break requirements.
+	 *
 	 * @class
 	 */
 	class BreakToken {
-
-		constructor(node, offset) {
+		/**
+		 * Creates a new BreakToken instance.
+		 *
+		 * @param {Node} node - The DOM node this break token is associated with.
+		 * @param {Array<Object>} [overflowArray=[]] - An optional array of overflow items from layout.
+		 */
+		constructor(node, overflowArray) {
+			/** @type {Node} */
 			this.node = node;
-			this.offset = offset;
+
+			/** @type {Array<Object>} */
+			this.overflow = overflowArray || [];
+
+			/** @type {boolean} */
+			this.finished = false;
+
+			/** @type {Array<Node>} */
+			this.breakNeededAt = [];
 		}
 
+		/**
+		 * Compares this BreakToken to another to determine equality.
+		 *
+		 * @param {BreakToken} otherBreakToken - Another BreakToken to compare with.
+		 * @returns {boolean} True if both BreakTokens are equivalent; otherwise, false.
+		 */
 		equals(otherBreakToken) {
-			if (!otherBreakToken) {
+			if (this.node !== otherBreakToken.node) {
 				return false;
 			}
-			if (this["node"] && otherBreakToken["node"] &&
-				this["node"] !== otherBreakToken["node"]) {
+
+			if (otherBreakToken.overflow.length !== this.overflow.length) {
 				return false;
 			}
-			if (this["offset"] && otherBreakToken["offset"] &&
-				this["offset"] !== otherBreakToken["offset"]) {
-				return false;
+
+			for (const index in this.overflow) {
+				if (!this.overflow[index].equals(otherBreakToken.overflow[index])) {
+					return false;
+				}
 			}
+
+			let otherQueue = otherBreakToken.getForcedBreakQueue();
+			for (const index in this.breakNeededAt) {
+				if (!this.breakNeededAt[index].isEqualNode(otherQueue[index])) {
+					return false;
+				}
+			}
+
 			return true;
 		}
 
-		toJSON(hash) {
-			let node;
-			let index = 0;
-			if (!this.node) {
-				return {};
-			}
-			if (isElement(this.node) && this.node.dataset.ref) {
-				node = this.node.dataset.ref;
-			} else if (hash) {
-				node = this.node.parentElement.dataset.ref;
-			}
-
-			if (this.node.parentElement) {
-				const children = Array.from(this.node.parentElement.childNodes);
-				index = children.indexOf(this.node);
-			}
-
-			return JSON.stringify({
-				"node": node,
-				"index" : index,
-				"offset": this.offset
-			});
+		/**
+		 * Marks the BreakToken as finished (i.e., no further processing required).
+		 */
+		setFinished() {
+			this.finished = true;
 		}
 
+		/**
+		 * Checks whether the BreakToken has been marked as finished.
+		 *
+		 * @returns {boolean} True if finished, otherwise false.
+		 */
+		isFinished() {
+			return this.finished;
+		}
+
+		/**
+		 * Adds a DOM node that requires a break (e.g., forced page break).
+		 *
+		 * @param {Node} needsBreak - A DOM node where a break is required.
+		 */
+		addNeedsBreak(needsBreak) {
+			this.breakNeededAt.push(needsBreak);
+		}
+
+		/**
+		 * Retrieves and removes the next node that needs a break.
+		 *
+		 * @returns {Node | undefined} The next node requiring a break, or undefined if none remain.
+		 */
+		getNextNeedsBreak() {
+			return this.breakNeededAt.shift();
+		}
+
+		/**
+		 * Gets the current queue of nodes where breaks are needed.
+		 *
+		 * @returns {Array<Node>} An array of nodes requiring breaks.
+		 */
+		getForcedBreakQueue() {
+			return this.breakNeededAt;
+		}
+
+		/**
+		 * Sets the queue of nodes where breaks are needed.
+		 *
+		 * @param {Array<Node>} queue - The new queue of nodes requiring breaks.
+		 * @returns {Array<Node>} The updated queue.
+		 */
+		setForcedBreakQueue(queue) {
+			return (this.breakNeededAt = queue);
+		}
 	}
 
 	/**
-	 * Render result.
+	 * Represents the result of a rendering operation.
+	 *
 	 * @class
 	 */
 	class RenderResult {
-
+		/**
+		 * Create a RenderResult.
+		 *
+		 * @param {Object} breakToken - A token indicating where rendering stopped due to overflow.
+		 * @param {Error} [error] - Optional error encountered during rendering.
+		 */
 		constructor(breakToken, error) {
+			/**
+			 * The token where rendering ended or needs to continue.
+			 * @type {Object}
+			 */
 			this.breakToken = breakToken;
+
+			/**
+			 * An optional error that occurred during rendering.
+			 * @type {Error|undefined}
+			 */
 			this.error = error;
 		}
 	}
 
-	class OverflowContentError extends Error {
-		constructor(message, items) {
-			super(message);
-			this.items = items;
+	/**
+	 * Represents an overflow area in a document or visual element.
+	 * Used to track positions and dimensions when content exceeds bounds.
+	 *
+	 * @class
+	 */
+	class Overflow {
+		/**
+		 * Creates an instance of Overflow.
+		 *
+		 * @param {Node} node - The DOM node associated with the overflow.
+		 * @param {number} offset - The offset within the node where overflow begins.
+		 * @param {number} overflowHeight - The height of the overflow content.
+		 * @param {Range} range - The range object representing the overflow area.
+		 * @param {boolean} topLevel - Indicates if this overflow is at the top level.
+		 */
+		constructor(node, offset, overflowHeight, range, topLevel) {
+			this.node = node;
+			this.offset = offset;
+			this.overflowHeight = overflowHeight;
+			this.range = range;
+			this.topLevel = topLevel;
+		}
+
+		/**
+		 * Checks if this overflow object is equal to another based on node and offset.
+		 *
+		 * @param {Object} otherOffset - Another object with `node` and `offset` properties to compare against.
+		 * @param {Node} otherOffset.node - The node to compare.
+		 * @param {number} otherOffset.offset - The offset to compare.
+		 * @returns {boolean} True if both node and offset match, false otherwise.
+		 */
+		equals(otherOffset) {
+			if (!otherOffset) {
+				return false;
+			}
+			if (
+				this["node"] &&
+				otherOffset["node"] &&
+				this["node"] !== otherOffset["node"]
+			) {
+				return false;
+			}
+			if (
+				this["offset"] &&
+				otherOffset["offset"] &&
+				this["offset"] !== otherOffset["offset"]
+			) {
+				return false;
+			}
+			return true;
 		}
 	}
 
@@ -1399,17 +2091,18 @@
 	 * @class
 	 */
 	class Layout {
-
 		constructor(element, hooks, options) {
 			this.element = element;
 
 			this.bounds = this.element.getBoundingClientRect();
-			this.parentBounds = this.element.offsetParent.getBoundingClientRect();
+			this.parentBounds = this.element.offsetParent?.getBoundingClientRect() || {
+				left: 0,
+			};
 			let gap = parseFloat(window.getComputedStyle(this.element).columnGap);
-		
+
 			if (gap) {
 				let leftMargin = this.bounds.left - this.parentBounds.left;
-				this.gap =  gap - leftMargin;	
+				this.gap = gap - leftMargin;
 			} else {
 				this.gap = 0;
 			}
@@ -1425,6 +2118,7 @@
 				this.hooks.beforeOverflow = new Hook();
 				this.hooks.onOverflow = new Hook();
 				this.hooks.afterOverflowRemoved = new Hook();
+				this.hooks.afterOverflowAdded = new Hook();
 				this.hooks.onBreakToken = new Hook();
 				this.hooks.beforeRenderResult = new Hook();
 			}
@@ -1433,58 +2127,108 @@
 
 			this.maxChars = this.settings.maxChars || MAX_CHARS_PER_BREAK;
 			this.forceRenderBreak = false;
+
+			this.temporaryIndex = 0;
 		}
 
-		async renderTo(wrapper, source, breakToken, bounds = this.bounds) {
+		/**
+		 * Fills the page and check for the first overflow.
+		 *
+		 * @param {Element} wrapper - current Page's content wrapper
+		 * @param {HTML} source - Html source template content
+		 * @param {BreakToken} breakToken - previous breakToken
+		 * @param {Page} prevPage - previous Page
+		 * @param {DOMRect} bounds - Page bounds
+		 * @returns {BreakToken}
+		 */
+		async renderTo(
+			wrapper,
+			source,
+			breakToken,
+			prevPage = null,
+			bounds = this.bounds,
+		) {
 			let start = this.getStart(source, breakToken);
+			let firstDivisible = source;
+
+			while (firstDivisible.children.length == 1) {
+				firstDivisible = firstDivisible.children[0];
+			}
+
 			let walker = walk$2(start, source);
 
 			let node;
-			let prevNode;
 			let done;
 			let next;
-
-			let hasRenderedContent = false;
-			let newBreakToken;
-
-			let length = 0;
+			let forcedBreakQueue = [];
 
 			let prevBreakToken = breakToken || new BreakToken(start);
 
-			this.hooks && this.hooks.onPageLayout.trigger(wrapper, prevBreakToken, this);
+			this.hooks &&
+				this.hooks.onPageLayout.trigger(wrapper, prevBreakToken, this);
+
+			// Add overflow, and check that it doesn't have overflow itself.
+			this.addOverflowToPage(wrapper, breakToken, prevPage);
+
+			// Footnotes may change the bounds.
+			bounds = this.element.getBoundingClientRect();
+
+			let newBreakToken = this.findBreakToken(
+				wrapper,
+				source,
+				bounds,
+				prevBreakToken,
+				start,
+			);
+
+			if (prevBreakToken.isFinished()) {
+				if (newBreakToken) {
+					newBreakToken.setFinished();
+				}
+				return new RenderResult(newBreakToken);
+			}
+
+			let hasRenderedContent = !!wrapper.childNodes.length;
+
+			if (prevBreakToken) {
+				forcedBreakQueue = prevBreakToken.getForcedBreakQueue();
+			}
 
 			while (!done && !newBreakToken) {
 				next = walker.next();
-				prevNode = node;
 				node = next.value;
 				done = next.done;
 
-				if (!node) {
-					this.hooks && this.hooks.layout.trigger(wrapper, this);
+				if (node) {
+					this.hooks && this.hooks.layoutNode.trigger(node);
 
-					let imgs = wrapper.querySelectorAll("img");
-					if (imgs.length) {
-						await this.waitForImages(imgs);
+					// Footnotes may change the bounds.
+					bounds = this.element.getBoundingClientRect();
+
+					// Check if the rendered element has a break set
+					// Remember the node but don't apply the break until we have laid
+					// out the rest of any parent content - this lets a table or divs
+					// side by side still add content to this page before we start a new
+					// one.
+					if (this.shouldBreak(node) && hasRenderedContent) {
+						forcedBreakQueue.push(node);
 					}
 
-					newBreakToken = this.findBreakToken(wrapper, source, bounds, prevBreakToken);
-
-					if (newBreakToken && newBreakToken.equals(prevBreakToken)) {
-						console.warn("Unable to layout item: ", prevNode);
-						this.hooks && this.hooks.beforeRenderResult.trigger(undefined, wrapper, this);
-						return new RenderResult(undefined, new OverflowContentError("Unable to layout item", [prevNode]));
+					if (!forcedBreakQueue.length && node.dataset && node.dataset.page) {
+						let named = node.dataset.page;
+						let page = this.element.closest(".pagedjs_page");
+						page.classList.add("pagejs_named_page");
+						page.classList.add("pagedjs_" + named + "_page");
+						if (!node.dataset.splitFrom) {
+							page.classList.add("pagedjs_" + named + "_first_page");
+						}
 					}
-
-					this.rebuildTableFromBreakToken(newBreakToken, wrapper);
-
-					this.hooks && this.hooks.beforeRenderResult.trigger(newBreakToken, wrapper, this);
-					return new RenderResult(newBreakToken);
 				}
 
-				this.hooks && this.hooks.layoutNode.trigger(node);
-
-				// Check if the rendered element has a break set
-				if (hasRenderedContent && this.shouldBreak(node, start)) {
+				// Check whether we have overflow when we've completed laying out a top
+				// level element. This lets it have multiple children overflowing and
+				// allows us to move all of the overflows onto the next page together.
+				if (forcedBreakQueue.length || !node || !node.parentElement) {
 					this.hooks && this.hooks.layout.trigger(wrapper, this);
 
 					let imgs = wrapper.querySelectorAll("img");
@@ -1492,115 +2236,72 @@
 						await this.waitForImages(imgs);
 					}
 
-					newBreakToken = this.findBreakToken(wrapper, source, bounds, prevBreakToken);
+					newBreakToken = this.findBreakToken(
+						wrapper,
+						source,
+						bounds,
+						prevBreakToken,
+						node,
+					);
 
-					if (!newBreakToken) {
-						newBreakToken = this.breakAt(node);
-					} else {
-						this.rebuildTableFromBreakToken(newBreakToken, wrapper);
+					if (newBreakToken && node === undefined) {
+						// We have run out of content. Do add the overflow to a new page but
+						// don't repeat the whole thing again.
+						newBreakToken.setFinished();
 					}
 
-					if (newBreakToken && newBreakToken.equals(prevBreakToken)) {
-						console.warn("Unable to layout item: ", node);
-						let after = newBreakToken.node && nodeAfter(newBreakToken.node);
-						if (after) {
-							newBreakToken = new BreakToken(after);
+					if (forcedBreakQueue.length) {
+						if (newBreakToken) {
+							newBreakToken.setForcedBreakQueue(forcedBreakQueue);
 						} else {
-							return new RenderResult(undefined, new OverflowContentError("Unable to layout item", [node]));
+							newBreakToken = this.breakAt(
+								forcedBreakQueue.shift(),
+								0,
+								forcedBreakQueue,
+							);
 						}
 					}
 
-					length = 0;
+					if (newBreakToken && newBreakToken.equals(prevBreakToken)) {
+						this.failed = true;
+						return new RenderResult(undefined, "Unable to layout item: " + node);
+					}
 
-					break;
-				}
-
-				if (node.dataset && node.dataset.page) {
-					let named = node.dataset.page;
-					let page = this.element.closest(".pagedjs_page");
-					page.classList.add("pagedjs_named_page");
-					page.classList.add("pagedjs_" + named + "_page");
-
-					if (!node.dataset.splitFrom) {
-						page.classList.add("pagedjs_" + named + "_first_page");
+					if (!node || newBreakToken) {
+						return new RenderResult(newBreakToken);
 					}
 				}
 
-				// Should the Node be a shallow or deep clone
+				// Should the Node be a shallow or deep clone?
 				let shallow = isContainer(node);
 
-				let rendered = this.append(node, wrapper, breakToken, shallow);
+				this.append(node, wrapper, source, breakToken, shallow);
+				bounds = this.element.getBoundingClientRect();
 
-				length += rendered.textContent.length;
-
-				// Check if layout has content yet
+				// Check whether layout has content yet.
 				if (!hasRenderedContent) {
 					hasRenderedContent = hasContent(node);
 				}
 
-				// Skip to the next node if a deep clone was rendered
+				// Skip to the next node if a deep clone was rendered.
 				if (!shallow) {
 					walker = walk$2(nodeAfter(node, source), source);
 				}
-
-				if (this.forceRenderBreak) {
-					this.hooks && this.hooks.layout.trigger(wrapper, this);
-
-					newBreakToken = this.findBreakToken(wrapper, source, bounds, prevBreakToken);
-
-					if (!newBreakToken) {
-						newBreakToken = this.breakAt(node);
-					} else {
-						this.rebuildTableFromBreakToken(newBreakToken, wrapper);
-					}
-
-					length = 0;
-					this.forceRenderBreak = false;
-
-					break;
-				}
-
-				// Only check x characters
-				if (length >= this.maxChars) {
-
-					this.hooks && this.hooks.layout.trigger(wrapper, this);
-
-					let imgs = wrapper.querySelectorAll("img");
-					if (imgs.length) {
-						await this.waitForImages(imgs);
-					}
-
-					newBreakToken = this.findBreakToken(wrapper, source, bounds, prevBreakToken);
-
-					if (newBreakToken) {
-						length = 0;
-						this.rebuildTableFromBreakToken(newBreakToken, wrapper);
-					}
-
-					if (newBreakToken && newBreakToken.equals(prevBreakToken)) {
-						console.warn("Unable to layout item: ", node);
-						let after = newBreakToken.node && nodeAfter(newBreakToken.node);
-						if (after) {
-							newBreakToken = new BreakToken(after);
-						} else {
-							this.hooks && this.hooks.beforeRenderResult.trigger(undefined, wrapper, this);
-							return new RenderResult(undefined, new OverflowContentError("Unable to layout item", [node]));
-						}
-					}
-				}
-
 			}
 
-			this.hooks && this.hooks.beforeRenderResult.trigger(newBreakToken, wrapper, this);
+			this.hooks &&
+				this.hooks.beforeRenderResult.trigger(newBreakToken, wrapper, this);
 			return new RenderResult(newBreakToken);
 		}
 
-		breakAt(node, offset = 0) {
-			let newBreakToken = new BreakToken(
+		breakAt(node, offset = 0, forcedBreakQueue = []) {
+			let newBreakToken = new BreakToken(node, offset, forcedBreakQueue);
+			let breakHooks = this.hooks.onBreakToken.triggerSync(
+				newBreakToken,
+				undefined,
 				node,
-				offset
+				this,
 			);
-			let breakHooks = this.hooks.onBreakToken.triggerSync(newBreakToken, undefined, node, this);
 			breakHooks.forEach((newToken) => {
 				if (typeof newToken != "undefined") {
 					newBreakToken = newToken;
@@ -1613,14 +2314,23 @@
 		shouldBreak(node, limiter) {
 			let previousNode = nodeBefore(node, limiter);
 			let parentNode = node.parentNode;
-			let parentBreakBefore = needsBreakBefore(node) && parentNode && !previousNode && needsBreakBefore(parentNode);
+			let parentBreakBefore =
+				needsBreakBefore(node) &&
+				parentNode &&
+				!previousNode &&
+				needsBreakBefore(parentNode);
 			let doubleBreakBefore;
 
 			if (parentBreakBefore) {
-				doubleBreakBefore = node.dataset.breakBefore === parentNode.dataset.breakBefore;
+				doubleBreakBefore =
+					node.dataset.breakBefore === parentNode.dataset.breakBefore;
 			}
 
-			return !doubleBreakBefore && needsBreakBefore(node) || needsPreviousBreakAfter(node) || needsPageBreak(node, previousNode);
+			return (
+				(!doubleBreakBefore && needsBreakBefore(node)) ||
+				needsPreviousBreakAfter(node) ||
+				needsPageBreak(node, previousNode)
+			);
 		}
 
 		forceBreak() {
@@ -1630,6 +2340,7 @@
 		getStart(source, breakToken) {
 			let start;
 			let node = breakToken && breakToken.node;
+			let finished = breakToken && breakToken.finished;
 
 			if (node) {
 				start = node;
@@ -1637,36 +2348,141 @@
 				start = source.firstChild;
 			}
 
-			return start;
+			return finished ? undefined : start;
 		}
 
-		append(node, dest, breakToken, shallow = true, rebuild = true) {
+		/**
+		 * Merge items from source into dest which don't yet exist in dest.
+		 *
+		 * @param {element} dest
+		 *   A destination DOM node tree.
+		 * @param {element} source
+		 *   A source DOM node tree.
+		 *
+		 * @returns {void}
+		 */
+		addOverflowNodes(dest, source) {
+			// Since we are modifying source as we go, we need to remember what
+			Array.from(source.childNodes).forEach((item) => {
+				if (isText(item)) {
+					// If we get to a text node, we assume for now an earlier element
+					// would have prevented duplication.
+					dest.append(item);
+				} else {
+					let match = findElement(item, dest);
+					if (match) {
+						this.addOverflowNodes(match, item);
+					} else {
+						dest.appendChild(item);
+					}
+				}
+			});
+		}
 
+		/**
+		 * Add overflow to new page.
+		 *
+		 * @param {element} dest
+		 *   The page content being built.
+		 * @param {breakToken} breakToken
+		 *   The current break cotent.
+		 * @param {element} alreadyRendered
+		 *   The content that has already been rendered.
+		 *
+		 * @returns {void}
+		 */
+		addOverflowToPage(dest, breakToken, alreadyRendered) {
+			if (!breakToken || !breakToken.overflow.length) {
+				return;
+			}
+
+			let fragment;
+
+			breakToken.overflow.forEach((overflow) => {
+				// A handy way to dump the contents of a fragment.
+				// console.log([].map.call(overflow.content.children, e => e.outerHTML).join('\n'));
+
+				fragment = rebuildTree(overflow.node, fragment, alreadyRendered);
+				// Find the parent to which overflow.content should be added.
+				// Overflow.content can be a much shallower start than
+				// overflow.node, if the range end was outside of the range
+				// start part of the tree. For this reason, we use a match against
+				// the parent element of overflow.content if it exists, or fall back
+				// to overflow.node's parent element.
+				let addTo = overflow.ancestor
+					? findElement(overflow.ancestor, fragment)
+					: fragment;
+				this.addOverflowNodes(addTo, overflow.content);
+			});
+
+			// Record refs.
+			Array.from(fragment.querySelectorAll("[data-ref]")).forEach((ref) => {
+				let refId = ref.dataset.ref;
+				if (!dest.querySelector(`[data-ref='${refId}']`)) {
+					if (!dest.indexOfRefs) {
+						dest.indexOfRefs = {};
+					}
+					dest.indexOfRefs[refId] = ref;
+				}
+			});
+
+			let tags = [
+				"overflow-tagged",
+				"overflow-partial",
+				"range-start-overflow",
+				"range-end-overflow",
+			];
+			tags.forEach((tag) => {
+				let camel = tag
+					.replace(/(?:^\w|[A-Z]|\b\w)/g, function (word, index) {
+						return index == 0 ? word.toLowerCase() : word.toUpperCase();
+					})
+					.replace(/[-\s]+/g, "");
+				let instances = fragment.querySelectorAll(`[data-${tag}]`);
+				instances.forEach((instance) => {
+					delete instance.dataset[camel];
+				});
+			});
+
+			dest.appendChild(fragment);
+
+			this.hooks && this.hooks.afterOverflowAdded.trigger(dest);
+		}
+
+		/**
+		 * Add text to new page.
+		 *
+		 * @param {element} node
+		 *   The node being appended to the destination.
+		 * @param {element} dest
+		 *   The destination to which content is being added.
+		 * @param {element} source
+		 *   The source DOM
+		 * @param {breakToken} breakToken
+		 *   The current breakToken.
+		 * @param {bool} shallow
+		 *	 Whether to do a shallow copy of the node.
+		 * @param {bool} rebuild
+		 *   Whether to rebuild parents.
+		 *
+		 * @returns {ChildNode}
+		 *   The cloned node.
+		 */
+		append(node, dest, source, breakToken, shallow = true, rebuild = true) {
 			let clone = cloneNode(node, !shallow);
 
 			if (node.parentNode && isElement(node.parentNode)) {
 				let parent = findElement(node.parentNode, dest);
-				// Rebuild chain
 				if (parent) {
-					parent.appendChild(clone);
+					replaceOrAppendElement(parent, clone);
 				} else if (rebuild) {
-					let fragment = rebuildAncestors(node);
+					let fragment = rebuildTree(node.parentElement, undefined, source);
 					parent = findElement(node.parentNode, fragment);
-					if (!parent) {
-						dest.appendChild(clone);
-					} else if (breakToken && isText(breakToken.node) && breakToken.offset > 0) {
-						clone.textContent = clone.textContent.substring(breakToken.offset);
-						parent.appendChild(clone);
-					} else {
-						parent.appendChild(clone);
-					}
-
+					replaceOrAppendElement(parent, clone);
 					dest.appendChild(fragment);
 				} else {
 					dest.appendChild(clone);
 				}
-
-
 			} else {
 				dest.appendChild(clone);
 			}
@@ -1688,19 +2504,21 @@
 			return clone;
 		}
 
-		rebuildTableFromBreakToken(breakToken, dest) {
+		rebuildTableFromBreakToken(breakToken, dest, source) {
 			if (!breakToken || !breakToken.node) {
 				return;
 			}
 			let node = breakToken.node;
-			let td = isElement(node) ? node.closest("td") : node.parentElement.closest("td");
+			let td = isElement(node)
+				? node.closest("td")
+				: node.parentElement.closest("td");
 			if (td) {
 				let rendered = findElement(td, dest, true);
 				if (!rendered) {
 					return;
 				}
 				while ((td = td.nextElementSibling)) {
-					this.append(td, dest, null, true);
+					this.append(td, dest, source, null, true);
 				}
 			}
 		}
@@ -1713,18 +2531,18 @@
 		}
 
 		async awaitImageLoaded(image) {
-			return new Promise(resolve => {
+			return new Promise((resolve) => {
 				if (image.complete !== true) {
 					image.onload = function () {
-						let {width, height} = window.getComputedStyle(image);
+						let { width, height } = window.getComputedStyle(image);
 						resolve(width, height);
 					};
 					image.onerror = function (e) {
-						let {width, height} = window.getComputedStyle(image);
+						let { width, height } = window.getComputedStyle(image);
 						resolve(width, height, e);
 					};
 				} else {
-					let {width, height} = window.getComputedStyle(image);
+					let { width, height } = window.getComputedStyle(image);
 					resolve(width, height);
 				}
 			});
@@ -1733,33 +2551,34 @@
 		avoidBreakInside(node, limiter) {
 			let breakNode;
 
-			if (node === limiter) {
-				return;
-			}
-
 			while (node.parentNode) {
-				node = node.parentNode;
-
 				if (node === limiter) {
 					break;
 				}
 
-				if (window.getComputedStyle(node)["break-inside"] === "avoid") {
+				if (isElement(node) && node.dataset.originalBreakInside === "avoid") {
 					breakNode = node;
 					break;
 				}
 
+				node = node.parentNode;
 			}
 			return breakNode;
 		}
 
-		createBreakToken(overflow, rendered, source) {
+		createOverflow(overflow, rendered, source) {
 			let container = overflow.startContainer;
 			let offset = overflow.startOffset;
 			let node, renderedNode, parent, index, temp;
+			let hyphen = this.settings.hyphenGlyph || "\u2011";
+			let topLevel = false;
 
 			if (isElement(container)) {
-				temp = child(container, offset);
+				if (container.nodeName == "INPUT") {
+					temp = container;
+				} else {
+					temp = child(container, offset);
+				}
 
 				if (isElement(temp)) {
 					renderedNode = findElement(temp, rendered);
@@ -1775,9 +2594,15 @@
 						if (!temp.nextSibling) {
 							// We need to ensure that the previous sibling of temp is fully rendered.
 							const renderedNodeFromSource = findElement(renderedNode, source);
-							const walker = document.createTreeWalker(renderedNodeFromSource, NodeFilter.SHOW_ELEMENT);
+							const walker = document.createTreeWalker(
+								renderedNodeFromSource,
+								NodeFilter.SHOW_ELEMENT,
+							);
 							const lastChildOfRenderedNodeFromSource = walker.lastChild();
-							const lastChildOfRenderedNodeMatchingFromRendered = findElement(lastChildOfRenderedNodeFromSource, rendered);
+							const lastChildOfRenderedNodeMatchingFromRendered = findElement(
+								lastChildOfRenderedNodeFromSource,
+								rendered,
+							);
 							// Check if we found that the last child in source
 							if (!lastChildOfRenderedNodeMatchingFromRendered) {
 								// Pending content to be rendered before virtual break token
@@ -1794,16 +2619,21 @@
 						offset = 0;
 					}
 				} else {
-					renderedNode = findElement(container, rendered);
+					if (container == rendered) {
+						parent = renderedNode = source;
+						topLevel = true;
+					} else {
+						renderedNode = findElement(container, rendered);
 
-					if (!renderedNode) {
-						renderedNode = findElement(prevValidNode(container), rendered);
+						if (!renderedNode) {
+							renderedNode = findElement(prevValidNode(container), rendered);
+						}
+
+						parent = findElement(renderedNode, source);
 					}
-
-					parent = findElement(renderedNode, source);
-					index = indexOfTextNode(temp, parent);
-					// No seperatation for the first textNode of an element
-					if(index === 0) {
+					index = indexOfTextNode(temp, parent, hyphen);
+					// No seperation for the first textNode of an element
+					if (index === 0) {
 						node = parent;
 						offset = 0;
 					} else {
@@ -1815,11 +2645,14 @@
 				renderedNode = findElement(container.parentNode, rendered);
 
 				if (!renderedNode) {
-					renderedNode = findElement(prevValidNode(container.parentNode), rendered);
+					renderedNode = findElement(
+						prevValidNode(container.parentNode),
+						rendered,
+					);
 				}
 
 				parent = findElement(renderedNode, source);
-				index = indexOfTextNode(container, parent);
+				index = indexOfTextNode(container, parent, hyphen);
 
 				if (index === -1) {
 					return;
@@ -1834,28 +2667,90 @@
 				return;
 			}
 
-			return new BreakToken(
+			return new Overflow(
 				node,
-				offset
+				offset,
+				overflow.getBoundingClientRect().height,
+				overflow,
+				topLevel,
 			);
-
 		}
 
-		findBreakToken(rendered, source, bounds = this.bounds, prevBreakToken, extract = true) {
-			let overflow = this.findOverflow(rendered, bounds);
+		/**
+		 * Recursively removes last child and it's ancestors if the nested parentElement is empty
+		 *
+		 * In case of empty table rows or similar
+		 *
+		 * @param {Element} parentElement
+		 * @param {Element} rootElement
+		 */
+		lastChildCheck(parentElement, rootElement) {
+			if (parentElement.childElementCount) {
+				this.lastChildCheck(parentElement.lastElementChild, rootElement);
+			}
+
+			let refId = parentElement.dataset.ref;
+
+			// A table row, math element or paragraph from which all content has been removed
+			// can itself also be removed. It will be added on the next page.
+			if (
+				parentElement.dataset.overflowTagged &&
+				parentElement.textContent.trim() == ""
+			) {
+				parentElement.parentNode.removeChild(parentElement);
+			} else if (refId && !rootElement.indexOfRefs[refId]) {
+				rootElement.indexOfRefs[refId] = parentElement;
+			}
+		}
+
+		/**
+		 * Converts overflowresults into a Breaktoken objects
+		 *
+		 * Proccesses overflow result
+		 *
+		 * -> Called only from findBreakToken
+		 *
+		 * @param {List} overflow - overflow ranges
+		 * @param {Element} rendered - page content div
+		 */
+		processOverflowResult(
+			ranges,
+			rendered,
+			source,
+			bounds,
+			prevBreakToken,
+			node,
+			extract,
+		) {
 			let breakToken, breakLetter;
 
-			let overflowHooks = this.hooks.onOverflow.triggerSync(overflow, rendered, bounds, this);
-			overflowHooks.forEach((newOverflow) => {
-				if (typeof newOverflow != "undefined") {
-					overflow = newOverflow;
-				}
-			});
+			ranges.forEach((overflowRange) => {
+				let overflowHooks = this.hooks.onOverflow.triggerSync(
+					overflowRange,
+					rendered,
+					bounds,
+					this,
+				);
+				overflowHooks.forEach((newOverflow) => {
+					if (typeof newOverflow != "undefined") {
+						overflowRange = newOverflow;
+					}
+				});
 
-			if (overflow) {
-				breakToken = this.createBreakToken(overflow, rendered, source);
+				let overflow = this.createOverflow(overflowRange, rendered, source);
+				if (!breakToken) {
+					breakToken = new BreakToken(node, [overflow]);
+				} else {
+					breakToken.overflow.push(overflow);
+				}
+
 				// breakToken is nullable
-				let breakHooks = this.hooks.onBreakToken.triggerSync(breakToken, overflow, rendered, this);
+				let breakHooks = this.hooks.onBreakToken.triggerSync(
+					breakToken,
+					overflowRange,
+					rendered,
+					this,
+				);
 				breakHooks.forEach((newToken) => {
 					if (typeof newToken != "undefined") {
 						breakToken = newToken;
@@ -1863,192 +2758,873 @@
 				});
 
 				// Stop removal if we are in a loop
-				if (breakToken && breakToken.equals(prevBreakToken)) {
-					return breakToken;
+				if (breakToken.equals(prevBreakToken)) {
+					return;
 				}
 
-				if (breakToken && breakToken["node"] && breakToken["offset"] && breakToken["node"].textContent) {
-					breakLetter = breakToken["node"].textContent.charAt(breakToken["offset"]);
+				if (overflow?.node && overflow?.offset && overflow?.node?.textContent) {
+					breakLetter = overflow.node.textContent.charAt(overflow.offset);
 				} else {
 					breakLetter = undefined;
 				}
 
-				if (breakToken && breakToken.node && extract) {
-					let removed = this.removeOverflow(overflow, breakLetter);
-					this.hooks && this.hooks.afterOverflowRemoved.trigger(removed, rendered, this);
+				if (overflow?.node && extract) {
+					overflow.ancestor = findElement(
+						overflow.range.commonAncestorContainer,
+						source,
+					);
+					overflow.content = this.removeOverflow(overflowRange, breakLetter);
 				}
+			});
 
+			// For each overflow that is removed, see if we have an empty td that can be removed.
+			// Also check that the data-ref is set so we get all the split-froms and tos. If a copy
+			// of a node wasn't shallow, the indexOfRefs entry won't be there yet.
+			ranges.forEach((overflowRange) => {
+				this.lastChildCheck(rendered, rendered);
+			});
+
+			// And then see if the last element has been completely removed and not split.
+			if (rendered.indexOfRefs && extract && breakToken.overflow.length) {
+				let firstOverflow = breakToken.overflow[0];
+				if (firstOverflow?.node && firstOverflow.content) {
+					// Remove data-refs in the overflow from the index.
+					Array.from(
+						firstOverflow.content.querySelectorAll("[data-ref]"),
+					).forEach((ref) => {
+						let refId = ref.dataset.ref;
+						if (!rendered.querySelector(`[data-ref='${refId}']`)) {
+							delete rendered.indexOfRefs[refId];
+						}
+					});
+				}
+			}
+
+			breakToken.overflow.forEach((overflow) => {
+				this.hooks &&
+					this.hooks.afterOverflowRemoved.trigger(
+						overflow.content,
+						rendered,
+						this,
+					);
+			});
+
+			return breakToken;
+		}
+
+		/**
+		 * Determines overflow of this layout and convert that into a breaktoken
+		 * -> Called by Layout.renderTo
+		 *
+		 * @param {Element} rendered - page content
+		 * @param {HTML} source - Source content
+		 * @param {DOMRect} bounds - Bounding rect
+		 * @param {BreakToken} prevBreakToken - previous BreakToken
+		 * @param {Element} node - Start node of the breakContent
+		 * @param {*} extract
+		 * @returns {BreakToken}
+		 */
+		findBreakToken(
+			rendered,
+			source,
+			bounds = this.bounds,
+			prevBreakToken,
+			node = null,
+			extract = true,
+		) {
+			let breakToken,
+				overflow = [];
+
+			let overflowResult = this.findOverflow(rendered, bounds, source);
+			while (overflowResult) {
+				// Check whether overflow already added - multiple overflows might result in the
+				// same range via avoid break rules.
+				let existing = false;
+				overflow.forEach((item) => {
+					if (
+						item.startContainer == overflowResult.startContainer &&
+						item.endContainer == overflowResult.endContainer
+					) {
+						if (
+							item.startOffset >= overflowResult.startOffset &&
+							item.endOffset <= overflowResult.endOffset
+						) {
+							item.setStart(
+								overflowResult.startContainer,
+								overflowResult.startOffset,
+							);
+							existing = true;
+						}
+						if (
+							item.endOffset > overflowResult.endOffset &&
+							item.startOffset == overflowResult.startOffset
+						) {
+							item.EndOffset = overflowResult.EndOffset;
+							item.setEnd(overflowResult.endContainer, overflowResult.endOffset);
+							existing = true;
+						}
+					}
+				});
+				if (!existing) {
+					overflow.push(overflowResult);
+				}
+				overflowResult = this.findOverflow(rendered, bounds, source);
+			}
+
+			if (overflow.length) {
+				breakToken = this.processOverflowResult(
+					overflow,
+					rendered,
+					source,
+					bounds,
+					prevBreakToken,
+					node,
+					extract,
+				);
 			}
 			return breakToken;
 		}
 
+		/**
+		 * Does the element exceed the bounds?
+		 *
+		 * @param {element} element
+		 *   The element being constrained.
+		 * @param {array} bounds
+		 *   The bounding element.
+		 *
+		 * @returns {bool}
+		 *   Whether the element is within bounds.
+		 */
 		hasOverflow(element, bounds = this.bounds) {
 			let constrainingElement = element && element.parentNode; // this gets the element, instead of the wrapper for the width workaround
-			let {width, height} = element.getBoundingClientRect();
+			if (constrainingElement.classList.contains("pagedjs_page_content")) {
+				constrainingElement = element;
+			}
+			let { width, height } = element.getBoundingClientRect();
 			let scrollWidth = constrainingElement ? constrainingElement.scrollWidth : 0;
-			let scrollHeight = constrainingElement ? constrainingElement.scrollHeight : 0;
-			return Math.max(Math.floor(width), scrollWidth) > Math.round(bounds.width) ||
-				Math.max(Math.floor(height), scrollHeight) > Math.round(bounds.height);
+			let scrollHeight = constrainingElement
+				? constrainingElement.scrollHeight
+				: 0;
+			return (
+				Math.max(Math.ceil(width), scrollWidth) > Math.ceil(bounds.width) ||
+				Math.max(Math.ceil(height), scrollHeight) > Math.ceil(bounds.height)
+			);
 		}
 
-		findOverflow(rendered, bounds = this.bounds, gap = this.gap) {
-			if (!this.hasOverflow(rendered, bounds)) return;
+		/**
+		 * Sums padding, borders and margins for bottom/right of parent elements.
+		 *
+		 * Assumes no margin collapsing because we're considering overflow
+		 * on a page.
+		 *
+		 * This and callers need to be extended to handle right-to-left text and
+		 * flow but I'll get LTR going first in the hope that it will simplify
+		 * the task of getting RTL sorted later. Need test cases too.
+		 */
+		getAncestorPaddingBorderAndMarginSums(element) {
+			let attribs = [
+				"padding-top",
+				"padding-right",
+				"padding-bottom",
+				"padding-left",
+				"border-top-width",
+				"border-right-width",
+				"border-bottom-width",
+				"border-left-width",
+				"margin-top",
+				"margin-right",
+				"margin-bottom",
+				"margin-left",
+			];
+			let result = {};
+			attribs.forEach((attrib) => (result[attrib] = 0));
 
-			let start = Math.floor(bounds.left);
-			let end = Math.round(bounds.right + gap);
-			let vStart = Math.round(bounds.top);
-			let vEnd = Math.round(bounds.bottom);
-			let range;
+			while (
+				element &&
+				!element.classList.contains("pagedjs_page_content") &&
+				!element.classList.contains("pagedjs_footnote_inner_content")
+			) {
+				let style = window.getComputedStyle(element);
+				attribs.forEach((attrib) => (result[attrib] += parseInt(style[attrib])));
+				element = element.parentElement;
+			}
 
-			let walker = walk$2(rendered.firstChild, rendered);
+			return result;
+		}
 
-			// Find Start
-			let next, done, node, offset, skip, breakAvoid, prev, br;
-			while (!done) {
-				next = walker.next();
-				done = next.done;
-				node = next.value;
-				skip = false;
-				breakAvoid = false;
-				prev = undefined;
-				br = undefined;
+		/**
+		 * Checks whether an element is within a table and gets any THEAD sizes.
+		 */
+		getAncestorTheadSizes(element) {
+			let result = 0;
 
-				if (node) {
-					let pos = getBoundingClientRect(node);
-					let left = Math.round(pos.left);
-					let right = Math.floor(pos.right);
-					let top = Math.round(pos.top);
-					let bottom = Math.floor(pos.bottom);
-
-					if (!range && (left >= end || top >= vEnd)) {
-						// Check if it is a float
-						let isFloat = false;
-
-						// Check if the node is inside a break-inside: avoid table cell
-						const insideTableCell = parentOf(node, "TD", rendered);
-						if (insideTableCell && window.getComputedStyle(insideTableCell)["break-inside"] === "avoid") {
-							// breaking inside a table cell produces unexpected result, as a workaround, we forcibly avoid break inside in a cell.
-							// But we take the whole row, not just the cell that is causing the break.
-							prev = insideTableCell.parentElement;
-						} else if (isElement(node)) {
-							let styles = window.getComputedStyle(node);
-							isFloat = styles.getPropertyValue("float") !== "none";
-							skip = styles.getPropertyValue("break-inside") === "avoid";
-							breakAvoid = node.dataset.breakBefore === "avoid" || node.dataset.previousBreakAfter === "avoid";
-							prev = breakAvoid && nodeBefore(node, rendered);
-							br = node.tagName === "BR" || node.tagName === "WBR";
+			while (
+				element &&
+				!element.classList.contains("pagedjs_page_content") &&
+				!element.classList.contains("pagedjs_footnote_inner_content")
+			) {
+				if (element.tagName == "TABLE") {
+					element.childNodes.forEach((node) => {
+						if (node.tagName == "THEAD") {
+							let style = getComputedStyle(node);
+							result += parseInt(style.height);
 						}
+					});
+				}
+				element = element.parentElement;
+			}
 
-						let tableRow;
-						if (node.nodeName === "TR") {
-							tableRow = node;
-						} else {
-							tableRow = parentOf(node, "TR", rendered);
-						}
-						if (tableRow) {
-							// honor break-inside="avoid" in parent tbody/thead
-							let container = tableRow.parentElement;
-							if (["TBODY", "THEAD"].includes(container.nodeName)) {
-								let styles = window.getComputedStyle(container);
-								if (styles.getPropertyValue("break-inside") === "avoid") prev = container;
-							}
+			return result;
+		}
 
-							// Check if the node is inside a row with a rowspan
-							const table = parentOf(tableRow, "TABLE", rendered);
-							const rowspan = table.querySelector("[colspan]");
-							if (table && rowspan) {
-								let columnCount = 0;
-								for (const cell of Array.from(table.rows[0].cells)) {
-									columnCount += parseInt(cell.getAttribute("colspan") || "1");
-								}
-								if (tableRow.cells.length !== columnCount) {
-									let previousRow = tableRow.previousElementSibling;
-									let previousRowColumnCount;
-									while (previousRow !== null) {
-										previousRowColumnCount = 0;
-										for (const cell of Array.from(previousRow.cells)) {
-											previousRowColumnCount += parseInt(cell.getAttribute("colspan") || "1");
-										}
-										if (previousRowColumnCount === columnCount) {
-											break;
-										}
-										previousRow = previousRow.previousElementSibling;
-									}
-									if (previousRowColumnCount === columnCount) {
-										prev = previousRow;
-									}
-								}
-							}
-						}
+		/**
+		 * Adds temporary data-split-to/from attribute where needed.
+		 *
+		 * @param DomElement element
+		 *   The deepest child, from which to start.
+		 */
+		addTemporarySplit(element, isTo = true) {
+			this.temporaryIndex++;
+			let name = isTo ? "data-split-to" : "data-split-from";
+			while (
+				element &&
+				!element.classList.contains("pagedjs_page_content") &&
+				!element.classList.contains("pagedjs_footnote_inner_content")
+			) {
+				if (!element.getAttribute(name)) {
+					element.setAttribute(name, "temp-" + this.temporaryIndex);
+				}
 
-						if (prev) {
-							range = document.createRange();
-							range.selectNode(prev);
-							break;
-						}
+				element = element.parentElement;
+			}
+		}
 
-						if (!br && !isFloat && isElement(node)) {
-							range = document.createRange();
-							range.selectNode(node);
-							break;
-						}
+		/**
+		 * Removes temporary data-split-to/from attribute where added.
+		 *
+		 * @param DomElement element
+		 *   The deepest child, from which to start.
+		 * @param boolean isTo
+		 *   Whether a split-to or -from was added.
+		 */
+		deleteTemporarySplit(element, isTo = true) {
+			let name = isTo ? "data-split-to" : "data-split-from";
+			while (
+				element &&
+				!element.classList.contains("pagedjs_page_content") &&
+				!element.classList.contains("pagedjs_footnote_inner_content")
+			) {
+				let value = element.getAttribute(name);
+				if (value == "temp-" + this.temporaryIndex) {
+					element.removeAttribute(name);
+				}
 
-						if (isText(node) && node.textContent.trim().length) {
-							range = document.createRange();
-							range.selectNode(node);
-							break;
-						}
+				element = element.parentElement;
+			}
+		}
 
+		/**
+		 * Returns the first child that overflows the bounds.
+		 *
+		 * There may be no children that overflow (the height might be extended
+		 * by a sibling). In this case, this function returns NULL.
+		 *
+		 * @param {node} node
+		 *   The parent node of the children we are searching.
+		 * @param {array} bounds
+		 *   The bounds of the page area.
+		 * @returns {ChildNode | null | undefined}
+		 *   The first overflowing child within the node.
+		 */
+		firstOverflowingChild(node, bounds) {
+			let bLeft = Math.ceil(bounds.left);
+			let bRight = Math.floor(bounds.right);
+			let bTop = Math.ceil(bounds.top);
+			let bBottom = Math.floor(bounds.bottom);
+			let result = undefined;
+			let skipRange = false;
+			let parentBottomPaddingBorder = 0,
+				parentBottomMargin = 0;
+
+			if (isElement(node)) {
+				let result = this.getAncestorPaddingBorderAndMarginSums(node);
+				parentBottomPaddingBorder = result["border-bottom-width"];
+				parentBottomMargin = result["margin-bottom"];
+			}
+
+			for (const child of node.childNodes) {
+				if (child.tagName == "COLGROUP") {
+					continue;
+				}
+
+				let pos = getBoundingClientRect(child);
+				let bottomMargin = 0;
+
+				if (isElement(child)) {
+					let styles = window.getComputedStyle(child);
+
+					bottomMargin = parseInt(styles["margin-bottom"]);
+
+					if (child.dataset.rangeStartOverflow !== undefined) {
+						skipRange = true;
+						result = null;
+						// Don't continue. The start may also be the end.
 					}
 
-					if (!range && isText(node) &&
-						node.textContent.trim().length &&
-						!breakInsideAvoidParentNode(node.parentNode)) {
-
-						let rects = getClientRects(node);
-						let rect;
-						left = 0;
-						top = 0;
-						for (var i = 0; i != rects.length; i++) {
-							rect = rects[i];
-							if (rect.width > 0 && (!left || rect.left > left)) {
-								left = rect.left;
-							}
-							if (rect.height > 0 && (!top || rect.top > top)) {
-								top = rect.top;
-							}
-						}
-
-						if (left >= end || top >= vEnd) {
-							range = document.createRange();
-							offset = this.textBreak(node, start, end, vStart, vEnd);
-							if (!offset) {
-								range = undefined;
-							} else {
-								range.setStart(node, offset);
-							}
-							break;
-						}
+					if (child.dataset.rangeEndOverflow !== undefined) {
+						skipRange = false;
+						result = undefined;
+						continue;
 					}
 
-					// Skip children
-					if (skip || (right <= end && bottom <= vEnd)) {
-						next = nodeAfter(node, rendered);
-						if (next) {
-							walker = walk$2(next, rendered);
-						}
-
+					if (child.dataset.overflowTagged !== undefined) {
+						continue;
 					}
+				} else {
+					bottomMargin = parentBottomMargin;
+				}
 
+				if (skipRange) {
+					continue;
+				}
+
+				let left = Math.ceil(pos.left);
+				let right = Math.floor(pos.right);
+				let top = Math.ceil(pos.top);
+				let bottom = Math.floor(
+					pos.bottom +
+						bottomMargin +
+						(node.lastChild == child ? parentBottomPaddingBorder : 0),
+				);
+
+				if (!(pos.height + bottomMargin)) {
+					continue;
+				}
+
+				if (left < bLeft || right > bRight || top < bTop || bottom > bBottom) {
+					return child;
 				}
 			}
 
-			// Find End
-			if (range) {
-				range.setEndAfter(rendered.lastChild);
-				return range;
+			return result;
+		}
+
+		removeHeightConstraint(element) {
+			let pageBox = element.parentElement.closest(".pagedjs_page");
+			pageBox.style.setProperty("--pagedjs-pagebox-height", "5000px");
+			this.addTemporarySplit(element.parentElement, false);
+		}
+
+		restoreHeightConstraint(element) {
+			let pageBox = element.parentElement.closest(".pagedjs_page");
+			this.deleteTemporarySplit(element.parentElement, false);
+			pageBox.style.removeProperty("--pagedjs-pagebox-height");
+		}
+
+		getUnconstrainedElementHeight(
+			element,
+			includeAncestors = true,
+			includeTableHead = true,
+		) {
+			this.removeHeightConstraint(element);
+			let unconstrainedHeight = getBoundingClientRect(element).height;
+			if (includeAncestors) {
+				let extra = this.getAncestorPaddingBorderAndMarginSums(
+					element.parentElement,
+				);
+				["top", "bottom"].forEach((direction) => {
+					unconstrainedHeight +=
+						extra[`padding-${direction}`] +
+						extra[`border-${direction}-width`] +
+						extra[`margin-${direction}`];
+				});
+			}
+			if (includeTableHead) {
+				unconstrainedHeight += this.getAncestorTheadSizes(element.parentElement);
+			}
+			this.restoreHeightConstraint(element);
+			return unconstrainedHeight;
+		}
+
+		getRange(rangeStart, offset, rangeEnd) {
+			let range = document.createRange();
+			if (isText(rangeStart)) {
+				range.setStart(rangeStart, offset);
+			} else {
+				range.selectNode(rangeStart);
 			}
 
+			// Additional nodes may have been added that will overflow further beyond
+			// node. Include them in the range.
+			rangeEnd = rangeEnd || rangeStart;
+			range.setEndAfter(rangeEnd);
+			return range;
+		}
+
+		startOfNewOverflow(node, rendered, bounds) {
+			let childNode,
+				done = false;
+			let prev;
+			let anyOverflowFound = false;
+			let topNode = node;
+
+			do {
+				prev = node;
+				do {
+					let parentBottomPaddingBorder, parentBottomMargin;
+					childNode = this.firstOverflowingChild(node, bounds);
+					if (childNode) {
+						anyOverflowFound = true;
+					} else if (childNode === undefined) {
+						// The overflow isn't caused by children. It could be caused by:
+						// * a sibling div / td / element with height that stretches this
+						//   element
+						// * margin / padding on this element
+						// In the former case, we want to ignore this node and take the
+						// sibling. In the later case, we want to move this node.
+						let intrinsicBottom = 0,
+							intrinsicRight = 0;
+						let childBounds = getBoundingClientRect(node);
+						if (isElement(node)) {
+							// Assume that any height is the result of matching the
+							// height of surrounding content if there's no content.
+							let result = this.getAncestorPaddingBorderAndMarginSums(node);
+							parentBottomPaddingBorder =
+								result["border-bottom-width"] + result["padding-bottom"];
+							parentBottomMargin = result["margin-bottom"];
+
+							if (node.childNodes.length) {
+								let lastChild = node.lastChild;
+								if (
+									(isText(lastChild) && !node.dataset.overflowTagged) ||
+									(!isText(lastChild) && !lastChild.dataset.overflowTagged)
+								) {
+									childBounds = getBoundingClientRect(lastChild);
+									intrinsicRight = childBounds.right;
+									intrinsicBottom = childBounds.bottom;
+								}
+							} else {
+								// Do we count this node even though it has no children?
+								// Seems to only be needed for BR.
+								if (node instanceof HTMLBRElement) {
+									intrinsicRight = childBounds.right;
+									intrinsicBottom = childBounds.bottom;
+								}
+							}
+						} else {
+							intrinsicRight = childBounds.right;
+							intrinsicBottom = childBounds.bottom;
+
+							let result = this.getAncestorPaddingBorderAndMarginSums(
+								node.parentElement,
+							);
+							parentBottomPaddingBorder = result["border-bottom-width"];
+							parentBottomMargin = result["margin-bottom"];
+						}
+						intrinsicBottom += parentBottomPaddingBorder + parentBottomMargin;
+						if (
+							intrinsicBottom <= bounds.bottom &&
+							intrinsicRight <= bounds.right
+						) {
+							let ascended;
+							do {
+								ascended = false;
+								do {
+									node = node.nextElementSibling;
+								} while (node && node.dataset.overflowTagged);
+								if (!node && rendered !== prev) {
+									ascended = true;
+									prev = node = prev.parentElement;
+								}
+							} while (ascended && node && node !== topNode);
+							if (!node || node == topNode) {
+								return [null, false];
+							}
+						} else {
+							// Node is causing the overflow via padding and margin or text content.
+							done = true;
+						}
+					} else {
+						// childNode is null. Overflowing children have been ignored and no other
+						// overflowing children were found. Check the node's next sibling or one of
+						// an ancestor.
+						do {
+							while (!node.nextElementSibling) {
+								if (node == rendered) {
+									return [null, false];
+								}
+								node = node.parentElement;
+							}
+							do {
+								node = node.nextElementSibling;
+							} while (node.nextElementSibling && node.dataset.overflowTagged);
+						} while (node.dataset.overflowTagged);
+					}
+				} while (node && !childNode && !done);
+
+				if (node) {
+					node = childNode;
+				}
+			} while (node && !done);
+
+			return [prev, anyOverflowFound];
+		}
+
+		/**
+		 * Tagging elements and returns range of overflowing elements
+		 *
+		 * @param {Element} startOfOverflow - Start element of the overflow
+		 * @param {Node} rangeStart
+		 * @param {Node} rangeEnd
+		 * @param {DOMRect} bounds - page bounds
+		 * @param {Element} rendered - Current rendered page content
+		 * @returns
+		 */
+		tagAndCreateOverflowRange(
+			startOfOverflow,
+			rangeStart,
+			rangeEnd,
+			bounds,
+			rendered,
+		) {
+			let offset = 0;
+			let start = bounds.left;
+			let end = bounds.right;
+			let vStart = bounds.top;
+			let vEnd = bounds.bottom;
+			let range;
+
+			if (isText(rangeStart) && rangeStart.textContent.trim().length) {
+				offset = this.textBreak(rangeStart, start, end, vStart, vEnd);
+				if (offset === undefined) {
+					// Adding split-to changed the CSS and meant we don't need to
+					// split this node.
+					let next = rangeStart;
+					while (!next.nextElementSibling) {
+						next = next.parentElement;
+						if (next == rendered) {
+							return;
+						}
+					}
+					rangeStart = next.nextElementSibling;
+				}
+			}
+
+			let previousElement = nodeBefore(rangeStart, rendered, true);
+			let shouldContinue = true;
+			let newRangeStart = rangeStart;
+			while (
+				!offset &&
+				previousElement &&
+				shouldContinue &&
+				((isText(newRangeStart) &&
+					(newRangeStart.parentElement.dataset.previousBreakAfter == "avoid" ||
+						newRangeStart.parentElement.dataset.breakBefore == "avoid")) ||
+					(!isText(newRangeStart) &&
+						(newRangeStart.dataset.previousBreakAfter == "avoid" ||
+							newRangeStart.dataset.breakBefore == "avoid")))
+			) {
+				// We are trying to avoid putting a break at newRangeStart.
+				// See if we can move some of the content above into the overflow.
+				let newPreviousElement = nodeBefore(previousElement, rendered, true);
+				// Don't go back into stuff already rendered.
+				if (!newPreviousElement || newPreviousElement.dataset.splitFrom) {
+					shouldContinue = false;
+				} else {
+					newRangeStart = previousElement;
+					previousElement = newPreviousElement;
+				}
+			}
+
+			if (shouldContinue) {
+				// We found earlier content that doesn't want to avoid having a break after it.
+				// newRangeStart is the next node (new overflow start).
+				rangeStart = newRangeStart;
+			}
+
+			// Set the start of the range and record on node or the previous element
+			// that overflow was moved.
+			let position = rangeStart;
+			range = this.getRange(rangeStart, offset, rangeEnd);
+			if (isText(rangeStart)) {
+				rangeStart.parentElement.dataset.splitTo =
+					rangeStart.parentElement.dataset.ref;
+				rangeStart.parentElement.dataset.rangeStartOverflow = true;
+				rangeStart.parentElement.dataset.overflowTagged = true;
+				position = rangeStart.parentElement;
+			} else {
+				rangeStart.dataset.rangeStartOverflow = true;
+			}
+
+			rangeEnd = rangeEnd || rangeStart;
+			if (isElement(rangeEnd)) {
+				if (
+					rangeStart.parentElement.closest(`[data-ref='${rangeEnd.dataset.ref}']`)
+				) {
+					let nextNode = nodeAfter(rangeEnd);
+					if (nextNode) {
+						nextNode.dataset.rangeEndOverflow = true;
+						nextNode.dataset.overflowTagged = true;
+					}
+				} else {
+					rangeEnd.dataset.rangeEndOverflow = true;
+					rangeEnd.dataset.overflowTagged = true;
+				}
+			} else {
+				rangeEnd.parentElement.dataset.rangeEndOverflow = true;
+			}
+
+			// Add splitTo
+			while (position !== rendered) {
+				if (position.previousSibling) {
+					position.parentElement.dataset.splitTo =
+						position.parentElement.dataset.ref;
+				}
+				position = position.parentElement;
+			}
+
+			// Tag ancestors in the range so we don't generate additional ranges
+			// that then cause problems when removing the ranges.
+			position = rangeStart;
+			while (position.parentElement !== range.commonAncestorContainer) {
+				position = position.parentElement;
+				position.dataset.overflowTagged = true;
+			}
+
+			if (isElement(position)) {
+				let stopAt = rangeEnd;
+				while (stopAt.parentElement !== range.commonAncestorContainer) {
+					stopAt = stopAt.parentElement;
+				}
+
+				while (position !== stopAt) {
+					position = position.nextSibling;
+					if (isElement(position)) {
+						position.dataset.overflowTagged = true;
+					}
+				}
+			} else {
+				position = position.parentElement;
+			}
+			while (!position.nextElementSibling && position !== rendered) {
+				position = position.parentElement;
+				position.dataset.overflowTagged = true;
+			}
+
+			return range;
+		}
+
+		rowspanNeedsBreakAt(tableRow, rendered) {
+			if (tableRow.nodeName !== "TR") {
+				return;
+			}
+
+			const table = parentOf(tableRow, "TABLE", rendered);
+			if (!table) {
+				return;
+			}
+
+			const rowspan = table.querySelector("[colspan]");
+			if (!rowspan) {
+				return;
+			}
+
+			let columnCount = 0;
+			for (const cell of Array.from(table.rows[0].cells)) {
+				columnCount += parseInt(cell.getAttribute("colspan") || "1");
+			}
+			if (tableRow.cells.length !== columnCount) {
+				let previousRow = tableRow;
+				let previousRowColumnCount;
+				while (previousRow !== null) {
+					previousRowColumnCount = 0;
+					for (const cell of Array.from(previousRow.cells)) {
+						previousRowColumnCount += parseInt(
+							cell.getAttribute("colspan") || "1",
+						);
+					}
+					if (previousRowColumnCount === columnCount) {
+						break;
+					}
+					previousRow = previousRow.previousElementSibling;
+				}
+				if (previousRowColumnCount === columnCount) {
+					return previousRow;
+				}
+			}
+		}
+
+		/**
+		 * Find the next overflow in the current layout. Tags overflowing content and returns the range of the overflowing content
+		 * -> Called by findBreakToken and afterLayout
+		 *
+		 * @param {Element} rendered - Current page rendered div
+		 * @param {DOMRect} bounds - ClientRect of the page
+		 * @param {HTML} source - Source html content
+		 * @returns {null | Range} range - null if there is no overflow.
+		 */
+		findOverflow(rendered, bounds, source) {
+			if (
+				!this.hasOverflow(rendered, bounds) ||
+				rendered.dataset.overflowTagged
+			) {
+				return;
+			}
+
+			// The pattern here is:
+			// Round the bounds towards the smaller rectangle (round up top & left and
+			// round down bottom and right) and round the content towards the larger
+			// rectangle (round down top and left and round up bottom and right). Then
+			// use > and < to check if bounds are exceeded. That way portions of pixels
+			// will be correctly handled - you can't render a fraction of a pixel so
+			// bounds should have any fraction treated like that pixel isn't available
+			// and content should have any fraction of a pixel treated like the whole
+			// pixel is required.
+			let end = bounds.right;
+			let vEnd = bounds.bottom;
+			let anyOverflowFound;
+
+			// Find the deepest element that is the first in set of siblings with
+			// overflow. There may be others. We just take the first we find and
+			// are called again to check for additional instances.
+			let node = rendered,
+				startOfOverflow,
+				check;
+
+			while (isText(node)) {
+				node = node.nextElementSibling;
+			}
+
+			[startOfOverflow, anyOverflowFound] = this.startOfNewOverflow(
+				node,
+				rendered,
+				bounds,
+			);
+
+			if (!anyOverflowFound) {
+				return;
+			}
+
+			let startOfOverflowIsText = isText(startOfOverflow);
+			if (
+				(startOfOverflowIsText &&
+					startOfOverflow.parentElement.dataset.overflowTagged) ||
+				(!startOfOverflowIsText && startOfOverflow.dataset.overflowTagged)
+			) {
+				return;
+			}
+
+			// The node we finished on may be within something asking not to have its
+			// contents split. It - or a parent - may also have to be split because
+			// the content is just too big for the page.
+			// Resolve those requirements, deciding on a node that will be split in
+			// the following way:
+			// 1) Prefer the smallest node we can (start with the one we ended on).
+			//    While going back up the ancestors, check that subsequent children
+			//    of the ancestor are all entirely in overflow too. If they are, we
+			//    can take a range starting at our initial node and going to the end
+			//    of the ancestor's children.
+
+			let rangeStart = (check = node = startOfOverflow);
+			let visibleSiblings = false;
+			let rangeEnd = rendered.lastElementChild;
+
+			do {
+				let checkBounds = getBoundingClientRect(check);
+				let hasOverflow = checkBounds.bottom > vEnd || checkBounds.right > end;
+
+				let rowspanNeedsBreakAt;
+
+				if (hasOverflow && this.avoidBreakInside(check, rendered)) {
+					rowspanNeedsBreakAt = this.rowspanNeedsBreakAt(check, rendered);
+					if (rowspanNeedsBreakAt) {
+						// No question - break earlier.
+						rangeStart = rowspanNeedsBreakAt;
+						rangeEnd = rendered.lastChild;
+						break;
+					} else {
+						// If there is an element with overflow and it is within a
+						// break-inside: avoid, we take the whole container, provided that it
+						// will fit on a page by itself. But calculating whether it will fit
+						// by itself is non-trivial. If it is within a dom structure, the
+						// space available will be reduced by the containers. We can use the
+						// current container (that will get duplicated) but there might be
+						// subtle differences in styling due to the split-from class being
+						// added. We therefore temporary add the split-from to the current
+						// structure and find out how much space we need for the whole thing.
+						//
+						// To calculate whether we must split the element, we need to know its
+						// unconstrained height. If it has been wrapped into another column
+						// by .pagedjs_pagebox's display:grid, we need to temporarily lengthen
+						// the current column to get the maximum width it would take. Go from
+						// check's parent to simplify handling where check is a text node.
+						let unconstrainedHeight;
+						if (checkBounds.width > bounds.width) {
+							unconstrainedHeight = this.getUnconstrainedElementHeight(check);
+						} else {
+							unconstrainedHeight = checkBounds.height;
+						}
+
+						let mustSplit = unconstrainedHeight > bounds.height;
+
+						if (!mustSplit) {
+							// Move the whole thing.
+							rangeStart = check;
+						}
+					}
+				}
+
+				let sibling = check,
+					siblingBounds;
+				do {
+					sibling = sibling.nextSibling;
+					siblingBounds = sibling ? getBoundingClientRect(sibling) : undefined;
+				} while (sibling && !siblingBounds?.height);
+
+				if (sibling && siblingBounds?.height && !rowspanNeedsBreakAt) {
+					// Is the sibling entirely in overflow? If yes, so must all following
+					// siblings be - add them to this range; they can't have anything we
+					// want to keep on this page.
+					if (
+						(siblingBounds.left > end || siblingBounds.top > vEnd) &&
+						!visibleSiblings
+					) {
+						if (!rowspanNeedsBreakAt) {
+							rangeEnd = check.parentElement.lastChild;
+						}
+					} else {
+						visibleSiblings = true;
+						rangeEnd = undefined;
+					}
+				}
+
+				// Get the columns widths and make them attributes so removal of
+				// overflow doesn't do strange things - they may be affecting
+				// widths on this page.
+				Array.from(check.parentElement.children).forEach((childNode) => {
+					let style = getComputedStyle(childNode);
+					childNode.width = style.width;
+				});
+
+				if (
+					isElement(check) &&
+					Array.from(check.classList).filter((value) =>
+						["region-content", "pagedjs_page_content"].includes(value),
+					).length
+				) {
+					break;
+				}
+				check = check.parentElement;
+			} while (check && check !== rendered);
+
+			return this.tagAndCreateOverflowRange(
+				startOfOverflow,
+				rangeStart,
+				rangeEnd,
+				bounds,
+				rendered,
+			);
 		}
 
 		findEndToken(rendered, source) {
@@ -2073,7 +3649,6 @@
 			}
 
 			if (isText(lastChild)) {
-
 				if (lastChild.parentNode.dataset.ref) {
 					lastNodeIndex = indexOf$2(lastChild);
 					lastChild = lastChild.parentNode;
@@ -2101,6 +3676,28 @@
 			let bottom = 0;
 			let word, next, done, pos;
 			let offset;
+
+			// Margin bottom is needed when the node is in a block level element
+			// such as a table, grid or flex, where margins don't collapse.
+			// Temporarily add data-split-to as this may change margins too
+			// (It always does in current code but let's not assume that).
+			// With the split-to set, margin might be removed, resulting in us
+			// not actually needing to split this text. In that case, the return
+			// result will be undefined and the split should be done at the next
+			// node. In this case we also keep the data-split-to=foo so the
+			// styling that removes the need for the overflow remains active.
+			// "Margin" includes bottom padding and border in this calculation.
+
+			this.addTemporarySplit(node.parentElement);
+
+			let parentAdditions = this.getAncestorPaddingBorderAndMarginSums(
+				node.parentElement,
+			);
+			parentAdditions =
+				parentAdditions["padding-bottom"] +
+				parentAdditions["border-bottom-width"] +
+				parentAdditions["margin-bottom"];
+
 			while (!done) {
 				next = wordwalker.next();
 				word = next.value;
@@ -2114,19 +3711,23 @@
 
 				left = Math.floor(pos.left);
 				right = Math.floor(pos.right);
-				top = Math.floor(pos.top);
-				bottom = Math.floor(pos.bottom);
+				top = pos.top;
+				bottom = pos.bottom;
 
-				if (left >= end || top >= vEnd) {
+				if (left > end || top > vEnd - parentAdditions) {
 					offset = word.startOffset;
 					break;
 				}
 
-				if (right > end || bottom > vEnd) {
+				// The bounds won't be exceeded so we need >= rather than >.
+				// Also below for the letters.
+				if (right > end || bottom > vEnd - parentAdditions) {
 					let letterwalker = letters(word);
 					let letter, nextLetter, doneLetter;
 
 					while (!doneLetter) {
+						// Note that the letter walker continues to walk beyond the end of the word, until the end of the
+						// text node.
 						nextLetter = letterwalker.next();
 						letter = nextLetter.value;
 						doneLetter = nextLetter.done;
@@ -2136,10 +3737,10 @@
 						}
 
 						pos = getBoundingClientRect(letter);
-						left = Math.floor(pos.left);
-						top = Math.floor(pos.top);
+						right = pos.right;
+						bottom = pos.bottom;
 
-						if (left >= end || top >= vEnd) {
+						if (right > end || bottom > vEnd - parentAdditions) {
 							offset = letter.startOffset;
 							done = true;
 
@@ -2147,14 +3748,26 @@
 						}
 					}
 				}
+			}
 
+			// See comment above the addTemporarySplit call above for the offset ==
+			// undefined part of why we may leave the temporary split-to attribute in
+			// place. This should be overridden though if a break is to be avoided.
+			// In that case,
+			if (offset != undefined) {
+				this.deleteTemporarySplit(node.parentElement);
+			}
+
+			// Don't get tricked into doing a split by whitespace at the start of a string.
+			if (node.textContent.substring(0, offset).trim() == "") {
+				return 0;
 			}
 
 			return offset;
 		}
 
 		removeOverflow(overflow, breakLetter) {
-			let {startContainer} = overflow;
+			let { startContainer } = overflow;
 			let extracted = overflow.extractContents();
 
 			this.hyphenateAtBreak(startContainer, breakLetter);
@@ -2169,8 +3782,10 @@
 
 				// Add a hyphen if previous character is a letter or soft hyphen
 				if (
-					(breakLetter && /^\w|\u00AD$/.test(prevLetter) && /^\w|\u00AD$/.test(breakLetter)) ||
-					(!breakLetter && /^\w|\u00AD$/.test(prevLetter))
+					(breakLetter &&
+						/^\w|\u00AD$/.test(prevLetter) &&
+						/^\w|\u00AD$/.test(breakLetter)) ||
+					(!breakLetter && prevLetter && /^\w|\u00AD$/.test(prevLetter))
 				) {
 					startContainer.parentNode.classList.add("pagedjs_hyphen");
 					startContainer.textContent += this.settings.hyphenGlyph || "\u2011";
@@ -2195,10 +3810,21 @@
 	EventEmitter(Layout.prototype);
 
 	/**
-	 * Render a page
+	 * Represents a single page in a paginated document.
+	 * Handles rendering, layout, overflow detection, and DOM interactions.
+	 *
 	 * @class
 	 */
 	class Page {
+		/**
+		 * Creates an instance of Page.
+		 *
+		 * @param {HTMLElement} pagesArea - The container element for all pages.
+		 * @param {HTMLTemplateElement} pageTemplate - Template for creating new pages.
+		 * @param {boolean} blank - Indicates if this is a blank page.
+		 * @param {Object} hooks - Hook functions for custom behavior.
+		 * @param {Object} options - Additional layout or rendering options.
+		 */
 		constructor(pagesArea, pageTemplate, blank, hooks, options) {
 			this.pagesArea = pagesArea;
 			this.pageTemplate = pageTemplate;
@@ -2208,21 +3834,26 @@
 			this.height = undefined;
 
 			this.hooks = hooks;
-
 			this.settings = options || {};
-
-			// this.element = this.create(this.pageTemplate);
 		}
 
+		/**
+		 * Creates a new page element from the template and inserts it into the DOM.
+		 *
+		 * @param {HTMLTemplateElement} template - The template to use for page creation.
+		 * @param {HTMLElement} [after] - Optional reference element to insert after.
+		 * @returns {HTMLElement} The newly created page element.
+		 */
 		create(template, after) {
-			//let documentFragment = document.createRange().createContextualFragment( TEMPLATE );
-			//let page = documentFragment.children[0];
 			let clone = document.importNode(this.pageTemplate.content, true);
 
 			let page, index;
 			if (after) {
 				this.pagesArea.insertBefore(clone, after.nextElementSibling);
-				index = Array.prototype.indexOf.call(this.pagesArea.children, after.nextElementSibling);
+				index = Array.prototype.indexOf.call(
+					this.pagesArea.children,
+					after.nextElementSibling,
+				);
 				page = this.pagesArea.children[index];
 			} else {
 				this.pagesArea.appendChild(clone);
@@ -2233,13 +3864,11 @@
 			let area = page.querySelector(".pagedjs_page_content");
 			let footnotesArea = page.querySelector(".pagedjs_footnote_area");
 
-
 			let size = area.getBoundingClientRect();
 
-
 			area.style.columnWidth = Math.round(size.width) + "px";
-			area.style.columnGap = "calc(var(--pagedjs-margin-right) + var(--pagedjs-margin-left) + var(--pagedjs-bleed-right) + var(--pagedjs-bleed-left) + var(--pagedjs-column-gap-offset))";
-			// area.style.overflow = "scroll";
+			area.style.columnGap =
+				"calc(var(--pagedjs-margin-right) + var(--pagedjs-margin-left) + var(--pagedjs-bleed-right) + var(--pagedjs-bleed-left) + var(--pagedjs-column-gap-offset))";
 
 			this.width = Math.round(size.width);
 			this.height = Math.round(size.height);
@@ -2252,30 +3881,31 @@
 			return page;
 		}
 
+		/**
+		 * Creates a wrapper element inside the page's content area.
+		 *
+		 * @returns {HTMLElement} The wrapper element.
+		 */
 		createWrapper() {
 			let wrapper = document.createElement("div");
-
 			this.area.appendChild(wrapper);
-
 			this.wrapper = wrapper;
-
 			return wrapper;
 		}
 
+		/**
+		 * Sets the page index and updates relevant attributes and classes.
+		 *
+		 * @param {number} pgnum - The page index number (0-based).
+		 */
 		index(pgnum) {
 			this.position = pgnum;
 
 			let page = this.element;
-			// let pagebox = this.pagebox;
-
 			let index = pgnum + 1;
-
 			let id = `page-${index}`;
 
 			this.id = id;
-
-			// page.dataset.pageNumber = index;
-
 			page.dataset.pageNumber = index;
 			page.setAttribute("id", id);
 
@@ -2314,21 +3944,32 @@
 		}
 		*/
 
-		async layout(contents, breakToken, maxChars) {
-
+		/**
+		 * Start to layout page
+		 *
+		 * @param {HTML} contents - HTML content
+		 * @param {BreakToken} breakToken - Previous Breaktoken
+		 * @param {Page} prevPage - Previous Page
+		 * @returns {BreakToken | null} - Null if breaktoken is equal to previous one
+		 */
+		async layout(contents, breakToken, prevPage) {
 			this.clear();
 
 			this.startToken = breakToken;
 
-			let settings = this.settings;
-			if (!settings.maxChars && maxChars) {
-				settings.maxChars = maxChars;
-			}
+			this.layoutMethod = new Layout(this.area, this.hooks, this.settings);
 
-			this.layoutMethod = new Layout(this.area, this.hooks, settings);
-
-			let renderResult = await this.layoutMethod.renderTo(this.wrapper, contents, breakToken);
+			let renderResult = await this.layoutMethod.renderTo(
+				this.wrapper,
+				contents,
+				breakToken,
+				prevPage,
+			);
 			let newBreakToken = renderResult.breakToken;
+
+			if (breakToken && newBreakToken && breakToken.equals(newBreakToken)) {
+				return;
+			}
 
 			this.addListeners(contents);
 
@@ -2337,13 +3978,24 @@
 			return newBreakToken;
 		}
 
+		/**
+		 * Appends content to the existing layout using the current layout method.
+		 *
+		 * @async
+		 * @param {DocumentFragment} contents - The contents to append.
+		 * @param {Object} breakToken - The token to continue rendering from.
+		 * @returns {Promise<Object>} A new breakToken after rendering.
+		 */
 		async append(contents, breakToken) {
-
 			if (!this.layoutMethod) {
 				return this.layout(contents, breakToken);
 			}
 
-			let renderResult = await this.layoutMethod.renderTo(this.wrapper, contents, breakToken);
+			let renderResult = await this.layoutMethod.renderTo(
+				this.wrapper,
+				contents,
+				breakToken,
+			);
 			let newBreakToken = renderResult.breakToken;
 
 			this.endToken = newBreakToken;
@@ -2351,76 +4003,122 @@
 			return newBreakToken;
 		}
 
+		/**
+		 * Finds a DOM element by its `data-ref` attribute in a list of elements.
+		 *
+		 * @param {string} ref - The reference string to look for.
+		 * @param {HTMLElement[]} entries - A list of elements to search.
+		 * @returns {HTMLElement|undefined} The matching element, if found.
+		 */
 		getByParent(ref, entries) {
-			let e;
-			for (var i = 0; i < entries.length; i++) {
-				e = entries[i];
-				if (e.dataset.ref === ref) {
-					return e;
+			for (let i = 0; i < entries.length; i++) {
+				if (entries[i].dataset.ref === ref) {
+					return entries[i];
 				}
 			}
 		}
 
+		/**
+		 * Registers a callback to run when content overflows the page.
+		 *
+		 * @param {Function} func - The overflow callback function.
+		 */
 		onOverflow(func) {
 			this._onOverflow = func;
 		}
 
+		/**
+		 * Registers a callback to run when content underflows the page.
+		 *
+		 * @param {Function} func - The underflow callback function.
+		 */
 		onUnderflow(func) {
 			this._onUnderflow = func;
 		}
 
+		/**
+		 * Clears the wrapper and listeners, resetting the layout state.
+		 */
 		clear() {
 			this.removeListeners();
 			this.wrapper && this.wrapper.remove();
 			this.createWrapper();
 		}
 
+		/**
+		 * Adds event listeners for scroll and resize to monitor overflows.
+		 *
+		 * @param {DocumentFragment} contents - The content being rendered (used in resize checks).
+		 * @returns {boolean} True if listeners were added.
+		 */
 		addListeners(contents) {
 			if (typeof ResizeObserver !== "undefined") {
 				this.addResizeObserver(contents);
 			} else {
-				this._checkOverflowAfterResize = this.checkOverflowAfterResize.bind(this, contents);
-				this.element.addEventListener("overflow", this._checkOverflowAfterResize, false);
-				this.element.addEventListener("underflow", this._checkOverflowAfterResize, false);
+				this._checkOverflowAfterResize = this.checkOverflowAfterResize.bind(
+					this,
+					contents,
+				);
+				this.element.addEventListener(
+					"overflow",
+					this._checkOverflowAfterResize,
+					false,
+				);
+				this.element.addEventListener(
+					"underflow",
+					this._checkOverflowAfterResize,
+					false,
+				);
 			}
-			// TODO: fall back to mutation observer?
 
-			this._onScroll = function () {
+			this._onScroll = () => {
 				if (this.listening) {
 					this.element.scrollLeft = 0;
 				}
-			}.bind(this);
+			};
 
-			// Keep scroll left from changing
 			this.element.addEventListener("scroll", this._onScroll);
-
 			this.listening = true;
 
 			return true;
 		}
 
+		/**
+		 * Removes event listeners related to overflow and resizing.
+		 */
 		removeListeners() {
 			this.listening = false;
 
 			if (typeof ResizeObserver !== "undefined" && this.ro) {
 				this.ro.disconnect();
 			} else if (this.element) {
-				this.element.removeEventListener("overflow", this._checkOverflowAfterResize, false);
-				this.element.removeEventListener("underflow", this._checkOverflowAfterResize, false);
+				this.element.removeEventListener(
+					"overflow",
+					this._checkOverflowAfterResize,
+					false,
+				);
+				this.element.removeEventListener(
+					"underflow",
+					this._checkOverflowAfterResize,
+					false,
+				);
 			}
 
 			this.element && this.element.removeEventListener("scroll", this._onScroll);
-
 		}
 
+		/**
+		 * Adds a ResizeObserver to monitor wrapper size changes.
+		 *
+		 * @param {DocumentFragment} contents - The contents being observed for overflow changes.
+		 */
 		addResizeObserver(contents) {
 			let wrapper = this.wrapper;
 			let prevHeight = wrapper.getBoundingClientRect().height;
-			this.ro = new ResizeObserver(entries => {
 
-				if (!this.listening) {
-					return;
-				}
+			this.ro = new ResizeObserver((entries) => {
+				if (!this.listening) return;
+
 				requestAnimationFrame(() => {
 					for (let entry of entries) {
 						const cr = entry.contentRect;
@@ -2428,7 +4126,7 @@
 						if (cr.height > prevHeight) {
 							this.checkOverflowAfterResize(contents);
 							prevHeight = wrapper.getBoundingClientRect().height;
-						} else if (cr.height < prevHeight) { // TODO: calc line height && (prevHeight - cr.height) >= 22
+						} else if (cr.height < prevHeight) {
 							this.checkUnderflowAfterResize(contents);
 							prevHeight = cr.height;
 						}
@@ -2439,12 +4137,20 @@
 			this.ro.observe(wrapper);
 		}
 
+		/**
+		 * Checks if the page content has overflowed after a resize.
+		 *
+		 * @param {DocumentFragment} contents - The content being checked.
+		 */
 		checkOverflowAfterResize(contents) {
-			if (!this.listening || !this.layoutMethod) {
-				return;
-			}
+			if (!this.listening || !this.layoutMethod) return;
 
-			let newBreakToken = this.layoutMethod.findBreakToken(this.wrapper, contents, this.startToken);
+			let newBreakToken = this.layoutMethod.findBreakToken(
+				this.wrapper,
+				contents,
+				undefined,
+				this.startToken,
+			);
 
 			if (newBreakToken) {
 				this.endToken = newBreakToken;
@@ -2452,10 +4158,13 @@
 			}
 		}
 
+		/**
+		 * Checks if the page content has underflowed (e.g., content was removed).
+		 *
+		 * @param {DocumentFragment} contents - The content being checked.
+		 */
 		checkUnderflowAfterResize(contents) {
-			if (!this.listening || !this.layoutMethod) {
-				return;
-			}
+			if (!this.listening || !this.layoutMethod) return;
 
 			let endToken = this.layoutMethod.findEndToken(this.wrapper, contents);
 
@@ -2464,7 +4173,9 @@
 			}
 		}
 
-
+		/**
+		 * Cleans up the page, removing all DOM elements and listeners.
+		 */
 		destroy() {
 			this.removeListeners();
 
@@ -2475,25 +4186,42 @@
 		}
 	}
 
+	// Add event emitter capabilities
 	EventEmitter(Page.prototype);
 
 	/**
-	 * Render a flow of text offscreen
+	 * Parses and processes a flow of content (HTML or DOM nodes) offscreen.
+	 * Adds unique references to elements for later retrieval or tracking.
+	 *
 	 * @class
 	 */
 	class ContentParser {
-
+		/**
+		 * Create a new ContentParser instance.
+		 *
+		 * @param {string | Node} content - HTML string or DOM Node to be parsed.
+		 * @param {Function} [cb] - Optional callback (currently unused).
+		 * @returns {DocumentFragment | Node} The parsed DOM fragment or node.
+		 */
 		constructor(content, cb) {
 			if (content && content.nodeType) {
-				// handle dom
+				// Handle DOM Node input
 				this.dom = this.add(content);
 			} else if (typeof content === "string") {
+				// Handle HTML string input
 				this.dom = this.parse(content);
 			}
 
 			return this.dom;
 		}
 
+		/**
+		 * Parses an HTML string into a DocumentFragment and adds `data-ref` attributes.
+		 *
+		 * @param {string} markup - The HTML markup to parse.
+		 * @param {string} [mime] - Optional MIME type (currently unused).
+		 * @returns {DocumentFragment} A document fragment with processed nodes.
+		 */
 		parse(markup, mime) {
 			let range = document.createRange();
 			let fragment = range.createContextualFragment(markup);
@@ -2503,6 +4231,12 @@
 			return fragment;
 		}
 
+		/**
+		 * Processes a DOM Node by cloning its structure (if needed) and adding `data-ref` attributes.
+		 *
+		 * @param {Node} contents - A DOM Node or DocumentFragment to process.
+		 * @returns {Node} The processed content with references.
+		 */
 		add(contents) {
 			// let fragment = document.createDocumentFragment();
 			//
@@ -2511,25 +4245,29 @@
 			// 	let clone = child.cloneNode(true);
 			// 	fragment.appendChild(clone);
 			// }
-
 			this.addRefs(contents);
 
 			return contents;
 		}
 
+		/**
+		 * Walks the content tree and adds a `data-ref` attribute (UUID) to each element.
+		 * Also preserves original `id` attributes via `data-id`.
+		 *
+		 * @param {Node} content - A DOM Node or DocumentFragment to annotate.
+		 */
 		addRefs(content) {
-			var treeWalker = document.createTreeWalker(
+			const treeWalker = document.createTreeWalker(
 				content,
 				NodeFilter.SHOW_ELEMENT,
 				null,
-				false
+				false,
 			);
 
 			let node = treeWalker.nextNode();
-			while(node) {
-
+			while (node) {
 				if (!node.hasAttribute("data-ref")) {
-					let uuid = UUID();
+					const uuid = UUID();
 					node.setAttribute("data-ref", uuid);
 				}
 
@@ -2537,17 +4275,23 @@
 					node.setAttribute("data-id", node.id);
 				}
 
-				// node.setAttribute("data-children", node.childNodes.length);
-
-				// node.setAttribute("data-text", node.textContent.trim().length);
 				node = treeWalker.nextNode();
 			}
 		}
 
+		/**
+		 * Finds a DOM node by its reference ID (this.refs must be pre-populated externally).
+		 *
+		 * @param {string} ref - The `data-ref` UUID to search for.
+		 * @returns {HTMLElement|undefined} The associated element, if found.
+		 */
 		find(ref) {
-			return this.refs[ref];
+			return this.refs?.[ref];
 		}
 
+		/**
+		 * Cleans up the parser's references and DOM structure.
+		 */
 		destroy() {
 			this.refs = undefined;
 			this.dom = undefined;
@@ -2834,10 +4578,30 @@
 </div>`;
 
 	/**
-	 * Chop up text into flows
+	 * The Chunker class is responsible for processing and paginating HTML content into individual page layouts.
+	 * It manages rendering, page flow, break handling, overflow detection, and layout cycles.
+	 *
 	 * @class
 	 */
+
 	class Chunker {
+		/**
+		 * Create a new Chunker instance.
+		 *
+		 * @param {HTMLElement|Document} content - The DOM content to be paginated.
+		 * @param {HTMLElement} [renderTo] - Optional container element to render pages into.
+		 * @param {Object} [options={}] - Configuration options.
+		 * @property {Object} hooks - Collection of lifecycle hooks.
+		 * @property {Page[]} pages - Array of rendered pages.
+		 * @property {number} total - Total number of pages rendered.
+		 * @property {boolean} stopped - Whether rendering is currently stopped.
+		 * @property {boolean} rendered - Whether rendering has completed.
+		 * @property {Queue} q - Internal render queue.
+		 * @property {HTMLElement|Document} content - The original content passed to the chunker.
+		 * @property {Object} modifiedRules - Map of modified stylesheets during rendering.
+		 * @property {number[]} charsPerBreak - Characters per page break for estimation.
+		 * @property {number} maxChars - Estimated maximum characters per page.
+		 */
 		constructor(content, renderTo, options) {
 			// this.preview = preview;
 
@@ -2854,6 +4618,7 @@
 			this.hooks.layoutNode = new Hook(this);
 			this.hooks.onOverflow = new Hook(this);
 			this.hooks.afterOverflowRemoved = new Hook(this);
+			this.hooks.afterOverflowAdded = new Hook(this);
 			this.hooks.onBreakToken = new Hook();
 			this.hooks.beforeRenderResult = new Hook(this);
 			this.hooks.afterPageLayout = new Hook(this);
@@ -2869,6 +4634,8 @@
 
 			this.content = content;
 
+			this.modifiedRules = {};
+
 			this.charsPerBreak = [];
 			this.maxChars;
 
@@ -2877,6 +4644,11 @@
 			}
 		}
 
+		/**
+		 * Sets up the page container and page template structure.
+		 *
+		 * @param {HTMLElement} renderTo - The DOM node to which pages should be rendered.
+		 */
 		setup(renderTo) {
 			this.pagesArea = document.createElement("div");
 			this.pagesArea.classList.add("pagedjs_pages");
@@ -2889,13 +4661,107 @@
 
 			this.pageTemplate = document.createElement("template");
 			this.pageTemplate.innerHTML = TEMPLATE;
-
 		}
 
+		/**
+		 * Gathers and records rules that should be disabled during rendering.
+		 */
+		rulesToDisable = ["breakInside", "overflow", "overflowX", "overflowY"];
+
+		recordRulesToDisable() {
+			for (var i in document.styleSheets) {
+				let sheet = document.styleSheets[i];
+				for (var j in sheet.cssRules) {
+					let rule = sheet.cssRules.item(j);
+					if (rule && rule.style) {
+						for (var k in this.rulesToDisable) {
+							let skip = false;
+							let disable = this.rulesToDisable[k];
+							let attribName = disable;
+							if (typeof disable == "object") {
+								attribName = Object.keys(disable)[0];
+								let value = disable[attribName];
+								skip =
+									!rule.style[attribName] || rule.style[attribName] !== value;
+							} else {
+								skip = !rule.style[attribName];
+							}
+							if (!skip) {
+								if (!this.modifiedRules[attribName]) {
+									this.modifiedRules[attribName] = [];
+								}
+								if (!this.modifiedRules[attribName][rule.style[attribName]]) {
+									this.modifiedRules[attribName][rule.style[attribName]] = [];
+								}
+								this.modifiedRules[attribName][rule.style[attribName]].push(rule);
+							}
+						}
+					}
+				}
+			}
+		}
+
+		/**
+		 * Disables specific CSS rules that may interfere with rendering.
+		 *
+		 * @param {HTMLElement} rendered - The rendered content container.
+		 */
+		disableRules(rendered) {
+			for (var i in this.modifiedRules) {
+				for (var j in this.modifiedRules[i]) {
+					for (var k in this.modifiedRules[i][j]) {
+						let rule = this.modifiedRules[i][j][k];
+						rule.style[i] = "";
+						let nodes = rendered.querySelectorAll(rule.selectorText);
+						nodes.forEach((node) => {
+							let attribName = i.substring(0, 1).toUpperCase() + i.substring(1);
+							node.dataset[`original${attribName}`] = j;
+						});
+					}
+				}
+			}
+		}
+
+		/**
+		 * Re-enables the CSS rules that were previously disabled.
+		 *
+		 * @param {HTMLElement} rendered - The rendered content container.
+		 */
+		enableRules(rendered) {
+			for (var i in this.modifiedRules) {
+				for (var j in this.modifiedRules[i]) {
+					for (var k in this.modifiedRules[i][j]) {
+						let rule = this.modifiedRules[i][j][k];
+						rule.style[i] = j;
+						let nodes = rendered.querySelectorAll(rule.selectorText);
+						nodes.forEach((node) => {
+							let attribName = i.substring(0, 1).toUpperCase() + i.substring(2);
+							delete node.dataset[`original${attribName}`];
+						});
+					}
+				}
+			}
+		}
+
+		/**
+		 * Starts the chunking and rendering process for the given content.
+		 *
+		 *
+		 * @async
+		 *
+		 * @param {HTMLElement|Document} content - Content to be paginated.
+		 * @param {HTMLElement} renderTo - Element to render into.
+		 * @returns {Promise<Chunker>} - Returns itself once rendering is complete.
+		 */
 		async flow(content, renderTo) {
 			let parsed;
 
 			await this.hooks.beforeParsed.trigger(content, this);
+
+			if (content) {
+				this.recordRulesToDisable();
+				this.disableRules(content);
+			}
 
 			parsed = new ContentParser(content);
 
@@ -2930,7 +4796,7 @@
 
 			this.emit("rendered", this.pages);
 
-
+			this.enableRules(content);
 
 			return this;
 		}
@@ -2963,31 +4829,50 @@
 		// 	}
 		// }
 
+		/**
+		 * Renders the parsed html into paginated content and adds references (UUID data-ref attributes)
+		 *
+		 * @param {HTML} parsed - parsed html content with data-refs for later use
+		 * @param {Element} startAt - HTML node to start rendering
+		 * @returns Pages
+		 */
 		async render(parsed, startAt) {
 			let renderer = this.layout(parsed, startAt);
 
 			let done = false;
 			let result;
 			while (!done) {
-				result = await this.q.enqueue(() => { return this.renderAsync(renderer); });
+				result = await this.q.enqueue(() => {
+					return this.renderAsync(renderer);
+				});
 				done = result.done;
 			}
 
 			return result;
 		}
-
+		/**
+		 * Resets the rendering state.
+		 */
 		start() {
 			this.rendered = false;
 			this.stopped = false;
 		}
 
+		/**
+		 * Stop the rendering process.
+		 */
 		stop() {
 			this.stopped = true;
 			// this.q.clear();
 		}
-
+		/**
+		 * Renders a chunk of content when the browser is idle.
+		 *
+		 * @param {AsyncGenerator} renderer - The renderer iterator.
+		 * @returns {Promise<Object>} - Result of rendering.
+		 */
 		renderOnIdle(renderer) {
-			return new Promise(resolve => {
+			return new Promise((resolve) => {
 				requestIdleCallback(async () => {
 					if (this.stopped) {
 						return resolve({ done: true, canceled: true });
@@ -3001,7 +4886,12 @@
 				});
 			});
 		}
-
+		/**
+		 * Performs one asynchronous rendering step.
+		 *
+		 * @param {AsyncGenerator} renderer - The renderer iterator.
+		 * @returns {Promise<Object>} - Result of rendering.
+		 */
 		async renderAsync(renderer) {
 			if (this.stopped) {
 				return { done: true, canceled: true };
@@ -3014,6 +4904,13 @@
 			}
 		}
 
+		/**
+		 * Handling page breaks and adds new Pages if required
+		 *
+		 * @param {Element} node - breaking node
+		 * @param {bool} force - force page break
+		 * @returns {null}
+		 */
 		async handleBreaks(node, force) {
 			let currentPage = this.total + 1;
 			let currentPosition = currentPage % 2 === 0 ? "left" : "right";
@@ -3027,94 +4924,174 @@
 				return;
 			}
 
-			if (node &&
-					typeof node.dataset !== "undefined" &&
-					typeof node.dataset.previousBreakAfter !== "undefined") {
+			if (
+				node &&
+				typeof node.dataset !== "undefined" &&
+				typeof node.dataset.previousBreakAfter !== "undefined"
+			) {
 				previousBreakAfter = node.dataset.previousBreakAfter;
 			}
 
-			if (node &&
-					typeof node.dataset !== "undefined" &&
-					typeof node.dataset.breakBefore !== "undefined") {
+			if (
+				node &&
+				typeof node.dataset !== "undefined" &&
+				typeof node.dataset.breakBefore !== "undefined"
+			) {
 				breakBefore = node.dataset.breakBefore;
 			}
 
 			if (force) {
 				page = this.addPage(true);
-			} else if( previousBreakAfter &&
-					(previousBreakAfter === "left" || previousBreakAfter === "right") &&
-					previousBreakAfter !== currentPosition) {
+			} else if (
+				previousBreakAfter &&
+				(previousBreakAfter === "left" || previousBreakAfter === "right") &&
+				previousBreakAfter !== currentPosition
+			) {
 				page = this.addPage(true);
-			} else if( previousBreakAfter &&
-					(previousBreakAfter === "verso" || previousBreakAfter === "recto") &&
-					previousBreakAfter !== currentSide) {
+			} else if (
+				previousBreakAfter &&
+				(previousBreakAfter === "verso" || previousBreakAfter === "recto") &&
+				previousBreakAfter !== currentSide
+			) {
 				page = this.addPage(true);
-			} else if( breakBefore &&
-					(breakBefore === "left" || breakBefore === "right") &&
-					breakBefore !== currentPosition) {
+			} else if (
+				breakBefore &&
+				(breakBefore === "left" || breakBefore === "right") &&
+				breakBefore !== currentPosition
+			) {
 				page = this.addPage(true);
-			} else if( breakBefore &&
-					(breakBefore === "verso" || breakBefore === "recto") &&
-					breakBefore !== currentSide) {
+			} else if (
+				breakBefore &&
+				(breakBefore === "verso" || breakBefore === "recto") &&
+				breakBefore !== currentSide
+			) {
 				page = this.addPage(true);
 			}
 
 			if (page) {
-				await this.hooks.beforePageLayout.trigger(page, undefined, undefined, this);
+				await this.hooks.beforePageLayout.trigger(
+					page,
+					undefined,
+					undefined,
+					this,
+				);
 				this.emit("page", page);
 				// await this.hooks.layout.trigger(page.element, page, undefined, this);
-				await this.hooks.afterPageLayout.trigger(page.element, page, undefined, this);
-				await this.hooks.finalizePage.trigger(page.element, page, undefined, this);
+				await this.hooks.afterPageLayout.trigger(
+					page.element,
+					page,
+					undefined,
+					this,
+				);
+				await this.hooks.finalizePage.trigger(
+					page.element,
+					page,
+					undefined,
+					this,
+				);
 				this.emit("renderedPage", page);
 			}
 		}
-
+		/**
+		 * Generator that performs the layout step-by-step, yielding break tokens.
+		 *
+		 * @async
+		 * @param {Document|HTMLElement} content - The parsed content.
+		 * @param {Object} [startAt] - Optional starting break token.
+		 * @yields {Object} - The current break token.
+		 */
 		async *layout(content, startAt) {
 			let breakToken = startAt || false;
-			let tokens = [];
+			let page, prevPage, prevNumPages;
 
-			while (breakToken !== undefined && (true)) {
-
-				if (breakToken && breakToken.node) {
-					await this.handleBreaks(breakToken.node);
-				} else {
-					await this.handleBreaks(content.firstChild);
+			while (
+				breakToken !== undefined &&
+				(true)
+			) {
+				let range;
+				if (
+					page &&
+					page.area.firstElementChild &&
+					page.area.firstElementChild.childElementCount
+				) {
+					range = document.createRange();
+					range.selectNode(page.area.firstElementChild.childNodes[0]);
+					range.setEndAfter(page.area.firstElementChild.lastChild);
 				}
 
-				let page = this.addPage();
+				let addedExtra = false;
+				let emptyBody = !range || !range.getBoundingClientRect().height;
+				let emptyFootnotes =
+					!page ||
+					!page.footnotesArea.firstElementChild ||
+					!page.footnotesArea.firstElementChild.childElementCount ||
+					!page.footnotesArea.firstElementChild.firstElementChild.getBoundingClientRect()
+						.height;
+				let emptyPage = emptyBody && emptyFootnotes;
 
-				await this.hooks.beforePageLayout.trigger(page, content, breakToken, this);
-				this.emit("page", page);
+				prevNumPages = this.total;
 
-				// Layout content in the page, starting from the breakToken
-				breakToken = await page.layout(content, breakToken, this.maxChars);
-
-				if (breakToken) {
-					let newToken = breakToken.toJSON(true);
-					if (tokens.lastIndexOf(newToken) > -1) {
-						// loop
-						let err = new OverflowContentError("Layout repeated", [breakToken.node]);
-						console.error("Layout repeated at: ", breakToken.node);
-						return err;
+				if (!page || !emptyPage) {
+					if (breakToken) {
+						if (breakToken.overflow.length && breakToken.overflow[0].node) {
+							// Overflow.
+							await this.handleBreaks(breakToken.overflow[0].node);
+						} else {
+							await this.handleBreaks(breakToken.node);
+						}
 					} else {
-						tokens.push(newToken);
+						await this.handleBreaks(content.firstChild);
 					}
 				}
 
-				await this.hooks.afterPageLayout.trigger(page.element, page, breakToken, this);
-				await this.hooks.finalizePage.trigger(page.element, page, undefined, this);
+				addedExtra = this.total != prevNumPages;
+
+				// Don't add a page if we have a forced break now and we just
+				// did a break due to overflow but have nothing displayed on
+				// the current page, unless there's overflow and we're finished.
+				if (!page || addedExtra || !emptyPage) {
+					this.addPage();
+				}
+
+				page = this.pages[this.total - 1];
+
+				await this.hooks.beforePageLayout.trigger(
+					page,
+					content,
+					breakToken,
+					this,
+				);
+				this.emit("page", page);
+
+				// Layout content in the page, starting from the breakToken.
+				breakToken = await page.layout(content, breakToken, prevPage);
+
+				await this.hooks.afterPageLayout.trigger(
+					page.element,
+					page,
+					breakToken,
+					this,
+				);
+				await this.hooks.finalizePage.trigger(
+					page.element,
+					page,
+					undefined,
+					this,
+				);
 				this.emit("renderedPage", page);
+
+				prevPage = page.wrapper;
 
 				this.recoredCharLength(page.wrapper.textContent.length);
 
 				yield breakToken;
-
-				// Stop if we get undefined, showing we have reached the end of the content
 			}
-
-
 		}
-
+		/**
+		 * Records the number of characters per page for average calculation.
+		 *
+		 * @param {number} length - Number of characters on the page.
+		 */
 		recoredCharLength(length) {
 			if (length === 0) {
 				return;
@@ -3127,11 +5104,16 @@
 				this.charsPerBreak.shift();
 			}
 
-			this.maxChars = this.charsPerBreak.reduce((a, b) => a + b, 0) / (this.charsPerBreak.length);
+			this.maxChars =
+				this.charsPerBreak.reduce((a, b) => a + b, 0) / this.charsPerBreak.length;
 		}
 
-		removePages(fromIndex=0) {
-
+		/**
+		 * Removes rendered pages starting from the specified index.
+		 *
+		 * @param {number} [fromIndex=0] - Index to start removing pages from.
+		 */
+		removePages(fromIndex = 0) {
 			if (fromIndex >= this.pages.length) {
 				return;
 			}
@@ -3149,11 +5131,22 @@
 
 			this.total = this.pages.length;
 		}
-
+		/**
+		 * Adds a new page to the render flow.
+		 *
+		 * @param {boolean} [blank=false] - Whether to add a blank page.
+		 * @returns {Page} - The newly added Page instance.
+		 */
 		addPage(blank) {
 			let lastPage = this.pages[this.pages.length - 1];
 			// Create a new page from the template
-			let page = new Page(this.pagesArea, this.pageTemplate, blank, this.hooks, this.settings);
+			let page = new Page(
+				this.pagesArea,
+				this.pageTemplate,
+				blank,
+				this.hooks,
+				this.settings,
+			);
 
 			this.pages.push(page);
 
@@ -3187,24 +5180,18 @@
 						this.rendered = false;
 
 						this.q.enqueue(async () => {
-
 							this.start();
 
 							await this.render(this.source, this.breakToken);
 
 							this.rendered = true;
-
 						});
 					}
-
-
 				});
 
 				page.onUnderflow((overflowToken) => {
 					// console.log("underflow on", page.id, overflowToken);
-
 					// page.append(this.source, overflowToken);
-
 				});
 			}
 
@@ -3250,7 +5237,12 @@
 			return page;
 		}
 		*/
-
+		/**
+		 * Clones an existing page and appends it to the document.
+		 *
+		 * @async
+		 * @param {Page} originalPage - The page to clone.
+		 */
 		async clonePage(originalPage) {
 			let lastPage = this.pages[this.pages.length - 1];
 
@@ -3267,26 +5259,41 @@
 			this.emit("page", page);
 
 			for (const className of originalPage.element.classList) {
-				if (className !== "pagedjs_left_page" && className !== "pagedjs_right_page") {
+				if (
+					className !== "pagedjs_left_page" &&
+					className !== "pagedjs_right_page"
+				) {
 					page.element.classList.add(className);
 				}
 			}
 
-			await this.hooks.afterPageLayout.trigger(page.element, page, undefined, this);
+			await this.hooks.afterPageLayout.trigger(
+				page.element,
+				page,
+				undefined,
+				this,
+			);
 			await this.hooks.finalizePage.trigger(page.element, page, undefined, this);
 			this.emit("renderedPage", page);
 		}
-
+		/**
+		 * Waits for all fonts to load before rendering starts.
+		 *
+		 * @returns {Promise<string[]>} - A promise resolving to a list of font families loaded.
+		 */
 		loadFonts() {
 			let fontPromises = [];
 			(document.fonts || []).forEach((fontFace) => {
 				if (fontFace.status !== "loaded") {
-					let fontLoaded = fontFace.load().then((r) => {
-						return fontFace.family;
-					}, (r) => {
-						console.warn("Failed to preload font-family:", fontFace.family);
-						return fontFace.family;
-					});
+					let fontLoaded = fontFace.load().then(
+						(r) => {
+							return fontFace.family;
+						},
+						(r) => {
+							console.warn("Failed to preload font-family:", fontFace.family);
+							return fontFace.family;
+						},
+					);
 					fontPromises.push(fontLoaded);
 				}
 			});
@@ -3294,12 +5301,13 @@
 				console.warn(err);
 			});
 		}
-
+		/**
+		 * Cleans up and removes all rendered elements and templates.
+		 */
 		destroy() {
 			this.pagesArea.remove();
 			this.pageTemplate.remove();
 		}
-
 	}
 
 	EventEmitter(Chunker.prototype);
@@ -26272,48 +28280,44 @@
 	    node: node
 	};
 
-	var _args = [
-		[
-			"css-tree@1.1.3",
-			"/home/gitlab-runner/builds/BQJy2NwB/0/pagedjs/pagedjs"
-		]
+	var name = "css-tree";
+	var version = "1.1.3";
+	var description = "A tool set for CSS: fast detailed parser (CSS → AST), walker (AST traversal), generator (AST → CSS) and lexer (validation and matching) based on specs and browser implementations";
+	var author = "Roman Dvornov <rdvornov@gmail.com> (https://github.com/lahmatiy)";
+	var license = "MIT";
+	var repository = "csstree/csstree";
+	var keywords = [
+		"css",
+		"ast",
+		"tokenizer",
+		"parser",
+		"walker",
+		"lexer",
+		"generator",
+		"utils",
+		"syntax",
+		"validation"
 	];
-	var _from = "css-tree@1.1.3";
-	var _id = "css-tree@1.1.3";
-	var _inBundle = false;
-	var _integrity = "sha512-tRpdppF7TRazZrjJ6v3stzv93qxRcSsFmW6cX0Zm2NVKpxE1WV1HblnghVv9TreireHkqI/VDEsfolRF1p6y7Q==";
-	var _location = "/css-tree";
-	var _phantomChildren = {
-	};
-	var _requested = {
-		type: "version",
-		registry: true,
-		raw: "css-tree@1.1.3",
-		name: "css-tree",
-		escapedName: "css-tree",
-		rawSpec: "1.1.3",
-		saveSpec: null,
-		fetchSpec: "1.1.3"
-	};
-	var _requiredBy = [
-		"/"
-	];
-	var _resolved = "https://registry.npmjs.org/css-tree/-/css-tree-1.1.3.tgz";
-	var _spec = "1.1.3";
-	var _where = "/home/gitlab-runner/builds/BQJy2NwB/0/pagedjs/pagedjs";
-	var author = {
-		name: "Roman Dvornov",
-		email: "rdvornov@gmail.com",
-		url: "https://github.com/lahmatiy"
-	};
-	var bugs = {
-		url: "https://github.com/csstree/csstree/issues"
+	var main = "lib/index.js";
+	var unpkg = "dist/csstree.min.js";
+	var jsdelivr = "dist/csstree.min.js";
+	var scripts = {
+		build: "rollup --config",
+		lint: "eslint data lib scripts test && node scripts/review-syntax-patch --lint && node scripts/update-docs --lint",
+		"lint-and-test": "npm run lint && npm test",
+		"update:docs": "node scripts/update-docs",
+		"review:syntax-patch": "node scripts/review-syntax-patch",
+		test: "mocha --reporter progress",
+		coverage: "nyc npm test",
+		travis: "nyc npm run lint-and-test && npm run coveralls",
+		coveralls: "nyc report --reporter=text-lcov | coveralls",
+		prepublishOnly: "npm run build",
+		hydrogen: "node --trace-hydrogen --trace-phase=Z --trace-deopt --code-comments --hydrogen-track-positions --redirect-code-traces --redirect-code-traces-to=code.asm --trace_hydrogen_file=code.cfg --print-opt-code bin/parse --stat -o /dev/null"
 	};
 	var dependencies = {
 		"mdn-data": "2.0.14",
 		"source-map": "^0.6.1"
 	};
-	var description = "A tool set for CSS: fast detailed parser (CSS → AST), walker (AST traversal), generator (AST → CSS) and lexer (validation and matching) based on specs and browser implementations";
 	var devDependencies = {
 		"@rollup/plugin-commonjs": "^11.0.2",
 		"@rollup/plugin-json": "^4.0.2",
@@ -26334,72 +28338,22 @@
 		"dist",
 		"lib"
 	];
-	var homepage = "https://github.com/csstree/csstree#readme";
-	var jsdelivr = "dist/csstree.min.js";
-	var keywords = [
-		"css",
-		"ast",
-		"tokenizer",
-		"parser",
-		"walker",
-		"lexer",
-		"generator",
-		"utils",
-		"syntax",
-		"validation"
-	];
-	var license = "MIT";
-	var main = "lib/index.js";
-	var name = "css-tree";
-	var repository = {
-		type: "git",
-		url: "git+https://github.com/csstree/csstree.git"
-	};
-	var scripts = {
-		build: "rollup --config",
-		coverage: "nyc npm test",
-		coveralls: "nyc report --reporter=text-lcov | coveralls",
-		hydrogen: "node --trace-hydrogen --trace-phase=Z --trace-deopt --code-comments --hydrogen-track-positions --redirect-code-traces --redirect-code-traces-to=code.asm --trace_hydrogen_file=code.cfg --print-opt-code bin/parse --stat -o /dev/null",
-		lint: "eslint data lib scripts test && node scripts/review-syntax-patch --lint && node scripts/update-docs --lint",
-		"lint-and-test": "npm run lint && npm test",
-		prepublishOnly: "npm run build",
-		"review:syntax-patch": "node scripts/review-syntax-patch",
-		test: "mocha --reporter progress",
-		travis: "nyc npm run lint-and-test && npm run coveralls",
-		"update:docs": "node scripts/update-docs"
-	};
-	var unpkg = "dist/csstree.min.js";
-	var version = "1.1.3";
 	var require$$4 = {
-		_args: _args,
-		_from: _from,
-		_id: _id,
-		_inBundle: _inBundle,
-		_integrity: _integrity,
-		_location: _location,
-		_phantomChildren: _phantomChildren,
-		_requested: _requested,
-		_requiredBy: _requiredBy,
-		_resolved: _resolved,
-		_spec: _spec,
-		_where: _where,
-		author: author,
-		bugs: bugs,
-		dependencies: dependencies,
+		name: name,
+		version: version,
 		description: description,
+		author: author,
+		license: license,
+		repository: repository,
+		keywords: keywords,
+		main: main,
+		unpkg: unpkg,
+		jsdelivr: jsdelivr,
+		scripts: scripts,
+		dependencies: dependencies,
 		devDependencies: devDependencies,
 		engines: engines,
-		files: files,
-		homepage: homepage,
-		jsdelivr: jsdelivr,
-		keywords: keywords,
-		license: license,
-		main: main,
-		name: name,
-		repository: repository,
-		scripts: scripts,
-		unpkg: unpkg,
-		version: version
+		files: files
 	};
 
 	function merge() {
@@ -26430,9 +28384,17 @@
 
 	var csstree = /*@__PURE__*/getDefaultExportFromCjs(lib);
 
+	/**
+	 * Class representing a CSS stylesheet parser and processor.
+	 * Provides a hook-based system for analyzing and transforming CSS using csstree.
+	 */
 	class Sheet {
+		/**
+		 * Create a Sheet instance.
+		 * @param {string} url - The base URL for resolving relative paths.
+		 * @param {Object} [hooks] - Optional custom hook object.
+		 */
 		constructor(url, hooks) {
-
 			if (hooks) {
 				this.hooks = hooks;
 			} else {
@@ -26444,10 +28406,8 @@
 				this.hooks.onDeclaration = new Hook(this);
 				this.hooks.onSelector = new Hook(this);
 				this.hooks.onPseudoSelector = new Hook(this);
-
 				this.hooks.onContent = new Hook(this);
 				this.hooks.onImport = new Hook(this);
-
 				this.hooks.beforeTreeParse = new Hook(this);
 				this.hooks.beforeTreeWalk = new Hook(this);
 				this.hooks.afterTreeWalk = new Hook(this);
@@ -26460,61 +28420,62 @@
 			}
 		}
 
-
-
-		// parse
+		/**
+		 * Parses a CSS string and returns the AST.
+		 * @param {string} text - Raw CSS text to parse.
+		 * @returns {Promise<Object>} Parsed CSS AST.
+		 */
 		async parse(text) {
 			this.text = text;
 
 			await this.hooks.beforeTreeParse.trigger(this.text, this);
-
-			// send to csstree
 			this.ast = csstree.parse(this._text);
 
 			await this.hooks.beforeTreeWalk.trigger(this.ast);
 
-			// Replace urls
 			this.replaceUrls(this.ast);
-
-			// Scope
 			this.id = UUID();
-			// this.addScope(this.ast, this.uuid);
-
-			// Replace IDs with data-id
 			this.replaceIds(this.ast);
 
 			this.imported = [];
 
-			// Trigger Hooks
 			this.urls(this.ast);
 			this.rules(this.ast);
 			this.atrules(this.ast);
 
 			await this.hooks.afterTreeWalk.trigger(this.ast, this);
 
-			// return ast
 			return this.ast;
 		}
 
-
-
+		/**
+		 * Inserts a new CSS rule into the AST.
+		 * @param {Object} rule - A csstree rule node.
+		 * @returns {Object} The inserted rule node.
+		 */
 		insertRule(rule) {
 			let inserted = this.ast.children.appendData(rule);
-
 			this.declarations(rule);
-
 			return inserted;
 		}
 
+		/**
+		 * Triggers onUrl hook for each URL node.
+		 * @param {Object} ast - CSS AST.
+		 */
 		urls(ast) {
 			csstree.walk(ast, {
 				visit: "Url",
 				enter: (node, item, list) => {
 					this.hooks.onUrl.trigger(node, item, list);
-				}
+				},
 			});
 		}
 
+		/**
+		 * Processes all at-rules and triggers relevant hooks.
+		 * @param {Object} ast - CSS AST.
+		 */
 		atrules(ast) {
 			csstree.walk(ast, {
 				visit: "Atrule",
@@ -26535,209 +28496,262 @@
 						this.hooks.onImport.trigger(node, item, list);
 						this.imports(node, item, list);
 					}
-				}
+				},
 			});
 		}
 
-
+		/**
+		 * Processes rule nodes and triggers related hooks.
+		 * @param {Object} ast - CSS AST.
+		 */
 		rules(ast) {
 			csstree.walk(ast, {
 				visit: "Rule",
 				enter: (ruleNode, ruleItem, rulelist) => {
-
 					this.hooks.onRule.trigger(ruleNode, ruleItem, rulelist);
 					this.declarations(ruleNode, ruleItem, rulelist);
 					this.onSelector(ruleNode, ruleItem, rulelist);
-
-				}
+				},
 			});
 		}
 
+		/**
+		 * Triggers onDeclaration and onContent hooks for declarations.
+		 * @param {Object} ruleNode
+		 * @param {*} ruleItem
+		 * @param {*} rulelist
+		 */
 		declarations(ruleNode, ruleItem, rulelist) {
 			csstree.walk(ruleNode, {
 				visit: "Declaration",
 				enter: (declarationNode, dItem, dList) => {
-
-					this.hooks.onDeclaration.trigger(declarationNode, dItem, dList, {ruleNode, ruleItem, rulelist});
+					this.hooks.onDeclaration.trigger(declarationNode, dItem, dList, {
+						ruleNode,
+						ruleItem,
+						rulelist,
+					});
 
 					if (declarationNode.property === "content") {
 						csstree.walk(declarationNode, {
 							visit: "Function",
 							enter: (funcNode, fItem, fList) => {
-								this.hooks.onContent.trigger(funcNode, fItem, fList, {declarationNode, dItem, dList}, {ruleNode, ruleItem, rulelist});
-							}
+								this.hooks.onContent.trigger(
+									funcNode,
+									fItem,
+									fList,
+									{ declarationNode, dItem, dList },
+									{ ruleNode, ruleItem, rulelist },
+								);
+							},
 						});
 					}
-
-				}
+				},
 			});
 		}
 
-		// add pseudo elements to parser
+		/**
+		 * Handles selector and pseudo-selector hooks.
+		 * @param {Object} ruleNode
+		 * @param {*} ruleItem
+		 * @param {*} rulelist
+		 */
 		onSelector(ruleNode, ruleItem, rulelist) {
 			csstree.walk(ruleNode, {
 				visit: "Selector",
 				enter: (selectNode, selectItem, selectList) => {
-					this.hooks.onSelector.trigger(selectNode, selectItem, selectList, {ruleNode, ruleItem, rulelist});
+					this.hooks.onSelector.trigger(selectNode, selectItem, selectList, {
+						ruleNode,
+						ruleItem,
+						rulelist,
+					});
 
-					if (selectNode.children.forEach(node => {if (node.type === "PseudoElementSelector") {
-						csstree.walk(node, {
-							visit: "PseudoElementSelector",
-							enter: (pseudoNode, pItem, pList) => {
-								this.hooks.onPseudoSelector.trigger(pseudoNode, pItem, pList, {selectNode, selectItem, selectList}, {ruleNode, ruleItem, rulelist});
-							}
-						});
-					}}));
-				}
+					selectNode.children.forEach((node) => {
+						if (node.type === "PseudoElementSelector") {
+							csstree.walk(node, {
+								visit: "PseudoElementSelector",
+								enter: (pseudoNode, pItem, pList) => {
+									this.hooks.onPseudoSelector.trigger(
+										pseudoNode,
+										pItem,
+										pList,
+										{ selectNode, selectItem, selectList },
+										{ ruleNode, ruleItem, rulelist },
+									);
+								},
+							});
+						}
+					});
+				},
 			});
 		}
 
+		/**
+		 * Resolves relative URLs in `url()` functions.
+		 * @param {Object} ast - CSS AST.
+		 */
 		replaceUrls(ast) {
 			csstree.walk(ast, {
 				visit: "Url",
-				enter: (node, item, list) => {
+				enter: (node) => {
 					let content = node.value.value;
-					if ((node.value.type === "Raw" && content.startsWith("data:")) || (node.value.type === "String" && (content.startsWith("\"data:") || content.startsWith("'data:")))) ; else {
+					if (
+						(node.value.type === "Raw" && content.startsWith("data:")) ||
+						(node.value.type === "String" &&
+							(content.startsWith('"data:') || content.startsWith("'data:")))
+					) ; else {
 						let href = content.replace(/["']/g, "");
 						let url = new URL(href, this.url);
 						node.value.value = url.toString();
 					}
-				}
+				},
 			});
 		}
 
+		/**
+		 * Scopes all selectors by prepending an ID selector.
+		 * @param {Object} ast - CSS AST.
+		 * @param {string} id - Scope ID.
+		 */
 		addScope(ast, id) {
-			// Get all selector lists
-			// add an id
 			csstree.walk(ast, {
 				visit: "Selector",
-				enter: (node, item, list) => {
+				enter: (node) => {
 					let children = node.children;
-					children.prepend(children.createItem({
-						type: "WhiteSpace",
-						value: " "
-					}));
-					children.prepend(children.createItem({
-						type: "IdSelector",
-						name: id,
-						loc: null,
-						children: null
-					}));
-				}
+					children.prepend(
+						children.createItem({
+							type: "WhiteSpace",
+							value: " ",
+						}),
+					);
+					children.prepend(
+						children.createItem({
+							type: "IdSelector",
+							name: id,
+							loc: null,
+							children: null,
+						}),
+					);
+				},
 			});
 		}
 
+		/**
+		 * Extracts named @page selectors and modifies them.
+		 * @param {Object} ast - CSS AST.
+		 * @returns {Object} Named page selectors with their CSS selectors.
+		 */
 		getNamedPageSelectors(ast) {
 			let namedPageSelectors = {};
 			csstree.walk(ast, {
 				visit: "Rule",
-				enter: (node, item, list) => {
+				enter: (node) => {
 					csstree.walk(node, {
 						visit: "Declaration",
-						enter: (declaration, dItem, dList) => {
+						enter: (declaration) => {
 							if (declaration.property === "page") {
 								let value = declaration.value.children.first();
 								let name = value.name;
 								let selector = csstree.generate(node.prelude);
-								namedPageSelectors[name] = {
-									name: name,
-									selector: selector
-								};
+								namedPageSelectors[name] = { name, selector };
 
-								// dList.remove(dItem);
-
-								// Add in page break
 								declaration.property = "break-before";
 								value.type = "Identifier";
 								value.name = "always";
-
 							}
-						}
+						},
 					});
-				}
+				},
 			});
 			return namedPageSelectors;
 		}
 
+		/**
+		 * Converts ID selectors to [data-id="..."] format.
+		 * @param {Object} ast - CSS AST.
+		 */
 		replaceIds(ast) {
 			csstree.walk(ast, {
 				visit: "Rule",
-				enter: (node, item, list) => {
-
+				enter: (node) => {
 					csstree.walk(node, {
 						visit: "IdSelector",
-						enter: (idNode, idItem, idList) => {
+						enter: (idNode) => {
 							let name = idNode.name;
 							idNode.flags = null;
 							idNode.matcher = "=";
-							idNode.name = {type: "Identifier", loc: null, name: "data-id"};
+							idNode.name = { type: "Identifier", loc: null, name: "data-id" };
 							idNode.type = "AttributeSelector";
-							idNode.value = {type: "String", loc: null, value: `"${name}"`};
-						}
+							idNode.value = { type: "String", loc: null, value: `"${name}"` };
+						},
 					});
-				}
+				},
 			});
 		}
 
+		/**
+		 * Processes @import rules, adds valid URLs to `this.imported`, and removes them from AST.
+		 * @param {Object} node
+		 * @param {*} item
+		 * @param {*} list
+		 */
 		imports(node, item, list) {
-			// console.log("import", node, item, list);
 			let queries = [];
 			csstree.walk(node, {
 				visit: "MediaQuery",
-				enter: (mqNode, mqItem, mqList) => {
+				enter: (mqNode) => {
 					csstree.walk(mqNode, {
 						visit: "Identifier",
-						enter: (identNode, identItem, identList) => {
+						enter: (identNode) => {
 							queries.push(identNode.name);
-						}
+						},
 					});
-				}
+				},
 			});
 
-			// Just basic media query support for now
 			let shouldNotApply = queries.some((query, index) => {
-				let q = query;
-				if (q === "not") {
-					q = queries[index + 1];
-					return !(q === "screen" || q === "speech");
-				} else {
-					return (q === "screen" || q === "speech");
+				if (query === "not") {
+					let next = queries[index + 1];
+					return !(next === "screen" || next === "speech");
 				}
+				return query !== "screen" && query !== "speech";
 			});
 
-			if (shouldNotApply) {
-				return;
-			}
+			if (shouldNotApply) return;
 
 			csstree.walk(node, {
 				visit: "String",
-				enter: (urlNode, urlItem, urlList) => {
+				enter: (urlNode) => {
 					let href = urlNode.value.replace(/["']/g, "");
 					let url = new URL(href, this.url);
-					let value = url.toString();
-
-					this.imported.push(value);
-
-					// Remove the original
+					this.imported.push(url.toString());
 					list.remove(item);
-				}
+				},
 			});
 		}
 
+		/** @param {string} t */
 		set text(t) {
 			this._text = t;
 		}
 
+		/** @returns {string} */
 		get text() {
 			return this._text;
 		}
 
-		// generate string
+		/**
+		 * Generates a CSS string from AST.
+		 * @param {Object} [ast] - AST to stringify. Defaults to internal AST.
+		 * @returns {string} CSS code as string.
+		 */
 		toString(ast) {
 			return csstree.generate(ast || this.ast);
 		}
 	}
 
+	/**
+	 * @module the default css for pagedjs
+	 */
 	var baseStyles = `
 :root {
 	--pagedjs-width: 8.5in;
@@ -27445,8 +29459,19 @@
 }
 `;
 
-	async function request(url, options={}) {
-		return new Promise(function(resolve, reject) {
+	/**
+	 * Performs an HTTP request using XMLHttpRequest and returns a Promise resolving to a Response.
+	 *
+	 * @param {string} url - The URL to request.
+	 * @param {Object} [options={}] - Optional settings for the request.
+	 * @param {string} [options.method="get"] - HTTP method to use (e.g., "GET", "POST").
+	 * @param {Object.<string, string>} [options.headers] - Headers to set on the request.
+	 * @param {string} [options.credentials] - Whether to send cookies with the request ("include" to send).
+	 * @param {Document | BodyInit | null} [options.body] - The body of the request, for methods like POST.
+	 * @returns {Promise<Response>} Promise resolving to a Response object containing the response text and status.
+	 */
+	async function request(url, options = {}) {
+		return new Promise(function (resolve, reject) {
 			let request = new XMLHttpRequest();
 
 			request.open(options.method || "get", url, true);
@@ -27459,8 +29484,11 @@
 
 			request.onload = () => {
 				// Chrome returns a status code of 0 for local files
-				const status = request.status === 0 && url.startsWith("file://") ? 200 : request.status;
-				resolve(new Response(request.responseText, {status}));
+				const status =
+					request.status === 0 && url.startsWith("file://")
+						? 200
+						: request.status;
+				resolve(new Response(request.responseText, { status }));
 			};
 
 			request.onerror = reject;
@@ -27469,11 +29497,23 @@
 		});
 	}
 
+	/**
+	 * The Polisher class handles the parsing and insertion of CSS stylesheets,
+	 * including remote resources and special hooks for processing CSS content.
+	 */
 	class Polisher {
+		/**
+		 * Creates a new Polisher instance.
+		 * @param {boolean} [setup=true] - Whether to immediately run setup.
+		 */
 		constructor(setup) {
+			/** @type {Sheet[]} */
 			this.sheets = [];
+
+			/** @type {HTMLStyleElement[]} */
 			this.inserted = [];
 
+			/** @type {Object<string, Hook>} */
 			this.hooks = {};
 			this.hooks.onUrl = new Hook(this);
 			this.hooks.onAtPage = new Hook(this);
@@ -27483,9 +29523,7 @@
 			this.hooks.onContent = new Hook(this);
 			this.hooks.onSelector = new Hook(this);
 			this.hooks.onPseudoSelector = new Hook(this);
-
 			this.hooks.onImport = new Hook(this);
-
 			this.hooks.beforeTreeParse = new Hook(this);
 			this.hooks.beforeTreeWalk = new Hook(this);
 			this.hooks.afterTreeWalk = new Hook(this);
@@ -27495,6 +29533,10 @@
 			}
 		}
 
+		/**
+		 * Sets up the base stylesheet and injects a <style> element into the document head.
+		 * @returns {CSSStyleSheet} - The created stylesheet object.
+		 */
 		setup() {
 			this.base = this.insert(baseStyles);
 			this.styleEl = document.createElement("style");
@@ -27503,52 +29545,56 @@
 			return this.styleSheet;
 		}
 
-		async add() {
+		/**
+		 * Adds and processes one or more CSS sources (URLs or inline CSS).
+		 * @param {...(string|Object<string, string>)} sources - URLs or object maps of URLs to CSS strings.
+		 * @returns {Promise<string>} - The final processed CSS text.
+		 */
+		async add(...sources) {
 			let fetched = [];
 			let urls = [];
 
-			for (var i = 0; i < arguments.length; i++) {
+			for (let source of sources) {
 				let f;
 
-				if (typeof arguments[i] === "object") {
-					for (let url in arguments[i]) {
-						let obj = arguments[i];
-						f = new Promise(function(resolve, reject) {
-							urls.push(url);
-							resolve(obj[url]);
-						});
+				if (typeof source === "object") {
+					for (let url in source) {
+						let css = source[url];
+						urls.push(url);
+						f = Promise.resolve(css);
 					}
 				} else {
-					urls.push(arguments[i]);
-					f = request(arguments[i]).then((response) => {
-						return response.text();
-					});
+					urls.push(source);
+					f = request(source).then((response) => response.text());
 				}
-
 
 				fetched.push(f);
 			}
 
-			return await Promise.all(fetched)
-				.then(async (originals) => {
-					let text = "";
-					for (let index = 0; index < originals.length; index++) {
-						text = await this.convertViaSheet(originals[index], urls[index]);
-						this.insert(text);
-					}
-					return text;
-				});
+			return await Promise.all(fetched).then(async (originals) => {
+				let text = "";
+				for (let index = 0; index < originals.length; index++) {
+					text = await this.convertViaSheet(originals[index], urls[index]);
+					this.insert(text);
+				}
+				return text;
+			});
 		}
 
+		/**
+		 * Converts raw CSS into a Sheet object, parses it, handles imports,
+		 * and returns the processed CSS string.
+		 * @param {string} cssStr - The raw CSS string.
+		 * @param {string} href - The source URL for the CSS.
+		 * @returns {Promise<string>} - The processed CSS text.
+		 */
 		async convertViaSheet(cssStr, href) {
 			let sheet = new Sheet(href, this.hooks);
 			await sheet.parse(cssStr);
 
-			// Insert the imported sheets first
+			// Handle @imported styles recursively
 			for (let url of sheet.imported) {
-				let str = await request(url).then((response) => {
-					return response.text();
-				});
+				let str = await request(url).then((response) => response.text());
 				let text = await this.convertViaSheet(str, url);
 				this.insert(text);
 			}
@@ -27564,22 +29610,28 @@
 			if (typeof sheet.orientation !== "undefined") {
 				this.orientation = sheet.orientation;
 			}
+
 			return sheet.toString();
 		}
 
-		insert(text){
+		/**
+		 * Inserts a CSS string into the document inside a <style> tag.
+		 * @param {string} text - The CSS to insert.
+		 * @returns {HTMLStyleElement} - The created style element.
+		 */
+		insert(text) {
 			let head = document.querySelector("head");
 			let style = document.createElement("style");
 			style.setAttribute("data-pagedjs-inserted-styles", "true");
-
 			style.appendChild(document.createTextNode(text));
-
 			head.appendChild(style);
-
 			this.inserted.push(style);
 			return style;
 		}
 
+		/**
+		 * Cleans up all inserted styles and resets the polisher.
+		 */
 		destroy() {
 			this.styleEl.remove();
 			this.inserted.forEach((s) => {
@@ -27589,189 +29641,227 @@
 		}
 	}
 
+	/**
+	 * Handler class that automatically registers methods as hook callbacks
+	 * based on hooks provided by chunker, polisher, and caller objects.
+	 *
+	 * It also extends its prototype with event-emitter capabilities,
+	 * allowing instances to emit and listen to events.
+	 *
+	 * @class Handler
+	 *
+	 * @param {Object} [chunker] - Optional object containing a `hooks` map.
+	 * @param {Object} [polisher] - Optional object containing a `hooks` map.
+	 * @param {Object} [caller] - Optional object containing a `hooks` map.
+	 *
+	 * @property {Object} chunker - Reference to the provided chunker object.
+	 * @property {Object} polisher - Reference to the provided polisher object.
+	 * @property {Object} caller - Reference to the provided caller object.
+	 */
+
 	class Handler {
 		constructor(chunker, polisher, caller) {
-			let hooks = Object.assign({}, chunker && chunker.hooks, polisher && polisher.hooks, caller && caller.hooks);
+			// Merge all hook maps from chunker, polisher, and caller into one object.
+			// Only include hooks if the corresponding object exists.
+			let hooks = Object.assign(
+				{},
+				chunker && chunker.hooks,
+				polisher && polisher.hooks,
+				caller && caller.hooks,
+			);
+
+			// Store references to the provided components
 			this.chunker = chunker;
 			this.polisher = polisher;
 			this.caller = caller;
 
+			// Loop through all hook names
 			for (let name in hooks) {
+				// Only register a hook if the Handler instance has a method with the same name
 				if (name in this) {
 					let hook = hooks[name];
+
+					// Register the Handler's method as a callback for the hook
+					// Bind ensures "this" refers to the Handler instance
 					hook.register(this[name].bind(this));
 				}
 			}
 		}
 	}
 
+	// Mix event emitter methods (on, off, emit, etc.) into Handler.prototype
 	EventEmitter(Handler.prototype);
 
-	// https://www.w3.org/TR/css3-page/#page-size-prop
-
+	/**
+	 * @module a js object that defines the default files size from // https://www.w3.org/TR/css3-page/#page-size-prop
+	 */
 	var pageSizes = {
-		"A0": {
+		A0: {
 			width: {
 				value: 841,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 1189,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"A1": {
+		A1: {
 			width: {
 				value: 594,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 841,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"A2": {
+		A2: {
 			width: {
 				value: 420,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 594,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"A3": {
+		A3: {
 			width: {
 				value: 297,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 420,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"A4": {
+		A4: {
 			width: {
 				value: 210,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 297,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"A5": {
+		A5: {
 			width: {
 				value: 148,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 210,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"A6": {
+		A6: {
 			width: {
 				value: 105,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 148,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"A7": {
+		A7: {
 			width: {
 				value: 74,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 105,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"A8": {
+		A8: {
 			width: {
 				value: 52,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 74,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"A9": {
+		A9: {
 			width: {
 				value: 37,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 52,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"A10": {
+		A10: {
 			width: {
 				value: 26,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 37,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"B4": {
+		B4: {
 			width: {
 				value: 250,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 353,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"B5": {
+		B5: {
 			width: {
 				value: 176,
-				unit: "mm"
+				unit: "mm",
 			},
 			height: {
 				value: 250,
-				unit: "mm"
-			}
+				unit: "mm",
+			},
 		},
-		"letter": {
+		letter: {
 			width: {
 				value: 8.5,
-				unit: "in"
+				unit: "in",
 			},
 			height: {
 				value: 11,
-				unit: "in"
-			}
+				unit: "in",
+			},
 		},
-		"legal": {
+		legal: {
 			width: {
 				value: 8.5,
-				unit: "in"
+				unit: "in",
 			},
 			height: {
 				value: 14,
-				unit: "in"
-			}
+				unit: "in",
+			},
 		},
-		"ledger": {
+		ledger: {
 			width: {
 				value: 11,
-				unit: "in"
+				unit: "in",
 			},
 			height: {
 				value: 17,
-				unit: "in"
-			}
-		}
+				unit: "in",
+			},
+		},
 	};
 
+	/**
+	 *  A class to do all the @page conversion and update in the css.
+	 *
+	 */
 	class AtPage extends Handler {
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
@@ -27798,29 +29888,37 @@
 					top: {},
 					right: {},
 					left: {},
-					bottom: {}
+					bottom: {},
 				},
 				padding: {
 					top: {},
 					right: {},
 					left: {},
-					bottom: {}
+					bottom: {},
 				},
 				border: {
 					top: {},
 					right: {},
 					left: {},
-					bottom: {}
+					bottom: {},
 				},
 				backgroundOrigin: undefined,
 				block: {},
 				marks: undefined,
 				notes: undefined,
-				added: false
+				added: false,
 			};
 		}
 
-		// Find and Remove @page rules
+		/**
+		 * Processes a CSS `@page` rule node and integrates it into the internal `pages` model.
+		 * Handles merging of existing page data, extracting selectors, marginalia, size, bleed,
+		 * marks, margins, padding, and borders. Also removes the processed item from the rule list.
+		 *
+		 * @param {Object} node - The AST node representing the `@page` rule.
+		 * @param {Object} item - The list item in the AST that contains the rule (used for removal).
+		 * @param {Object} list - The parent list of rules, typically from the CSS AST (csstree.List).
+		 */
 		onAtPage(node, item, list) {
 			let page, marginalia;
 			let selector = "";
@@ -27882,7 +29980,7 @@
 							top: declarations.bleed[0],
 							right: declarations.bleed[1],
 							bottom: declarations.bleed[2],
-							left: declarations.bleed[3]
+							left: declarations.bleed[3],
 						};
 						break;
 					case 3: // top right bottom right
@@ -27890,7 +29988,7 @@
 							top: declarations.bleed[0],
 							right: declarations.bleed[1],
 							bottom: declarations.bleed[2],
-							left: declarations.bleed[1]
+							left: declarations.bleed[1],
 						};
 						break;
 					case 2: // top right top right
@@ -27898,7 +29996,7 @@
 							top: declarations.bleed[0],
 							right: declarations.bleed[1],
 							bottom: declarations.bleed[0],
-							left: declarations.bleed[1]
+							left: declarations.bleed[1],
 						};
 						break;
 					default:
@@ -27906,19 +30004,22 @@
 							top: declarations.bleed[0],
 							right: declarations.bleed[0],
 							bottom: declarations.bleed[0],
-							left: declarations.bleed[0]
+							left: declarations.bleed[0],
 						};
 				}
 			}
 
 			if (declarations.marks) {
-				if (!declarations.bleed || declarations.bleed && declarations.bleed[0] === "auto") {
+				if (
+					!declarations.bleed ||
+					(declarations.bleed && declarations.bleed[0] === "auto")
+				) {
 					// Spec say 6pt, but needs more space for marks
 					page.bleed = {
 						top: { value: 6, unit: "mm" },
 						right: { value: 6, unit: "mm" },
 						bottom: { value: 6, unit: "mm" },
-						left: { value: 6, unit: "mm" }
+						left: { value: 6, unit: "mm" },
 					};
 				}
 
@@ -27964,6 +30065,15 @@
 		}
 		*/
 
+		/**
+		 * Finalizes processing after the CSS AST tree has been walked.
+		 * Applies page-level classes and, if a default `@page` rule (`*`) is marked as dirty (i.e., changed),
+		 * it updates root-level CSS variables and emits size and page-related metadata.
+		 *
+		 * @param {Object} ast - The full CSS AST (typically from csstree) representing the stylesheet.
+		 * @param {Object} sheet - The current stylesheet being processed (contextual information, optional).
+		 */
+
 		afterTreeWalk(ast, sheet) {
 			let dirtyPage = "*" in this.pages && this.pages["*"].added === false;
 
@@ -27987,23 +30097,43 @@
 					bleedrecto = this.pages[":right"].bleed;
 				}
 
-				if ((width && height) &&
-					(this.width !== width || this.height !== height)) {
+				if (width && height && (this.width !== width || this.height !== height)) {
 					this.width = width;
 					this.height = height;
 					this.format = format;
 					this.orientation = orientation;
 
-					this.addRootVars(ast, width, height, orientation, bleed, bleedrecto, bleedverso, marks);
-					this.addRootPage(ast, this.pages["*"].size, bleed, bleedrecto, bleedverso);
+					this.addRootVars(
+						ast,
+						width,
+						height,
+						orientation,
+						bleed,
+						bleedrecto,
+						bleedverso,
+						marks,
+					);
+					this.addRootPage(
+						ast,
+						this.pages["*"].size,
+						bleed,
+						bleedrecto,
+						bleedverso,
+					);
 
 					this.emit("size", { width, height, orientation, format, bleed });
 					this.emit("atpages", this.pages);
 				}
-
 			}
 		}
 
+		/**
+		 * Extracts the type selector (page name) from the `@page` rule prelude.
+		 * For example, in `@page myPage {}`, this returns `"myPage"`.
+		 *
+		 * @param {Object} ast - The AST node for the `@page` rule (should contain a `prelude`).
+		 * @returns {string|undefined} The type selector name if found, otherwise `undefined`.
+		 */
 		getTypeSelector(ast) {
 			// Find page name
 			let name;
@@ -28012,12 +30142,20 @@
 				visit: "TypeSelector",
 				enter: (node, item, list) => {
 					name = node.name;
-				}
+				},
 			});
 
 			return name;
 		}
 
+		/**
+		 * Extracts a pseudo-class selector from the `@page` prelude.
+		 * Looks for values like `:left`, `:right`, `:first`, etc., and returns the name.
+		 * Skips `:nth` pseudo-classes (handled separately).
+		 *
+		 * @param {Object} ast - The AST node for the `@page` rule.
+		 * @returns {string|undefined} The pseudo-class name if found, otherwise `undefined`.
+		 */
 		getPsuedoSelector(ast) {
 			// Find if it has :left & :right & :black & :first
 			let name;
@@ -28027,12 +30165,19 @@
 					if (node.name !== "nth") {
 						name = node.name;
 					}
-				}
+				},
 			});
 
 			return name;
 		}
 
+		/**
+		 * Extracts the argument of an `:nth` pseudo-class selector, if present.
+		 * For example, in `@page :nth(3n) {}`, this returns `"3n"`.
+		 *
+		 * @param {Object} ast - The AST node for the `@page` rule.
+		 * @returns {string|undefined} The `:nth` selector argument if found, otherwise `undefined`.
+		 */
 		getNthSelector(ast) {
 			// Find if it has :nth
 			let nth;
@@ -28043,19 +30188,44 @@
 						let raw = node.children.first();
 						nth = raw.value;
 					}
-				}
+				},
 			});
 
 			return nth;
 		}
 
+		/**
+		 * Extracts and removes `@margin-*` style at-rules from the block of a `@page` rule.
+		 * These are stored in a dictionary keyed by their normalized region names.
+		 *
+		 * @param {Object} ast - The AST node for the `@page` rule.
+		 * @returns {Object} A dictionary of marginalia region names to their blocks.
+		 */
 		replaceMarginalia(ast) {
 			let parsed = {};
 			const MARGINS = [
-				"top-left-corner", "top-left", "top", "top-center", "top-right", "top-right-corner",
-				"bottom-left-corner", "bottom-left", "bottom", "bottom-center", "bottom-right", "bottom-right-corner",
-				"left-top", "left-middle", "left", "left-bottom", "top-right-corner",
-				"right-top", "right-middle", "right", "right-bottom", "right-right-corner"
+				"top-left-corner",
+				"top-left",
+				"top",
+				"top-center",
+				"top-right",
+				"top-right-corner",
+				"bottom-left-corner",
+				"bottom-left",
+				"bottom",
+				"bottom-center",
+				"bottom-right",
+				"bottom-right-corner",
+				"left-top",
+				"left-middle",
+				"left",
+				"left-bottom",
+				"top-right-corner",
+				"right-top",
+				"right-middle",
+				"right",
+				"right-bottom",
+				"right-right-corner",
 			];
 			csstree.walk(ast.block, {
 				visit: "Atrule",
@@ -28077,12 +30247,19 @@
 						parsed[name] = node.block;
 						list.remove(item);
 					}
-				}
+				},
 			});
 
 			return parsed;
 		}
 
+		/**
+		 * Extracts and removes `@footnote` at-rules from the block of a `@page` rule.
+		 * Returns a dictionary of extracted footnote blocks.
+		 *
+		 * @param {Object} ast - The AST node for the `@page` rule.
+		 * @returns {Object} A dictionary of note names (currently only `footnote`) to their blocks.
+		 */
 		replaceNotes(ast) {
 			let parsed = {};
 
@@ -28094,12 +30271,26 @@
 						parsed[name] = node.block;
 						list.remove(item);
 					}
-				}
+				},
 			});
 
 			return parsed;
 		}
 
+		/**
+		 * Extracts and removes relevant declarations from the `@page` block such as:
+		 * - size
+		 * - bleed
+		 * - marks
+		 * - margin / margin-*
+		 * - padding / padding-*
+		 * - border / border-*
+		 *
+		 * Converts them into structured objects for internal processing.
+		 *
+		 * @param {Object} ast - The AST node for the `@page` rule.
+		 * @returns {Object} A parsed object containing size, bleed, marks, margin, padding, and border properties.
+		 */
 		replaceDeclarations(ast) {
 			let parsed = {};
 
@@ -28115,13 +30306,12 @@
 							visit: "Identifier",
 							enter: (ident) => {
 								parsed.marks.push(ident.name);
-							}
+							},
 						});
 						dList.remove(dItem);
 					} else if (prop === "margin") {
 						parsed.margin = this.getMargins(declaration);
 						dList.remove(dItem);
-
 					} else if (prop.indexOf("margin-") === 0) {
 						let m = prop.substring("margin-".length);
 						if (!parsed.margin) {
@@ -28129,16 +30319,14 @@
 								top: {},
 								right: {},
 								left: {},
-								bottom: {}
+								bottom: {},
 							};
 						}
 						parsed.margin[m] = declaration.value.children.first();
 						dList.remove(dItem);
-
 					} else if (prop === "padding") {
 						parsed.padding = this.getPaddings(declaration.value);
 						dList.remove(dItem);
-
 					} else if (prop.indexOf("padding-") === 0) {
 						let p = prop.substring("padding-".length);
 						if (!parsed.padding) {
@@ -28146,20 +30334,18 @@
 								top: {},
 								right: {},
 								left: {},
-								bottom: {}
+								bottom: {},
 							};
 						}
 						parsed.padding[p] = declaration.value.children.first();
 						dList.remove(dItem);
-					}
-
-					else if (prop === "border") {
+					} else if (prop === "border") {
 						if (!parsed.border) {
 							parsed.border = {
 								top: {},
 								right: {},
 								left: {},
-								bottom: {}
+								bottom: {},
 							};
 						}
 						parsed.border.top = csstree.generate(declaration.value);
@@ -28168,26 +30354,20 @@
 						parsed.border.bottom = csstree.generate(declaration.value);
 
 						dList.remove(dItem);
-
-					}
-
-					else if (prop.indexOf("border-") === 0) {
+					} else if (prop.indexOf("border-") === 0) {
 						if (!parsed.border) {
 							parsed.border = {
 								top: {},
 								right: {},
 								left: {},
-								bottom: {}
+								bottom: {},
 							};
 						}
 						let p = prop.substring("border-".length);
 
 						parsed.border[p] = csstree.generate(declaration.value);
 						dList.remove(dItem);
-
-					}
-
-					else if (prop === "size") {
+					} else if (prop === "size") {
 						parsed.size = this.getSize(declaration);
 						dList.remove(dItem);
 					} else if (prop === "bleed") {
@@ -28204,29 +30384,26 @@
 									case "Dimension": // bleed: 1in 2in, bleed: 20px ect.
 										parsed.bleed.push({
 											value: subNode.value,
-											unit: subNode.unit
+											unit: subNode.unit,
 										});
 										break;
 									case "Number":
 										parsed.bleed.push({
 											value: subNode.value,
-											unit: "px"
+											unit: "px",
 										});
 										break;
 									// ignore
 								}
-
-							}
+							},
 						});
 
 						dList.remove(dItem);
 					}
-
-				}
+				},
 			});
 
 			return parsed;
-
 		}
 		getSize(declaration) {
 			let width, height, orientation, format;
@@ -28241,7 +30418,7 @@
 					} else if (typeof height === "undefined") {
 						height = { value, unit };
 					}
-				}
+				},
 			});
 
 			// Get size: "A4"
@@ -28254,7 +30431,7 @@
 						width = s.width;
 						height = s.height;
 					}
-				}
+				},
 			});
 
 			// Get Format or Landscape or Portrait
@@ -28272,24 +30449,37 @@
 						}
 						format = name;
 					}
-				}
+				},
 			});
 
 			return {
 				width,
 				height,
 				orientation,
-				format
+				format,
 			};
 		}
 
+		/**
+		 * Parses a shorthand or longhand `margin` declaration and expands it into
+		 * individual `top`, `right`, `bottom`, and `left` sides.
+		 *
+		 * Supports values like:
+		 * - `margin: 10px`
+		 * - `margin: 10px 20px`
+		 * - `margin: 10px 20px 30px`
+		 * - `margin: 10px 20px 30px 40px`
+		 *
+		 * @param {Object} declaration - The AST node representing the `margin` declaration.
+		 * @returns {Object} An object with `top`, `right`, `bottom`, and `left` properties.
+		 */
 		getMargins(declaration) {
 			let margins = [];
 			let margin = {
 				top: {},
 				right: {},
 				left: {},
-				bottom: {}
+				bottom: {},
 			};
 
 			csstree.walk(declaration, {
@@ -28299,11 +30489,11 @@
 							margins.push(node);
 							break;
 						case "Number": // margin: 0
-							margins.push({value: node.value, unit: "px"});
+							margins.push({ value: node.value, unit: "px" });
 							break;
 						// ignore
 					}
-				}
+				},
 			});
 
 			if (margins.length === 1) {
@@ -28330,13 +30520,26 @@
 			return margin;
 		}
 
+		/**
+		 * Parses a shorthand or longhand `padding` declaration and expands it into
+		 * `top`, `right`, `bottom`, and `left` properties.
+		 *
+		 * Supports values like:
+		 * - `padding: 10px`
+		 * - `padding: 10px 20px`
+		 * - `padding: 10px 20px 30px`
+		 * - `padding: 10px 20px 30px 40px`
+		 *
+		 * @param {Object} declaration - The AST node representing the `padding` declaration.
+		 * @returns {Object} An object with `top`, `right`, `bottom`, and `left` properties.
+		 */
 		getPaddings(declaration) {
 			let paddings = [];
 			let padding = {
 				top: {},
 				right: {},
 				left: {},
-				bottom: {}
+				bottom: {},
 			};
 
 			csstree.walk(declaration, {
@@ -28346,30 +30549,27 @@
 							paddings.push(node);
 							break;
 						case "Number": // padding: 0
-							paddings.push({value: node.value, unit: "px"});
+							paddings.push({ value: node.value, unit: "px" });
 							break;
 						// ignore
 					}
-				}
+				},
 			});
 			if (paddings.length === 1) {
 				for (let p in padding) {
 					padding[p] = paddings[0];
 				}
 			} else if (paddings.length === 2) {
-
 				padding.top = paddings[0];
 				padding.right = paddings[1];
 				padding.bottom = paddings[0];
 				padding.left = paddings[1];
 			} else if (paddings.length === 3) {
-
 				padding.top = paddings[0];
 				padding.right = paddings[1];
 				padding.bottom = paddings[2];
 				padding.left = paddings[1];
 			} else if (paddings.length === 4) {
-
 				padding.top = paddings[0];
 				padding.right = paddings[1];
 				padding.bottom = paddings[2];
@@ -28378,13 +30578,21 @@
 			return padding;
 		}
 
-		// get values for the border on the @page to pass them to the element with the .pagedjs_area class
+		/**
+		 * Parses border-related declarations (`border`, `border-top`, etc.)
+		 * and expands them into an object representing each side.
+		 *
+		 * This is used to apply page-level borders on generated content (e.g. `.pagedjs_area`).
+		 *
+		 * @param {Object} declaration - A declaration node with a `prop` and `value`.
+		 * @returns {Object} An object with `top`, `right`, `bottom`, and `left` properties.
+		 */
 		getBorders(declaration) {
 			let border = {
 				top: {},
 				right: {},
 				left: {},
-				bottom: {}
+				bottom: {},
 			};
 
 			if (declaration.prop == "border") {
@@ -28392,27 +30600,33 @@
 				border.right = csstree.generate(declaration.value);
 				border.bottom = csstree.generate(declaration.value);
 				border.left = csstree.generate(declaration.value);
-
-			}
-			else if (declaration.prop == "border-top") {
+			} else if (declaration.prop == "border-top") {
 				border.top = csstree.generate(declaration.value);
-			}
-			else if (declaration.prop == "border-right") {
+			} else if (declaration.prop == "border-right") {
 				border.right = csstree.generate(declaration.value);
-
-			}
-			else if (declaration.prop == "border-bottom") {
+			} else if (declaration.prop == "border-bottom") {
 				border.bottom = csstree.generate(declaration.value);
-
-			}
-			else if (declaration.prop == "border-left") {
+			} else if (declaration.prop == "border-left") {
 				border.left = csstree.generate(declaration.value);
 			}
 
 			return border;
 		}
 
-
+		/**
+		 * Adds dynamically generated page classes (rules) to the stylesheet.
+		 * These are based on parsed `@page` rules with selectors like:
+		 * - `*` (default)
+		 * - `:left`, `:right`, `:first`, `:blank`
+		 * - `:nth(...)`
+		 * - Named pages (e.g., `@page chapter`)
+		 *
+		 * Ensures each rule is only added once.
+		 *
+		 * @param {Object} pages - A dictionary of parsed `@page` definitions.
+		 * @param {Object} ast - The stylesheet AST (typically from `csstree`).
+		 * @param {Object} sheet - The stylesheet object that supports `insertRule()`.
+		 */
 		addPageClasses(pages, ast, sheet) {
 			// First add * page
 			if ("*" in pages && pages["*"].added === false) {
@@ -28459,19 +30673,26 @@
 					pages[pg].added = true;
 				}
 			}
-
 		}
 
-		createPage(page, ruleList, sheet) {
+		/**
+		 * Creates a CSS rule for a page, applying margin, padding, border, and
+		 * dimension variables. Also adds marginalia and notes if present.
+		 *
+		 * @param {Object} page - The page object containing properties like `width`, `margin`, etc.
+		 * @param {Object} ruleList - The list of AST rules to which new rules may be appended.
+		 * @param {Object} sheet - The stylesheet object used to insert rules.
+		 * @returns {Object} A CSS rule representing the page.
+		 */
 
+		createPage(page, ruleList, sheet) {
 			let selectors = this.selectorsForPage(page);
 			let children = page.block.children.copy();
 			let block = {
 				type: "Block",
 				loc: 0,
-				children: children
+				children: children,
 			};
-
 
 			let rule = this.createRule(selectors, block);
 
@@ -28479,9 +30700,14 @@
 			this.addPaddingVars(page.padding, children, children.first());
 			this.addBorderVars(page.border, children, children.first());
 
-
 			if (page.width) {
-				this.addDimensions(page.width, page.height, page.orientation, children, children.first());
+				this.addDimensions(
+					page.width,
+					page.height,
+					page.orientation,
+					children,
+					children.first(),
+				);
 			}
 
 			if (page.marginalia) {
@@ -28489,12 +30715,20 @@
 				this.addMarginaliaContent(page, ruleList, rule, sheet);
 			}
 
-			if(page.notes) {
+			if (page.notes) {
 				this.addNotesStyles(page.notes, page, ruleList, rule, sheet);
 			}
 
 			return rule;
 		}
+
+		/**
+		 * Adds CSS custom properties (variables) for page margins to the rule block.
+		 *
+		 * @param {Object} margin - An object with `top`, `right`, `bottom`, and `left` values.
+		 * @param {Object} list - The list of declarations (typically from a Block AST node).
+		 * @param {Object} item - Reference item used for insertion position.
+		 */
 
 		addMarginVars(margin, list, item) {
 			// variables for margins
@@ -28506,19 +30740,23 @@
 						property: "--pagedjs-margin-" + m,
 						value: {
 							type: "Raw",
-							value: value
-						}
+							value: value,
+						},
 					});
 					list.append(mVar, item);
-
 				}
 			}
 		}
-
+		/**
+		 * Adds CSS custom properties (variables) for page padding to the rule block.
+		 *
+		 * @param {Object} padding - An object with `top`, `right`, `bottom`, and `left` values.
+		 * @param {Object} list - The list of declarations.
+		 * @param {Object} item - Reference node for insertion.
+		 */
 		addPaddingVars(padding, list, item) {
 			// variables for padding
 			for (let p in padding) {
-
 				if (typeof padding[p].value !== "undefined") {
 					let value = padding[p].value + (padding[p].unit || "");
 					let pVar = list.createItem({
@@ -28526,16 +30764,22 @@
 						property: "--pagedjs-padding-" + p,
 						value: {
 							type: "Raw",
-							value: value
-						}
+							value: value,
+						},
 					});
 
 					list.append(pVar, item);
 				}
-
 			}
 		}
 
+		/**
+		 * Adds CSS custom properties (variables) for page borders to the rule block.
+		 *
+		 * @param {Object} border - An object with string values for `top`, `right`, `bottom`, and `left`.
+		 * @param {Object} list - The list of declarations.
+		 * @param {Object} item - Reference node for insertion.
+		 */
 		addBorderVars(border, list, item) {
 			// variables for borders
 			for (const name of Object.keys(border)) {
@@ -28547,14 +30791,23 @@
 						property: "--pagedjs-border-" + name,
 						value: {
 							type: "Raw",
-							value: value
-						}
+							value: value,
+						},
 					});
 					list.append(borderItem, item);
 				}
 			}
 		}
 
+		/**
+		 * Adds CSS custom properties for page width and height based on orientation.
+		 *
+		 * @param {Object} width - Width value (e.g., {value: 210, unit: "mm"}).
+		 * @param {Object} height - Height value (same structure as width).
+		 * @param {string} orientation - Either 'portrait' or 'landscape'.
+		 * @param {Object} list - Declaration list to which variables are added.
+		 * @param {Object} item - Reference node.
+		 */
 		addDimensions(width, height, orientation, list, item) {
 			let widthString, heightString;
 
@@ -28580,6 +30833,18 @@
 			// list.appendData(h);
 		}
 
+		/**
+		 * Adds marginalia rules (styles) for specified page regions (e.g., top-left, right-middle).
+		 * Handles:
+		 * - Content detection
+		 * - Vertical alignment conversion
+		 * - max-width/max-height additions
+		 *
+		 * @param {Object} page - The page object containing marginalia blocks.
+		 * @param {Object} list - Rule list to append to.
+		 * @param {Object} item - The current rule or rule block.
+		 * @param {Object} sheet - The stylesheet to insert rules into.
+		 */
 		addMarginaliaStyles(page, list, item, sheet) {
 			for (let loc in page.marginalia) {
 				let block = csstree.clone(page.marginalia[loc]);
@@ -28593,7 +30858,10 @@
 					visit: "Declaration",
 					enter: (node, item, list) => {
 						if (node.property === "content") {
-							if (node.value.children && node.value.children.first().name === "none") {
+							if (
+								node.value.children &&
+								node.value.children.first().name === "none"
+							) {
 								hasContent = false;
 							} else {
 								hasContent = true;
@@ -28612,35 +30880,39 @@
 									} else if (name === "bottom") {
 										identNode.name = "flex-end";
 									}
-								}
+								},
 							});
 							node.property = "align-items";
 						}
 
-						if (node.property === "width" &&
+						if (
+							node.property === "width" &&
 							(loc === "top-left" ||
 								loc === "top-center" ||
 								loc === "top-right" ||
 								loc === "bottom-left" ||
 								loc === "bottom-center" ||
-								loc === "bottom-right")) {
+								loc === "bottom-right")
+						) {
 							let c = csstree.clone(node);
 							c.property = "max-width";
 							list.appendData(c);
 						}
 
-						if (node.property === "height" &&
+						if (
+							node.property === "height" &&
 							(loc === "left-top" ||
 								loc === "left-middle" ||
 								loc === "left-bottom" ||
 								loc === "right-top" ||
 								loc === "right-middle" ||
-								loc === "right-bottom")) {
+								loc === "right-bottom")
+						) {
 							let c = csstree.clone(node);
 							c.property = "max-height";
 							list.appendData(c);
 						}
-					}
+					},
 				});
 
 				let marginSelectors = this.selectorsForPageMargin(page, loc);
@@ -28650,35 +30922,47 @@
 
 				let sel = csstree.generate({
 					type: "Selector",
-					children: marginSelectors
+					children: marginSelectors,
 				});
 
 				this.marginalia[sel] = {
 					page: page,
 					selector: sel,
 					block: page.marginalia[loc],
-					hasContent: hasContent
+					hasContent: hasContent,
 				};
-
 			}
 		}
-
+		/**
+		 * Generates the content-only display rules for marginalia.
+		 * Adds `display: none` or `display: block` for margin content depending on whether `content: none` is used.
+		 *
+		 * @param {Object} page - Page object with marginalia blocks.
+		 * @param {Object} list - Rule list.
+		 * @param {Object} item - Rule being built.
+		 * @param {Object} sheet - Stylesheet to which rules are inserted.
+		 */
 		addMarginaliaContent(page, list, item, sheet) {
-			let displayNone;
 			// Just content
 			for (let loc in page.marginalia) {
+				let displayNone;
+
 				let content = csstree.clone(page.marginalia[loc]);
 				csstree.walk(content, {
 					visit: "Declaration",
 					enter: (node, item, list) => {
 						if (node.property !== "content") {
 							list.remove(item);
+							return;
 						}
 
-						if (node.value.children && node.value.children.first().name === "none") {
+						if (
+							node.value.children &&
+							node.value.children.first().name === "none"
+						) {
 							displayNone = true;
 						}
-					}
+					},
 				});
 
 				if (content.children.isEmpty()) {
@@ -28690,22 +30974,22 @@
 
 				displaySelectors.insertData({
 					type: "Combinator",
-					name: ">"
+					name: ">",
 				});
 
 				displaySelectors.insertData({
 					type: "ClassSelector",
-					name: "pagedjs_margin-content"
+					name: "pagedjs_margin-content",
 				});
 
 				displaySelectors.insertData({
 					type: "Combinator",
-					name: ">"
+					name: ">",
 				});
 
 				displaySelectors.insertData({
 					type: "TypeSelector",
-					name: "*"
+					name: "*",
 				});
 
 				if (displayNone) {
@@ -28722,18 +31006,18 @@
 
 				contentSelectors.insertData({
 					type: "Combinator",
-					name: ">"
+					name: ">",
 				});
 
 				contentSelectors.insertData({
 					type: "ClassSelector",
-					name: "pagedjs_margin-content"
+					name: "pagedjs_margin-content",
 				});
 
 				contentSelectors.insertData({
 					type: "PseudoElementSelector",
 					name: "after",
-					children: null
+					children: null,
 				});
 
 				let contentRule = this.createRule(contentSelectors, content);
@@ -28741,13 +31025,22 @@
 			}
 		}
 
-		addRootVars(ast, width, height, orientation, bleed, bleedrecto, bleedverso, marks) {
+		addRootVars(
+			ast,
+			width,
+			height,
+			orientation,
+			bleed,
+			bleedrecto,
+			bleedverso,
+			marks,
+		) {
 			let rules = [];
 			let selectors = new csstree.List();
 			selectors.insertData({
 				type: "PseudoClassSelector",
 				name: "root",
-				children: null
+				children: null,
 			});
 
 			let widthString, heightString;
@@ -28771,42 +31064,108 @@
 				widthStringLeft = `calc( ${CSSValueToString(width)} + ${CSSValueToString(bleed.left)} + ${CSSValueToString(bleed.right)} )`;
 				heightStringLeft = `calc( ${CSSValueToString(height)} + ${CSSValueToString(bleed.top)} + ${CSSValueToString(bleed.bottom)} )`;
 
-				let bleedTop = this.createVariable("--pagedjs-bleed-top", CSSValueToString(bleed.top));
-				let bleedRight = this.createVariable("--pagedjs-bleed-right", CSSValueToString(bleed.right));
-				let bleedBottom = this.createVariable("--pagedjs-bleed-bottom", CSSValueToString(bleed.bottom));
-				let bleedLeft = this.createVariable("--pagedjs-bleed-left", CSSValueToString(bleed.left));
+				let bleedTop = this.createVariable(
+					"--pagedjs-bleed-top",
+					CSSValueToString(bleed.top),
+				);
+				let bleedRight = this.createVariable(
+					"--pagedjs-bleed-right",
+					CSSValueToString(bleed.right),
+				);
+				let bleedBottom = this.createVariable(
+					"--pagedjs-bleed-bottom",
+					CSSValueToString(bleed.bottom),
+				);
+				let bleedLeft = this.createVariable(
+					"--pagedjs-bleed-left",
+					CSSValueToString(bleed.left),
+				);
 
-				let bleedTopRecto = this.createVariable("--pagedjs-bleed-right-top", CSSValueToString(bleed.top));
-				let bleedRightRecto = this.createVariable("--pagedjs-bleed-right-right", CSSValueToString(bleed.right));
-				let bleedBottomRecto = this.createVariable("--pagedjs-bleed-right-bottom", CSSValueToString(bleed.bottom));
-				let bleedLeftRecto = this.createVariable("--pagedjs-bleed-right-left", CSSValueToString(bleed.left));
+				let bleedTopRecto = this.createVariable(
+					"--pagedjs-bleed-right-top",
+					CSSValueToString(bleed.top),
+				);
+				let bleedRightRecto = this.createVariable(
+					"--pagedjs-bleed-right-right",
+					CSSValueToString(bleed.right),
+				);
+				let bleedBottomRecto = this.createVariable(
+					"--pagedjs-bleed-right-bottom",
+					CSSValueToString(bleed.bottom),
+				);
+				let bleedLeftRecto = this.createVariable(
+					"--pagedjs-bleed-right-left",
+					CSSValueToString(bleed.left),
+				);
 
-				let bleedTopVerso = this.createVariable("--pagedjs-bleed-left-top", CSSValueToString(bleed.top));
-				let bleedRightVerso = this.createVariable("--pagedjs-bleed-left-right", CSSValueToString(bleed.right));
-				let bleedBottomVerso = this.createVariable("--pagedjs-bleed-left-bottom", CSSValueToString(bleed.bottom));
-				let bleedLeftVerso = this.createVariable("--pagedjs-bleed-left-left", CSSValueToString(bleed.left));
+				let bleedTopVerso = this.createVariable(
+					"--pagedjs-bleed-left-top",
+					CSSValueToString(bleed.top),
+				);
+				let bleedRightVerso = this.createVariable(
+					"--pagedjs-bleed-left-right",
+					CSSValueToString(bleed.right),
+				);
+				let bleedBottomVerso = this.createVariable(
+					"--pagedjs-bleed-left-bottom",
+					CSSValueToString(bleed.bottom),
+				);
+				let bleedLeftVerso = this.createVariable(
+					"--pagedjs-bleed-left-left",
+					CSSValueToString(bleed.left),
+				);
 
 				if (bleedrecto) {
-					bleedTopRecto = this.createVariable("--pagedjs-bleed-right-top", CSSValueToString(bleedrecto.top));
-					bleedRightRecto = this.createVariable("--pagedjs-bleed-right-right", CSSValueToString(bleedrecto.right));
-					bleedBottomRecto = this.createVariable("--pagedjs-bleed-right-bottom", CSSValueToString(bleedrecto.bottom));
-					bleedLeftRecto = this.createVariable("--pagedjs-bleed-right-left", CSSValueToString(bleedrecto.left));
+					bleedTopRecto = this.createVariable(
+						"--pagedjs-bleed-right-top",
+						CSSValueToString(bleedrecto.top),
+					);
+					bleedRightRecto = this.createVariable(
+						"--pagedjs-bleed-right-right",
+						CSSValueToString(bleedrecto.right),
+					);
+					bleedBottomRecto = this.createVariable(
+						"--pagedjs-bleed-right-bottom",
+						CSSValueToString(bleedrecto.bottom),
+					);
+					bleedLeftRecto = this.createVariable(
+						"--pagedjs-bleed-right-left",
+						CSSValueToString(bleedrecto.left),
+					);
 
 					widthStringRight = `calc( ${CSSValueToString(width)} + ${CSSValueToString(bleedrecto.left)} + ${CSSValueToString(bleedrecto.right)} )`;
 					heightStringRight = `calc( ${CSSValueToString(height)} + ${CSSValueToString(bleedrecto.top)} + ${CSSValueToString(bleedrecto.bottom)} )`;
 				}
 				if (bleedverso) {
-					bleedTopVerso = this.createVariable("--pagedjs-bleed-left-top", CSSValueToString(bleedverso.top));
-					bleedRightVerso = this.createVariable("--pagedjs-bleed-left-right", CSSValueToString(bleedverso.right));
-					bleedBottomVerso = this.createVariable("--pagedjs-bleed-left-bottom", CSSValueToString(bleedverso.bottom));
-					bleedLeftVerso = this.createVariable("--pagedjs-bleed-left-left", CSSValueToString(bleedverso.left));
+					bleedTopVerso = this.createVariable(
+						"--pagedjs-bleed-left-top",
+						CSSValueToString(bleedverso.top),
+					);
+					bleedRightVerso = this.createVariable(
+						"--pagedjs-bleed-left-right",
+						CSSValueToString(bleedverso.right),
+					);
+					bleedBottomVerso = this.createVariable(
+						"--pagedjs-bleed-left-bottom",
+						CSSValueToString(bleedverso.bottom),
+					);
+					bleedLeftVerso = this.createVariable(
+						"--pagedjs-bleed-left-left",
+						CSSValueToString(bleedverso.left),
+					);
 
 					widthStringLeft = `calc( ${CSSValueToString(width)} + ${CSSValueToString(bleedverso.left)} + ${CSSValueToString(bleedverso.right)} )`;
 					heightStringLeft = `calc( ${CSSValueToString(height)} + ${CSSValueToString(bleedverso.top)} + ${CSSValueToString(bleedverso.bottom)} )`;
 				}
 
-				let pageWidthVar = this.createVariable("--pagedjs-width", CSSValueToString(width));
-				let pageHeightVar = this.createVariable("--pagedjs-height", CSSValueToString(height));
+				let pageWidthVar = this.createVariable(
+					"--pagedjs-width",
+					CSSValueToString(width),
+				);
+				let pageHeightVar = this.createVariable(
+					"--pagedjs-height",
+					CSSValueToString(height),
+				);
 
 				rules.push(
 					bleedTop,
@@ -28822,13 +31181,16 @@
 					bleedBottomVerso,
 					bleedLeftVerso,
 					pageWidthVar,
-					pageHeightVar
+					pageHeightVar,
 				);
 			}
 
 			if (marks) {
 				marks.forEach((mark) => {
-					let markDisplay = this.createVariable("--pagedjs-mark-" + mark + "-display", "block");
+					let markDisplay = this.createVariable(
+						"--pagedjs-mark-" + mark + "-display",
+						"block",
+					);
 					rules.push(markDisplay);
 				});
 			}
@@ -28841,8 +31203,14 @@
 				if (orientation !== "portrait") {
 					// reverse for orientation
 					[widthString, heightString] = [heightString, widthString];
-					[widthStringRight, heightStringRight] = [heightStringRight, widthStringRight];
-					[widthStringLeft, heightStringLeft] = [heightStringLeft, widthStringLeft];
+					[widthStringRight, heightStringRight] = [
+						heightStringRight,
+						widthStringRight,
+					];
+					[widthStringLeft, heightStringLeft] = [
+						heightStringLeft,
+						widthStringLeft,
+					];
 				}
 			}
 
@@ -28850,7 +31218,10 @@
 			let hVar = this.createVariable("--pagedjs-height", heightString);
 
 			let wVarR = this.createVariable("--pagedjs-width-right", widthStringRight);
-			let hVarR = this.createVariable("--pagedjs-height-right", heightStringRight);
+			let hVarR = this.createVariable(
+				"--pagedjs-height-right",
+				heightStringRight,
+			);
 
 			let wVarL = this.createVariable("--pagedjs-width-left", widthStringLeft);
 			let hVarL = this.createVariable("--pagedjs-height-left", heightStringLeft);
@@ -28862,27 +31233,35 @@
 			ast.children.appendData(rule);
 		}
 
-
+		/**
+		 * Appends CSS rules for footnotes, sidenotes, or other types of page notes.
+		 *
+		 * Each note rule targets a `.pagedjs_<type>_content` class inside the given page selector.
+		 *
+		 * @param {Object} notes - Object where each key is a note type (e.g. "footnote") and value is a Block node.
+		 * @param {Object} page - The page object.
+		 * @param {Object} list - The CSS rule list to append new note rules to.
+		 * @param {Object} item - Not used here, but may be for future insertion reference.
+		 * @param {Object} sheet - The stylesheet object (not used in this function).
+		 */
 		addNotesStyles(notes, page, list, item, sheet) {
-
 			for (const note in notes) {
 				let selectors = this.selectorsForPage(page);
 
 				selectors.insertData({
 					type: "Combinator",
-					name: " "
+					name: " ",
 				});
 
 				selectors.insertData({
 					type: "ClassSelector",
-					name: "pagedjs_" + note + "_content"
+					name: "pagedjs_" + note + "_content",
 				});
 
 				let notesRule = this.createRule(selectors, notes[note]);
 
 				list.appendData(notesRule);
 			}
-
 		}
 
 		/*
@@ -28909,150 +31288,149 @@
 				widthCalculations.appendData({
 					type: "Dimension",
 					unit: width.unit,
-					value: width.value
+					value: width.value,
 				});
 
 				widthCalculations.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculations.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				widthCalculations.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculations.appendData({
 					type: "Dimension",
 					unit: bleed.left.unit,
-					value: bleed.left.value
+					value: bleed.left.value,
 				});
 
 				widthCalculations.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculations.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				widthCalculations.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculations.appendData({
 					type: "Dimension",
 					unit: bleed.right.unit,
-					value: bleed.right.value
+					value: bleed.right.value,
 				});
 
 				// height
 				heightCalculations.appendData({
 					type: "Dimension",
 					unit: height.unit,
-					value: height.value
+					value: height.value,
 				});
 
 				heightCalculations.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculations.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				heightCalculations.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculations.appendData({
 					type: "Dimension",
 					unit: bleed.top.unit,
-					value: bleed.top.value
+					value: bleed.top.value,
 				});
 
 				heightCalculations.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculations.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				heightCalculations.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculations.appendData({
 					type: "Dimension",
 					unit: bleed.bottom.unit,
-					value: bleed.bottom.value
+					value: bleed.bottom.value,
 				});
 
 				dimensions.appendData({
 					type: "Function",
 					name: "calc",
-					children: widthCalculations
+					children: widthCalculations,
 				});
 
 				dimensions.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				dimensions.appendData({
 					type: "Function",
 					name: "calc",
-					children: heightCalculations
+					children: heightCalculations,
 				});
-
 			} else if (format) {
 				dimensions.appendData({
 					type: "Identifier",
-					name: format
+					name: format,
 				});
 
 				if (orientation) {
 					dimensions.appendData({
 						type: "WhiteSpace",
-						value: " "
+						value: " ",
 					});
 
 					dimensions.appendData({
 						type: "Identifier",
-						name: orientation
+						name: orientation,
 					});
 				}
 			} else {
 				dimensions.appendData({
 					type: "Dimension",
 					unit: width.unit,
-					value: width.value
+					value: width.value,
 				});
 
 				dimensions.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				dimensions.appendData({
 					type: "Dimension",
 					unit: height.unit,
-					value: height.value
+					value: height.value,
 				});
 			}
 
@@ -29062,8 +31440,8 @@
 				loc: null,
 				value: {
 					type: "Value",
-					children: dimensions
-				}
+					children: dimensions,
+				},
 			});
 
 			children.appendData({
@@ -29072,12 +31450,14 @@
 				loc: null,
 				value: {
 					type: "Value",
-					children: [{
-						type: "Dimension",
-						unit: "px",
-						value: 0
-					}]
-				}
+					children: [
+						{
+							type: "Dimension",
+							unit: "px",
+							value: 0,
+						},
+					],
+				},
 			});
 
 			children.appendData({
@@ -29086,12 +31466,14 @@
 				loc: null,
 				value: {
 					type: "Value",
-					children: [{
-						type: "Dimension",
-						unit: "px",
-						value: 0
-					}]
-				}
+					children: [
+						{
+							type: "Dimension",
+							unit: "px",
+							value: 0,
+						},
+					],
+				},
 			});
 
 			children.appendData({
@@ -29100,12 +31482,14 @@
 				loc: null,
 				value: {
 					type: "Value",
-					children: [{
-						type: "Dimension",
-						unit: "px",
-						value: 0
-					}]
-				}
+					children: [
+						{
+							type: "Dimension",
+							unit: "px",
+							value: 0,
+						},
+					],
+				},
 			});
 
 			let rule = ast.children.createItem({
@@ -29115,8 +31499,8 @@
 				block: {
 					type: "Block",
 					loc: null,
-					children: children
-				}
+					children: children,
+				},
 			});
 
 			ast.children.append(rule);
@@ -29129,115 +31513,115 @@
 				widthCalculationsLeft.appendData({
 					type: "Dimension",
 					unit: width.unit,
-					value: width.value
+					value: width.value,
 				});
 
 				widthCalculationsLeft.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculationsLeft.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				widthCalculationsLeft.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculationsLeft.appendData({
 					type: "Dimension",
 					unit: bleedverso.left.unit,
-					value: bleedverso.left.value
+					value: bleedverso.left.value,
 				});
 
 				widthCalculationsLeft.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculationsLeft.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				widthCalculationsLeft.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculationsLeft.appendData({
 					type: "Dimension",
 					unit: bleedverso.right.unit,
-					value: bleedverso.right.value
+					value: bleedverso.right.value,
 				});
 
 				// height
 				heightCalculationsLeft.appendData({
 					type: "Dimension",
 					unit: height.unit,
-					value: height.value
+					value: height.value,
 				});
 
 				heightCalculationsLeft.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculationsLeft.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				heightCalculationsLeft.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculationsLeft.appendData({
 					type: "Dimension",
 					unit: bleedverso.top.unit,
-					value: bleedverso.top.value
+					value: bleedverso.top.value,
 				});
 
 				heightCalculationsLeft.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculationsLeft.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				heightCalculationsLeft.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculationsLeft.appendData({
 					type: "Dimension",
 					unit: bleedverso.bottom.unit,
-					value: bleedverso.bottom.value
+					value: bleedverso.bottom.value,
 				});
 
 				dimensionsLeft.appendData({
 					type: "Function",
 					name: "calc",
-					children: widthCalculationsLeft
+					children: widthCalculationsLeft,
 				});
 
 				dimensionsLeft.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				dimensionsLeft.appendData({
 					type: "Function",
 					name: "calc",
-					children: heightCalculationsLeft
+					children: heightCalculationsLeft,
 				});
 
 				childrenLeft.appendData({
@@ -29246,8 +31630,8 @@
 					loc: null,
 					value: {
 						type: "Value",
-						children: dimensionsLeft
-					}
+						children: dimensionsLeft,
+					},
 				});
 
 				let ruleLeft = ast.children.createItem({
@@ -29257,12 +31641,11 @@
 					block: {
 						type: "Block",
 						loc: null,
-						children: childrenLeft
-					}
+						children: childrenLeft,
+					},
 				});
 
 				ast.children.append(ruleLeft);
-
 			}
 
 			if (bleedrecto) {
@@ -29273,115 +31656,115 @@
 				widthCalculationsRight.appendData({
 					type: "Dimension",
 					unit: width.unit,
-					value: width.value
+					value: width.value,
 				});
 
 				widthCalculationsRight.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculationsRight.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				widthCalculationsRight.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculationsRight.appendData({
 					type: "Dimension",
 					unit: bleedrecto.left.unit,
-					value: bleedrecto.left.value
+					value: bleedrecto.left.value,
 				});
 
 				widthCalculationsRight.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculationsRight.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				widthCalculationsRight.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				widthCalculationsRight.appendData({
 					type: "Dimension",
 					unit: bleedrecto.right.unit,
-					value: bleedrecto.right.value
+					value: bleedrecto.right.value,
 				});
 
 				// height
 				heightCalculationsRight.appendData({
 					type: "Dimension",
 					unit: height.unit,
-					value: height.value
+					value: height.value,
 				});
 
 				heightCalculationsRight.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculationsRight.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				heightCalculationsRight.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculationsRight.appendData({
 					type: "Dimension",
 					unit: bleedrecto.top.unit,
-					value: bleedrecto.top.value
+					value: bleedrecto.top.value,
 				});
 
 				heightCalculationsRight.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculationsRight.appendData({
 					type: "Operator",
-					value: "+"
+					value: "+",
 				});
 
 				heightCalculationsRight.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				heightCalculationsRight.appendData({
 					type: "Dimension",
 					unit: bleedrecto.bottom.unit,
-					value: bleedrecto.bottom.value
+					value: bleedrecto.bottom.value,
 				});
 
 				dimensionsRight.appendData({
 					type: "Function",
 					name: "calc",
-					children: widthCalculationsRight
+					children: widthCalculationsRight,
 				});
 
 				dimensionsRight.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				dimensionsRight.appendData({
 					type: "Function",
 					name: "calc",
-					children: heightCalculationsRight
+					children: heightCalculationsRight,
 				});
 
 				childrenRight.appendData({
@@ -29390,8 +31773,8 @@
 					loc: null,
 					value: {
 						type: "Value",
-						children: dimensionsRight
-					}
+						children: dimensionsRight,
+					},
 				});
 
 				let ruleRight = ast.children.createItem({
@@ -29401,15 +31784,20 @@
 					block: {
 						type: "Block",
 						loc: null,
-						children: childrenRight
-					}
+						children: childrenRight,
+					},
 				});
 
 				ast.children.append(ruleRight);
-
 			}
 		}
 
+		/**
+		 * Parses an nth selector string (e.g., "2n+1") into its components.
+		 *
+		 * @param {string} nth - The nth selector string.
+		 * @returns {object} Parsed nth object in An+B format.
+		 */
 		getNth(nth) {
 			let n = nth.indexOf("n");
 			let plus = nth.indexOf("+");
@@ -29434,11 +31822,18 @@
 					type: "AnPlusB",
 					loc: null,
 					a: a,
-					b: b
-				}
+					b: b,
+				},
 			};
 		}
 
+		/**
+		 * Adds page-specific classes based on dataset attributes.
+		 *
+		 * @param {object} page - The page object.
+		 * @param {HTMLElement} start - The element marking the start of the page.
+		 * @param {Array} pages - The array of all pages.
+		 */
 		addPageAttributes(page, start, pages) {
 			let namedPages = [start.dataset.page];
 
@@ -29457,9 +31852,16 @@
 				}
 			}
 		}
-
+		/**
+		 * Determines the start element for content on a new page.
+		 *
+		 * @param {HTMLElement} content - The content container.
+		 * @param {object} breakToken - The token representing where the break occurred.
+		 * @returns {HTMLElement|undefined} The starting element.
+		 */
 		getStartElement(content, breakToken) {
-			let node = breakToken && breakToken.node;
+			// If we have a breaktoken, we want the first node that will be added next.
+			let node = breakToken && (breakToken.overflow[0]?.node || breakToken.node);
 
 			if (!content && !breakToken) {
 				return;
@@ -29468,6 +31870,10 @@
 			// No break
 			if (!node) {
 				return content.children[0];
+			}
+
+			if (breakToken && breakToken.node && breakToken.overflow[0]?.topLevel) {
+				return findElement(breakToken.node, content);
 			}
 
 			// Top level element
@@ -29498,6 +31904,28 @@
 			}
 			// page.element.querySelector('.paged_area').style.color = red;
 		}
+		afterPageLayout(page, contents, breakToken, chunker) {
+			let thisPage = chunker.pages[chunker.pages.length - 1];
+			// If only footnotes were added, attribs should be like the previous page.
+			let emptyBody =
+				!thisPage.area.firstElementChild ||
+				!thisPage.area.firstElementChild.childElementCount ||
+				!thisPage.area.firstElementChild.firstElementChild.getBoundingClientRect()
+					.height;
+			let emptyFootnotes =
+				!thisPage.footnotesArea.firstElementChild.childElementCount ||
+				!thisPage.footnotesArea.firstElementChild.firstElementChild.getBoundingClientRect()
+					.height;
+
+			if (emptyBody && !emptyFootnotes && chunker.pages.length > 1) {
+				// Start element for the previous page.
+				let prevBreakToken = chunker.pages[chunker.pages.length - 2].startToken;
+				let start = this.getStartElement(contents, prevBreakToken);
+				if (start) {
+					this.addPageAttributes(thisPage, start, chunker.pages);
+				}
+			}
+		}
 
 		finalizePage(fragment, page, breakToken, chunker) {
 			for (let m in this.marginalia) {
@@ -29514,9 +31942,13 @@
 			// check center
 			["top", "bottom"].forEach((loc) => {
 				let marginGroup = page.element.querySelector(".pagedjs_margin-" + loc);
-				let center = page.element.querySelector(".pagedjs_margin-" + loc + "-center");
+				let center = page.element.querySelector(
+					".pagedjs_margin-" + loc + "-center",
+				);
 				let left = page.element.querySelector(".pagedjs_margin-" + loc + "-left");
-				let right = page.element.querySelector(".pagedjs_margin-" + loc + "-right");
+				let right = page.element.querySelector(
+					".pagedjs_margin-" + loc + "-right",
+				);
 
 				let centerContent = center.classList.contains("hasContent");
 				let leftContent = left.classList.contains("hasContent");
@@ -29531,7 +31963,6 @@
 					rightWidth = window.getComputedStyle(right)["max-width"];
 				}
 
-
 				if (centerContent) {
 					centerWidth = window.getComputedStyle(center)["max-width"];
 
@@ -29541,7 +31972,8 @@
 						} else if (leftContent) {
 							if (!rightContent) {
 								if (leftWidth !== "none" && leftWidth !== "auto") {
-									marginGroup.style["grid-template-columns"] = leftWidth + " 1fr " + leftWidth;
+									marginGroup.style["grid-template-columns"] =
+										leftWidth + " 1fr " + leftWidth;
 								} else {
 									marginGroup.style["grid-template-columns"] = "auto auto 1fr";
 									left.style["white-space"] = "nowrap";
@@ -29549,21 +31981,27 @@
 									let leftOuterWidth = left.offsetWidth;
 									let centerOuterWidth = center.offsetWidth;
 									let outerwidths = leftOuterWidth + centerOuterWidth;
-									let newcenterWidth = centerOuterWidth * 100 / outerwidths;
-									marginGroup.style["grid-template-columns"] = "minmax(16.66%, 1fr) minmax(33%, " + newcenterWidth + "%) minmax(16.66%, 1fr)";
+									let newcenterWidth = (centerOuterWidth * 100) / outerwidths;
+									marginGroup.style["grid-template-columns"] =
+										"minmax(16.66%, 1fr) minmax(33%, " +
+										newcenterWidth +
+										"%) minmax(16.66%, 1fr)";
 									left.style["white-space"] = "normal";
 									center.style["white-space"] = "normal";
 								}
 							} else {
 								if (leftWidth !== "none" && leftWidth !== "auto") {
 									if (rightWidth !== "none" && rightWidth !== "auto") {
-										marginGroup.style["grid-template-columns"] = leftWidth + " 1fr " + rightWidth;
+										marginGroup.style["grid-template-columns"] =
+											leftWidth + " 1fr " + rightWidth;
 									} else {
-										marginGroup.style["grid-template-columns"] = leftWidth + " 1fr " + leftWidth;
+										marginGroup.style["grid-template-columns"] =
+											leftWidth + " 1fr " + leftWidth;
 									}
 								} else {
 									if (rightWidth !== "none" && rightWidth !== "auto") {
-										marginGroup.style["grid-template-columns"] = rightWidth + " 1fr " + rightWidth;
+										marginGroup.style["grid-template-columns"] =
+											rightWidth + " 1fr " + rightWidth;
 									} else {
 										marginGroup.style["grid-template-columns"] = "auto auto 1fr";
 										left.style["white-space"] = "nowrap";
@@ -29572,12 +32010,17 @@
 										let leftOuterWidth = left.offsetWidth;
 										let centerOuterWidth = center.offsetWidth;
 										let rightOuterWidth = right.offsetWidth;
-										let outerwidths = leftOuterWidth + centerOuterWidth + rightOuterWidth;
-										let newcenterWidth = centerOuterWidth * 100 / outerwidths;
+										let outerwidths =
+											leftOuterWidth + centerOuterWidth + rightOuterWidth;
+										let newcenterWidth = (centerOuterWidth * 100) / outerwidths;
 										if (newcenterWidth > 40) {
-											marginGroup.style["grid-template-columns"] = "minmax(16.66%, 1fr) minmax(33%, " + newcenterWidth + "%) minmax(16.66%, 1fr)";
+											marginGroup.style["grid-template-columns"] =
+												"minmax(16.66%, 1fr) minmax(33%, " +
+												newcenterWidth +
+												"%) minmax(16.66%, 1fr)";
 										} else {
-											marginGroup.style["grid-template-columns"] = "repeat(3, 1fr)";
+											marginGroup.style["grid-template-columns"] =
+												"repeat(3, 1fr)";
 										}
 										left.style["white-space"] = "normal";
 										center.style["white-space"] = "normal";
@@ -29587,7 +32030,8 @@
 							}
 						} else {
 							if (rightWidth !== "none" && rightWidth !== "auto") {
-								marginGroup.style["grid-template-columns"] = rightWidth + " 1fr " + rightWidth;
+								marginGroup.style["grid-template-columns"] =
+									rightWidth + " 1fr " + rightWidth;
 							} else {
 								marginGroup.style["grid-template-columns"] = "auto auto 1fr";
 								right.style["white-space"] = "nowrap";
@@ -29595,23 +32039,31 @@
 								let rightOuterWidth = right.offsetWidth;
 								let centerOuterWidth = center.offsetWidth;
 								let outerwidths = rightOuterWidth + centerOuterWidth;
-								let newcenterWidth = centerOuterWidth * 100 / outerwidths;
-								marginGroup.style["grid-template-columns"] = "minmax(16.66%, 1fr) minmax(33%, " + newcenterWidth + "%) minmax(16.66%, 1fr)";
+								let newcenterWidth = (centerOuterWidth * 100) / outerwidths;
+								marginGroup.style["grid-template-columns"] =
+									"minmax(16.66%, 1fr) minmax(33%, " +
+									newcenterWidth +
+									"%) minmax(16.66%, 1fr)";
 								right.style["white-space"] = "normal";
 								center.style["white-space"] = "normal";
 							}
 						}
 					} else if (centerWidth !== "none" && centerWidth !== "auto") {
 						if (leftContent && leftWidth !== "none" && leftWidth !== "auto") {
-							marginGroup.style["grid-template-columns"] = leftWidth + " " + centerWidth + " 1fr";
-						} else if (rightContent && rightWidth !== "none" && rightWidth !== "auto") {
-							marginGroup.style["grid-template-columns"] = "1fr " + centerWidth + " " + rightWidth;
+							marginGroup.style["grid-template-columns"] =
+								leftWidth + " " + centerWidth + " 1fr";
+						} else if (
+							rightContent &&
+							rightWidth !== "none" &&
+							rightWidth !== "auto"
+						) {
+							marginGroup.style["grid-template-columns"] =
+								"1fr " + centerWidth + " " + rightWidth;
 						} else {
-							marginGroup.style["grid-template-columns"] = "1fr " + centerWidth + " 1fr";
+							marginGroup.style["grid-template-columns"] =
+								"1fr " + centerWidth + " 1fr";
 						}
-
 					}
-
 				} else {
 					if (leftContent) {
 						if (!rightContent) {
@@ -29619,13 +32071,16 @@
 						} else {
 							if (leftWidth !== "none" && leftWidth !== "auto") {
 								if (rightWidth !== "none" && rightWidth !== "auto") {
-									marginGroup.style["grid-template-columns"] = leftWidth + " 1fr " + rightWidth;
+									marginGroup.style["grid-template-columns"] =
+										leftWidth + " 1fr " + rightWidth;
 								} else {
-									marginGroup.style["grid-template-columns"] = leftWidth + " 0 1fr";
+									marginGroup.style["grid-template-columns"] =
+										leftWidth + " 0 1fr";
 								}
 							} else {
 								if (rightWidth !== "none" && rightWidth !== "auto") {
-									marginGroup.style["grid-template-columns"] = "1fr 0 " + rightWidth;
+									marginGroup.style["grid-template-columns"] =
+										"1fr 0 " + rightWidth;
 								} else {
 									marginGroup.style["grid-template-columns"] = "auto 1fr auto";
 									left.style["white-space"] = "nowrap";
@@ -29633,8 +32088,9 @@
 									let leftOuterWidth = left.offsetWidth;
 									let rightOuterWidth = right.offsetWidth;
 									let outerwidths = leftOuterWidth + rightOuterWidth;
-									let newLeftWidth = leftOuterWidth * 100 / outerwidths;
-									marginGroup.style["grid-template-columns"] = "minmax(16.66%, " + newLeftWidth + "%) 0 1fr";
+									let newLeftWidth = (leftOuterWidth * 100) / outerwidths;
+									marginGroup.style["grid-template-columns"] =
+										"minmax(16.66%, " + newLeftWidth + "%) 0 1fr";
 									left.style["white-space"] = "normal";
 									right.style["white-space"] = "normal";
 								}
@@ -29652,10 +32108,14 @@
 
 			// check middle
 			["left", "right"].forEach((loc) => {
-				let middle = page.element.querySelector(".pagedjs_margin-" + loc + "-middle.hasContent");
+				let middle = page.element.querySelector(
+					".pagedjs_margin-" + loc + "-middle.hasContent",
+				);
 				let marginGroup = page.element.querySelector(".pagedjs_margin-" + loc);
 				let top = page.element.querySelector(".pagedjs_margin-" + loc + "-top");
-				let bottom = page.element.querySelector(".pagedjs_margin-" + loc + "-bottom");
+				let bottom = page.element.querySelector(
+					".pagedjs_margin-" + loc + "-bottom",
+				);
 				let topContent = top.classList.contains("hasContent");
 				let bottomContent = bottom.classList.contains("hasContent");
 				let middleHeight, topHeight, bottomHeight;
@@ -29677,37 +32137,78 @@
 						} else if (topContent) {
 							if (!bottomContent) {
 								if (topHeight !== "none" && topHeight !== "auto") {
-									marginGroup.style["grid-template-rows"] = topHeight + " calc(100% - " + topHeight + "*2) " + topHeight;
+									marginGroup.style["grid-template-rows"] =
+										topHeight + " calc(100% - " + topHeight + "*2) " + topHeight;
 								}
 							} else {
 								if (topHeight !== "none" && topHeight !== "auto") {
 									if (bottomHeight !== "none" && bottomHeight !== "auto") {
-										marginGroup.style["grid-template-rows"] = topHeight + " calc(100% - " + topHeight + " - " + bottomHeight + ") " + bottomHeight;
+										marginGroup.style["grid-template-rows"] =
+											topHeight +
+											" calc(100% - " +
+											topHeight +
+											" - " +
+											bottomHeight +
+											") " +
+											bottomHeight;
 									} else {
-										marginGroup.style["grid-template-rows"] = topHeight + " calc(100% - " + topHeight + "*2) " + topHeight;
+										marginGroup.style["grid-template-rows"] =
+											topHeight +
+											" calc(100% - " +
+											topHeight +
+											"*2) " +
+											topHeight;
 									}
 								} else {
 									if (bottomHeight !== "none" && bottomHeight !== "auto") {
-										marginGroup.style["grid-template-rows"] = bottomHeight + " calc(100% - " + bottomHeight + "*2) " + bottomHeight;
+										marginGroup.style["grid-template-rows"] =
+											bottomHeight +
+											" calc(100% - " +
+											bottomHeight +
+											"*2) " +
+											bottomHeight;
 									}
 								}
 							}
 						} else {
 							if (bottomHeight !== "none" && bottomHeight !== "auto") {
-								marginGroup.style["grid-template-rows"] = bottomHeight + " calc(100% - " + bottomHeight + "*2) " + bottomHeight;
+								marginGroup.style["grid-template-rows"] =
+									bottomHeight +
+									" calc(100% - " +
+									bottomHeight +
+									"*2) " +
+									bottomHeight;
 							}
 						}
 					} else {
 						if (topContent && topHeight !== "none" && topHeight !== "auto") {
-							marginGroup.style["grid-template-rows"] = topHeight + " " + middleHeight + " calc(100% - (" + topHeight + " + " + middleHeight + "))";
-						} else if (bottomContent && bottomHeight !== "none" && bottomHeight !== "auto") {
-							marginGroup.style["grid-template-rows"] = "1fr " + middleHeight + " " + bottomHeight;
+							marginGroup.style["grid-template-rows"] =
+								topHeight +
+								" " +
+								middleHeight +
+								" calc(100% - (" +
+								topHeight +
+								" + " +
+								middleHeight +
+								"))";
+						} else if (
+							bottomContent &&
+							bottomHeight !== "none" &&
+							bottomHeight !== "auto"
+						) {
+							marginGroup.style["grid-template-rows"] =
+								"1fr " + middleHeight + " " + bottomHeight;
 						} else {
-							marginGroup.style["grid-template-rows"] = "calc((100% - " + middleHeight + ")/2) " + middleHeight + " calc((100% - " + middleHeight + ")/2)";
+							marginGroup.style["grid-template-rows"] =
+								"calc((100% - " +
+								middleHeight +
+								")/2) " +
+								middleHeight +
+								" calc((100% - " +
+								middleHeight +
+								")/2)";
 						}
-
 					}
-
 				} else {
 					if (topContent) {
 						if (!bottomContent) {
@@ -29715,13 +32216,15 @@
 						} else {
 							if (topHeight !== "none" && topHeight !== "auto") {
 								if (bottomHeight !== "none" && bottomHeight !== "auto") {
-									marginGroup.style["grid-template-rows"] = topHeight + " 1fr " + bottomHeight;
+									marginGroup.style["grid-template-rows"] =
+										topHeight + " 1fr " + bottomHeight;
 								} else {
 									marginGroup.style["grid-template-rows"] = topHeight + " 0 1fr";
 								}
 							} else {
 								if (bottomHeight !== "none" && bottomHeight !== "auto") {
-									marginGroup.style["grid-template-rows"] = "1fr 0 " + bottomHeight;
+									marginGroup.style["grid-template-rows"] =
+										"1fr 0 " + bottomHeight;
 								} else {
 									marginGroup.style["grid-template-rows"] = "1fr 0 1fr";
 								}
@@ -29735,15 +32238,16 @@
 						}
 					}
 				}
-
-
-
 			});
-
 		}
 
 		// CSS Tree Helpers
 
+		/**
+		 * Builds a list of CSS selectors for a given page.
+		 * @param {object} page - The page object.
+		 * @returns {csstree.List} A list of CSS selector nodes.
+		 */
 		selectorsForPage(page) {
 			let nthlist;
 			let nth;
@@ -29752,19 +32256,19 @@
 
 			selectors.insertData({
 				type: "ClassSelector",
-				name: "pagedjs_page"
+				name: "pagedjs_page",
 			});
 
 			// Named page
 			if (page.name) {
 				selectors.insertData({
 					type: "ClassSelector",
-					name: "pagedjs_named_page"
+					name: "pagedjs_named_page",
 				});
 
 				selectors.insertData({
 					type: "ClassSelector",
-					name: "pagedjs_" + page.name + "_page"
+					name: "pagedjs_" + page.name + "_page",
 				});
 			}
 
@@ -29772,14 +32276,14 @@
 			if (page.psuedo && !(page.name && page.psuedo === "first")) {
 				selectors.insertData({
 					type: "ClassSelector",
-					name: "pagedjs_" + page.psuedo + "_page"
+					name: "pagedjs_" + page.psuedo + "_page",
 				});
 			}
 
 			if (page.name && page.psuedo === "first") {
 				selectors.insertData({
 					type: "ClassSelector",
-					name: "pagedjs_" + page.name + "_" + page.psuedo + "_page"
+					name: "pagedjs_" + page.name + "_" + page.psuedo + "_page",
 				});
 			}
 
@@ -29793,36 +32297,49 @@
 				selectors.insertData({
 					type: "PseudoClassSelector",
 					name: "nth-of-type",
-					children: nthlist
+					children: nthlist,
 				});
 			}
 
 			return selectors;
 		}
 
+		/**
+		 * Builds CSS selectors for a specific margin area of a page.
+		 * @param {object} page - The page object.
+		 * @param {string} margin - The margin position (e.g. "top", "bottom").
+		 * @returns {csstree.List} A list of CSS selector nodes for the margin.
+		 */
 		selectorsForPageMargin(page, margin) {
 			let selectors = this.selectorsForPage(page);
 
 			selectors.insertData({
 				type: "Combinator",
-				name: " "
+				name: " ",
 			});
 
 			selectors.insertData({
 				type: "ClassSelector",
-				name: "pagedjs_margin-" + margin
+				name: "pagedjs_margin-" + margin,
 			});
 
 			return selectors;
 		}
 
+		/**
+		 * Creates a CSS declaration for a property with a simple identifier value.
+		 * @param {string} property - The CSS property name.
+		 * @param {string} value - The CSS value.
+		 * @param {boolean} important - Whether the declaration is !important.
+		 * @returns {object} A CSSTree declaration node.
+		 */
 		createDeclaration(property, value, important) {
 			let children = new csstree.List();
 
 			children.insertData({
 				type: "Identifier",
 				loc: null,
-				name: value
+				name: value,
 			});
 
 			return {
@@ -29833,11 +32350,16 @@
 				value: {
 					type: "Value",
 					loc: null,
-					children: children
-				}
+					children: children,
+				},
 			};
 		}
-
+		/**
+		 * Creates a raw CSS variable declaration.
+		 * @param {string} property - The variable name.
+		 * @param {string} value - The raw CSS value.
+		 * @returns {object} A CSSTree declaration node.
+		 */
 		createVariable(property, value) {
 			return {
 				type: "Declaration",
@@ -29845,11 +32367,19 @@
 				property: property,
 				value: {
 					type: "Raw",
-					value: value
-				}
+					value: value,
+				},
 			};
 		}
 
+		/**
+		 * Creates a CSS calc() declaration from multiple dimensions.
+		 * @param {string} property - The CSS property name.
+		 * @param {Array} items - Array of {value, unit} objects.
+		 * @param {boolean} important - Whether the declaration is !important.
+		 * @param {string} [operator='+'] - Math operator (e.g. '+', '-', etc.).
+		 * @returns {object} A CSSTree declaration node.
+		 */
 		createCalculatedDimension(property, items, important, operator = "+") {
 			let children = new csstree.List();
 			let calculations = new csstree.List();
@@ -29858,23 +32388,23 @@
 				calculations.appendData({
 					type: "Dimension",
 					unit: item.unit,
-					value: item.value
+					value: item.value,
 				});
 
 				calculations.appendData({
 					type: "WhiteSpace",
-					value: " "
+					value: " ",
 				});
 
 				if (index + 1 < items.length) {
 					calculations.appendData({
 						type: "Operator",
-						value: operator
+						value: operator,
 					});
 
 					calculations.appendData({
 						type: "WhiteSpace",
-						value: " "
+						value: " ",
 					});
 				}
 			});
@@ -29883,7 +32413,7 @@
 				type: "Function",
 				loc: null,
 				name: "calc",
-				children: calculations
+				children: calculations,
 			});
 
 			return {
@@ -29894,11 +32424,17 @@
 				value: {
 					type: "Value",
 					loc: null,
-					children: children
-				}
+					children: children,
+				},
 			};
 		}
-
+		/**
+		 * Creates a CSS dimension-based declaration.
+		 * @param {string} property - The CSS property.
+		 * @param {object} cssValue - Object with `value` and `unit` keys.
+		 * @param {boolean} important - Whether the declaration is !important.
+		 * @returns {object} A CSSTree declaration node.
+		 */
 		createDimension(property, cssValue, important) {
 			let children = new csstree.List();
 
@@ -29906,7 +32442,7 @@
 				type: "Dimension",
 				loc: null,
 				value: cssValue.value,
-				unit: cssValue.unit
+				unit: cssValue.unit,
 			});
 
 			return {
@@ -29917,11 +32453,15 @@
 				value: {
 					type: "Value",
 					loc: null,
-					children: children
-				}
+					children: children,
+				},
 			};
 		}
-
+		/**
+		 * Creates a CSSTree Block node from an array of declarations.
+		 * @param {Array} declarations - Array of CSSTree declaration nodes.
+		 * @returns {object} A CSSTree block node.
+		 */
 		createBlock(declarations) {
 			let block = new csstree.List();
 
@@ -29932,15 +32472,21 @@
 			return {
 				type: "Block",
 				loc: null,
-				children: block
+				children: block,
 			};
 		}
 
+		/**
+		 * Creates a CSSTree Rule node from selectors and a block.
+		 * @param {csstree.List} selectors - List of selector nodes.
+		 * @param {object|Array} block - A block node or array of declarations.
+		 * @returns {object} A CSSTree rule node.
+		 */
 		createRule(selectors, block) {
 			let selectorList = new csstree.List();
 			selectorList.insertData({
 				type: "Selector",
-				children: selectors
+				children: selectors,
 			});
 
 			if (Array.isArray(block)) {
@@ -29951,18 +32497,27 @@
 				type: "Rule",
 				prelude: {
 					type: "SelectorList",
-					children: selectorList
+					children: selectorList,
 				},
-				block: block
+				block: block,
 			};
 		}
-
 	}
 
 	class Breaks extends Handler {
+		/**
+		 * Handles CSS break properties for paged media.
+		 * @param {Object} chunker - The chunker instance managing the pagination.
+		 * @param {Object} polisher - The polisher instance managing CSS and styles.
+		 * @param {Object} caller - The caller instance (optional, context info).
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 
+			/**
+			 * Stores break rules keyed by CSS selector.
+			 * @type {Object.<string, Array.<Object>>}
+			 */
 			this.breaks = {};
 		}
 
@@ -29979,7 +32534,7 @@
 					property: property,
 					value: value,
 					selector: selector,
-					name: name
+					name: name,
 				};
 
 				selector.split(",").forEach((s) => {
@@ -29993,15 +32548,17 @@
 				dList.remove(dItem);
 			}
 
-			if (property === "break-before" ||
-					property === "break-after" ||
-					property === "page-break-before" ||
-					property === "page-break-after"
+			if (
+				property === "break-before" ||
+				property === "break-after" ||
+				property === "page-break-before" ||
+				property === "page-break-after"
 			) {
 				let child = declaration.value.children.first();
 				let value = child.name;
 				let selector = csstree.generate(rule.ruleNode.prelude);
 
+				// Normalize legacy page-break properties
 				if (property === "page-break-before") {
 					property = "break-before";
 				} else if (property === "page-break-after") {
@@ -30011,7 +32568,7 @@
 				let breaker = {
 					property: property,
 					value: value,
-					selector: selector
+					selector: selector,
 				};
 
 				selector.split(",").forEach((s) => {
@@ -30022,7 +32579,7 @@
 					}
 				});
 
-				// Remove from CSS -- handle right / left in module
+				// Remove from CSS -- break rules handled by script
 				dList.remove(dItem);
 			}
 		}
@@ -30031,14 +32588,19 @@
 			this.processBreaks(parsed, this.breaks);
 		}
 
+		/**
+		 * Applies stored break rules to matching elements.
+		 *
+		 * @param {DocumentFragment} parsed - The parsed DOM fragment.
+		 * @param {Object.<string, Array.<Object>>} breaks - Break rules keyed by selectors.
+		 */
 		processBreaks(parsed, breaks) {
 			for (let b in breaks) {
-				// Find elements
+				// Find elements matching the selector
 				let elements = parsed.querySelectorAll(b);
-				// Add break data
+
 				for (var i = 0; i < elements.length; i++) {
 					for (let prop of breaks[b]) {
-
 						if (prop.property === "break-after") {
 							let nodeAfter = displayedElementAfter(elements[i], parsed);
 
@@ -30048,14 +32610,17 @@
 								nodeAfter.setAttribute("data-previous-break-after", prop.value);
 							}
 						} else if (prop.property === "break-before") {
-							let nodeBefore = displayedElementBefore(elements[i], parsed);
+							let nodeBefore = displayedElementBefore(elements[i], parsed, true);
 
 							// Breaks are only allowed between siblings, not between a box and its container.
 							// If we cannot find a node before we should not break!
 							// https://drafts.csswg.org/css-break-3/#break-propagation
 							if (nodeBefore) {
-								if (prop.value === "page" && needsPageBreak(elements[i], nodeBefore)) {
-									// we ignore this explicit page break because an implicit page break is already needed
+								if (
+									prop.value === "page" &&
+									needsPageBreak(elements[i], nodeBefore)
+								) {
+									// Ignore explicit page break if implicit break already needed
 									continue;
 								}
 								elements[i].setAttribute("data-break-before", prop.value);
@@ -30077,6 +32642,13 @@
 			}
 		}
 
+		/**
+		 * Merges new break rules into existing break rules.
+		 *
+		 * @param {Object.<string, Array.<Object>>} pageBreaks - Existing break rules.
+		 * @param {Object.<string, Array.<Object>>} newBreaks - New break rules to merge.
+		 * @returns {Object.<string, Array.<Object>>} The merged break rules.
+		 */
 		mergeBreaks(pageBreaks, newBreaks) {
 			for (let b in newBreaks) {
 				if (b in pageBreaks) {
@@ -30088,18 +32660,32 @@
 			return pageBreaks;
 		}
 
+		/**
+		 * Adds break-related data attributes from elements on the page to the page object.
+		 *
+		 * @param {Element} pageElement - The page DOM element.
+		 * @param {Object} page - The page metadata object to update.
+		 */
 		addBreakAttributes(pageElement, page) {
 			let before = pageElement.querySelector("[data-break-before]");
 			let after = pageElement.querySelector("[data-break-after]");
-			let previousBreakAfter = pageElement.querySelector("[data-previous-break-after]");
+			let previousBreakAfter = pageElement.querySelector(
+				"[data-previous-break-after]",
+			);
 
 			if (before) {
 				if (before.dataset.splitFrom) {
 					page.splitFrom = before.dataset.splitFrom;
 					pageElement.setAttribute("data-split-from", before.dataset.splitFrom);
-				} else if (before.dataset.breakBefore && before.dataset.breakBefore !== "avoid") {
+				} else if (
+					before.dataset.breakBefore &&
+					before.dataset.breakBefore !== "avoid"
+				) {
 					page.breakBefore = before.dataset.breakBefore;
-					pageElement.setAttribute("data-break-before", before.dataset.breakBefore);
+					pageElement.setAttribute(
+						"data-break-before",
+						before.dataset.breakBefore,
+					);
 				}
 			}
 
@@ -30107,14 +32693,20 @@
 				if (after.dataset.splitTo) {
 					page.splitTo = after.dataset.splitTo;
 					pageElement.setAttribute("data-split-to", after.dataset.splitTo);
-				} else if (after.dataset.breakAfter && after.dataset.breakAfter !== "avoid") {
+				} else if (
+					after.dataset.breakAfter &&
+					after.dataset.breakAfter !== "avoid"
+				) {
 					page.breakAfter = after.dataset.breakAfter;
 					pageElement.setAttribute("data-break-after", after.dataset.breakAfter);
 				}
 			}
 
 			if (previousBreakAfter && previousBreakAfter.dataset) {
-				if (previousBreakAfter.dataset.previousBreakAfter && previousBreakAfter.dataset.previousBreakAfter !== "avoid") {
+				if (
+					previousBreakAfter.dataset.previousBreakAfter &&
+					previousBreakAfter.dataset.previousBreakAfter !== "avoid"
+				) {
 					page.previousBreakAfter = previousBreakAfter.dataset.previousBreakAfter;
 				}
 			}
@@ -30125,128 +32717,219 @@
 		}
 	}
 
+	/**
+	 * Handles `@media print` rules during the stylesheet parsing phase.
+	 *
+	 * - Extracts CSS rules inside `@media print` and appends them to the main stylesheet.
+	 * - Removes `@media` blocks that are neither `print`, `all`, nor explicitly ignored.
+	 */
 	class PrintMedia extends Handler {
+		/**
+		 * Creates an instance of PrintMedia handler.
+		 *
+		 * @param {Object} chunker - The chunker instance used for pagination.
+		 * @param {Object} polisher - The polisher instance that processes stylesheets.
+		 * @param {Object} caller - The object that coordinates multiple handlers.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 		}
 
+		/**
+		 * Called when a `@media` at-rule is encountered in the stylesheet.
+		 *
+		 * - If the media type includes `print`, the rules inside are extracted and appended
+		 *   to the main rule list (i.e. made global).
+		 * - If the media type is unsupported or not needed, the block is removed entirely.
+		 *
+		 * @param {Object} node - The AST node for the `@media` at-rule.
+		 * @param {Object} item - The item in the list representing this rule.
+		 * @param {Object} list - The list of all CSS rules being parsed.
+		 */
 		onAtMedia(node, item, list) {
 			let media = this.getMediaName(node);
 			let rules;
+
 			if (media.includes("print")) {
 				rules = node.block.children;
 
-				// Append rules to the end of main rules list
-				// TODO: this isn't working right, needs to check what is in the prelude
+				// TODO: The below section was intended to scope the rules to .pagedjs_page
+				// but is commented out due to issues with modifying the prelude properly.
 				/*
 				rules.forEach((selectList) => {
 					if (selectList.prelude) {
 						selectList.prelude.children.forEach((rule) => {
-
 							rule.children.prependData({
 								type: "Combinator",
 								name: " "
 							});
-		
+
 							rule.children.prependData({
 								type: "ClassSelector",
 								name: "pagedjs_page"
 							});
-						});	
+						});
 					}
 				});
 
 				list.insertList(rules, item);
 				*/
 
-				// Append rules to the end of main rules list
+				// Move print rules to the main stylesheet
 				list.appendList(rules);
 
-				// Remove rules from the @media block
+				// Remove the @media print block itself
 				list.remove(item);
 			} else if (!media.includes("all") && !media.includes("pagedjs-ignore")) {
+				// Remove non-print media rules that are not marked to be ignored
 				list.remove(item);
 			}
-
 		}
 
+		/**
+		 * Extracts all media type names from a `@media` at-rule node.
+		 *
+		 * @param {Object} node - The AST node representing a `@media` at-rule.
+		 * @returns {string[]} An array of media query identifiers (e.g. `["print"]`, `["screen"]`).
+		 */
 		getMediaName(node) {
 			let media = [];
 
-			if (typeof node.prelude === "undefined" ||
-					node.prelude.type !== "AtrulePrelude" ) {
-				return;
+			if (
+				typeof node.prelude === "undefined" ||
+				node.prelude.type !== "AtrulePrelude"
+			) {
+				return media;
 			}
 
 			csstree.walk(node.prelude, {
 				visit: "Identifier",
-				enter: (identNode, iItem, iList) => {
+				enter: (identNode) => {
 					media.push(identNode.name);
-				}
+				},
 			});
+
 			return media;
 		}
-
-
 	}
 
+	/**
+	 * Handles split content across paginated pages.
+	 *
+	 * When content is split across pages (e.g., footnotes or paragraphs),
+	 * this handler links the split parts together using data attributes
+	 * (`data-split-from`, `data-split-to`, etc.) to assist layout engines
+	 * or post-processing logic.
+	 */
 	class Splits extends Handler {
+		/**
+		 * Create a new Splits handler instance.
+		 *
+		 * @param {Object} chunker - The chunker instance used for page breaking.
+		 * @param {Object} polisher - The polisher instance used for styling.
+		 * @param {Object} caller - The orchestrating object coordinating handlers.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 		}
 
+		/**
+		 * Called after the layout of each page is completed.
+		 *
+		 * - Detects elements on the current page that have been split from a previous page.
+		 * - Finds the original element on the previous page and adds metadata to link them.
+		 * - Applies alignment adjustments to the original element.
+		 *
+		 * @param {HTMLElement} pageElement - The root element of the current page.
+		 * @param {Object} page - Page metadata object.
+		 * @param {Object|null} breakToken - Information about the point where the content was split.
+		 * @param {Object} chunker - The chunker instance.
+		 */
 		afterPageLayout(pageElement, page, breakToken, chunker) {
 			let splits = Array.from(pageElement.querySelectorAll("[data-split-from]"));
 			let pages = pageElement.parentNode;
 			let index = Array.prototype.indexOf.call(pages.children, pageElement);
 			let prevPage;
 
+			// If this is the first page, there's no previous page to compare to
 			if (index === 0) {
 				return;
 			}
 
 			prevPage = pages.children[index - 1];
 
-			let from; // Capture the last from element
+			let from; // Capture the last "from" element for alignment handling
+
 			splits.forEach((split) => {
 				let ref = split.dataset.ref;
-				from = prevPage.querySelector("[data-ref='"+ ref +"']:not([data-split-to])");
+
+				// Find the original element that was split
+				from = prevPage.querySelector("[data-ref='" + ref + "']");
 
 				if (from) {
+					// Link the original element to its split counterpart
 					from.dataset.splitTo = ref;
 
+					// Mark the element as the original split source if it's not already a split
 					if (!from.dataset.splitFrom) {
 						from.dataset.splitOriginal = true;
 					}
 				}
 			});
 
-			// Fix alignment on the deepest split element
+			// Fix alignment on the deepest original split element (only the last one in loop)
 			if (from) {
 				this.handleAlignment(from);
 			}
 		}
 
+		/**
+		 * Adjusts alignment metadata for a split element to preserve proper justification.
+		 *
+		 * This ensures that the last line of split content aligns correctly,
+		 * particularly when text-align is set to `justify`.
+		 *
+		 * @param {HTMLElement} node - The original DOM node that was split.
+		 */
 		handleAlignment(node) {
 			let styles = window.getComputedStyle(node);
 			let align = styles["text-align"];
 			let alignLast = styles["text-align-last"];
+
 			node.dataset.lastSplitElement = "true";
+
 			if (align === "justify" && alignLast === "auto") {
 				node.dataset.alignLastSplitElement = "justify";
 			} else {
 				node.dataset.alignLastSplitElement = alignLast;
 			}
 		}
-
 	}
 
 	class Counters extends Handler {
+		/**
+		 * Handles CSS counter properties for paged media.
+		 * @param {Object} chunker - The chunker instance managing pagination.
+		 * @param {Object} polisher - The polisher instance managing CSS and styles.
+		 * @param {Object} caller - The caller instance (optional, context info).
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 
+			/** @type {CSSStyleSheet} */
 			this.styleSheet = polisher.styleSheet;
+
+			/**
+			 * Stores counters keyed by counter name.
+			 * Each counter has increments and resets keyed by selector.
+			 * @type {Object.<string, {name:string, increments:Object.<string,Object>, resets:Object.<string,Object>}>}
+			 */
 			this.counters = {};
+
+			/**
+			 * Map tracking counters that have been reset by element reference.
+			 * @type {Map<string, string>}
+			 */
 			this.resetCountersMap = new Map();
 		}
 
@@ -30255,29 +32938,30 @@
 
 			if (property === "counter-increment") {
 				this.handleIncrement(declaration, rule);
-				// clean up empty declaration
-				let hasProperities = false;
-				declaration.value.children.forEach((data) => {
-					if (data.type && data.type !== "WhiteSpace") {
-						hasProperities = true;
-					}
-				});
-				if (!hasProperities) {
+				if (!this.hasNonWhitespaceChildren(declaration.value.children)) {
 					dList.remove(dItem);
 				}
 			} else if (property === "counter-reset") {
 				this.handleReset(declaration, rule);
-				// clean up empty declaration
-				let hasProperities = false;
-				declaration.value.children.forEach((data) => {
-					if (data.type && data.type !== "WhiteSpace") {
-						hasProperities = true;
-					}
-				});
-				if (!hasProperities) {
+				if (!this.hasNonWhitespaceChildren(declaration.value.children)) {
 					dList.remove(dItem);
 				}
 			}
+		}
+
+		/**
+		 * Helper to check if node children contain non-whitespace tokens.
+		 * @param {Object} children - The children node list.
+		 * @returns {boolean} True if any non-whitespace tokens found.
+		 */
+		hasNonWhitespaceChildren(children) {
+			let hasProperties = false;
+			children.forEach((data) => {
+				if (data.type && data.type !== "WhiteSpace") {
+					hasProperties = true;
+				}
+			});
+			return hasProperties;
 		}
 
 		afterParsed(parsed) {
@@ -30285,6 +32969,11 @@
 			this.scopeCounters(this.counters);
 		}
 
+		/**
+		 * Adds a new counter to the counters map or returns existing one.
+		 * @param {string} name - The name of the counter.
+		 * @returns {Object} The counter object.
+		 */
 		addCounter(name) {
 			if (name in this.counters) {
 				return this.counters[name];
@@ -30293,12 +32982,19 @@
 			this.counters[name] = {
 				name: name,
 				increments: {},
-				resets: {}
+				resets: {},
 			};
 
 			return this.counters[name];
 		}
 
+		/**
+		 * Parses and handles counter-increment declarations.
+		 * Updates counters with increment info.
+		 * @param {Object} declaration - The CSS declaration node.
+		 * @param {Object} rule - The CSS rule node.
+		 * @returns {Array<Object>} List of increments parsed.
+		 */
 		handleIncrement(declaration, rule) {
 			let increments = [];
 			let children = declaration.value.children;
@@ -30315,27 +33011,27 @@
 					if (item.next && item.next.data.type === "WhiteSpace") {
 						whitespace = item.next;
 					}
-					if (whitespace && whitespace.next && whitespace.next.data.type === "Number") {
+					if (
+						whitespace &&
+						whitespace.next &&
+						whitespace.next.data.type === "Number"
+					) {
 						number = whitespace.next;
 						value = parseInt(number.data.value);
 					}
 
 					let selector = csstree.generate(rule.ruleNode.prelude);
 
-					let counter;
-					if (!(name in this.counters)) {
-						counter = this.addCounter(name);
-					} else {
-						counter = this.counters[name];
-					}
+					let counter = this.counters[name] || this.addCounter(name);
+
 					let increment = {
 						selector: selector,
-						number: value || 1
+						number: value || 1,
 					};
 					counter.increments[selector] = increment;
 					increments.push(increment);
 
-					// Remove the parsed resets
+					// Remove the parsed increments from children
 					children.remove(item);
 					if (whitespace) {
 						children.remove(whitespace);
@@ -30345,10 +33041,16 @@
 					}
 				}
 			});
-			
+
 			return increments;
 		}
 
+		/**
+		 * Parses and handles counter-reset declarations.
+		 * Updates counters with reset info.
+		 * @param {Object} declaration - The CSS declaration node.
+		 * @param {Object} rule - The CSS rule node.
+		 */
 		handleReset(declaration, rule) {
 			let children = declaration.value.children;
 
@@ -30356,21 +33058,21 @@
 				if (data.type && data.type === "Identifier") {
 					let name = data.name;
 					let whitespace, number, value;
+
 					if (item.next && item.next.data.type === "WhiteSpace") {
 						whitespace = item.next;
 					}
+
 					if (whitespace && whitespace.next) {
 						if (whitespace.next.data.type === "Number") {
-							// The counter reset value is specified using a number. E.g. counter-reset: c2 5;
 							number = whitespace.next;
 							value = parseInt(number.data.value);
-						} else if (whitespace.next.data.type === "Function" && whitespace.next.data.name === "var") {
-							// The counter reset value is specified using a CSS variable (custom property).
-							// E.g. counter-reset: c2 var(--my-variable);
-							// See https://developer.mozilla.org/en-US/docs/Web/CSS/var
+						} else if (
+							whitespace.next.data.type === "Function" &&
+							whitespace.next.data.name === "var"
+						) {
+							// CSS variable as reset value
 							number = whitespace.next;
-							// Use the variable name (e.g. '--my-variable') as value for now. The actual value is resolved later by the
-							// processCounterResets function.
 							value = whitespace.next.data.children.head.data.name;
 						}
 					}
@@ -30389,21 +33091,17 @@
 						this.addFootnoteMarkerCounter(declaration.value.children);
 					}
 
-					if (!(name in this.counters)) {
-						counter = this.addCounter(name);
-					} else {
-						counter = this.counters[name];
-					}
+					counter = this.counters[name] || this.addCounter(name);
 
 					let reset = {
 						selector: selector,
-						number: value || 0
+						number: value || 0,
 					};
 
 					counter.resets[selector] = reset;
 
 					if (selector !== ".pagedjs_page") {
-						// Remove the parsed resets
+						// Remove parsed resets from children
 						children.remove(item);
 						if (whitespace) {
 							children.remove(whitespace);
@@ -30416,10 +33114,15 @@
 			});
 		}
 
+		/**
+		 * Processes all counters on the parsed fragment.
+		 * Calls handlers for increments, resets, and value assignment.
+		 * @param {DocumentFragment} parsed - The parsed DOM fragment.
+		 * @param {Object} counters - The counters map.
+		 */
 		processCounters(parsed, counters) {
-			let counter;
 			for (let c in counters) {
-				counter = this.counters[c];
+				let counter = this.counters[c];
 				this.processCounterIncrements(parsed, counter);
 				this.processCounterResets(parsed, counter);
 				if (c !== "page") {
@@ -30428,62 +33131,88 @@
 			}
 		}
 
+		/**
+		 * Adds counter-reset CSS rules scoped on pages to allow cross page scope.
+		 * @param {Object} counters - The counters map.
+		 */
 		scopeCounters(counters) {
 			let countersArray = [];
 			for (let c in counters) {
-				if(c !== "page") {
+				if (c !== "page") {
 					countersArray.push(`${counters[c].name} 0`);
 				}
 			}
-			// Add to pages to allow cross page scope
-			this.insertRule(`.pagedjs_pages { counter-reset: ${countersArray.join(" ")} page 0 pages var(--pagedjs-page-count) footnote var(--pagedjs-footnotes-count) footnote-marker var(--pagedjs-footnotes-count)}`);
+			this.insertRule(
+				`.pagedjs_pages { counter-reset: ${countersArray.join(" ")} page 0 pages var(--pagedjs-page-count) footnote var(--pagedjs-footnotes-count) footnote-marker var(--pagedjs-footnotes-count)}`,
+			);
 		}
 
+		/**
+		 * Inserts a CSS rule into the stylesheet.
+		 * @param {string} rule - The CSS rule string.
+		 */
 		insertRule(rule) {
 			this.styleSheet.insertRule(rule, this.styleSheet.cssRules.length);
 		}
 
+		/**
+		 * Adds data attributes for counter increments to matching elements.
+		 * @param {DocumentFragment} parsed - The parsed DOM fragment.
+		 * @param {Object} counter - The counter object.
+		 */
 		processCounterIncrements(parsed, counter) {
-			let increment;
 			for (let inc in counter.increments) {
-				increment = counter.increments[inc];
-				// Find elements for increments
+				let increment = counter.increments[inc];
 				let incrementElements = parsed.querySelectorAll(increment.selector);
-				// Add counter data
 				for (let i = 0; i < incrementElements.length; i++) {
-					incrementElements[i].setAttribute("data-counter-"+ counter.name +"-increment", increment.number);
+					incrementElements[i].setAttribute(
+						`data-counter-${counter.name}-increment`,
+						increment.number,
+					);
 					if (incrementElements[i].getAttribute("data-counter-increment")) {
-						incrementElements[i].setAttribute("data-counter-increment", incrementElements[i].getAttribute("data-counter-increment") + " " + counter.name);
+						incrementElements[i].setAttribute(
+							"data-counter-increment",
+							incrementElements[i].getAttribute("data-counter-increment") +
+								" " +
+								counter.name,
+						);
 					} else {
-						incrementElements[i].setAttribute("data-counter-increment", counter.name);
+						incrementElements[i].setAttribute(
+							"data-counter-increment",
+							counter.name,
+						);
 					}
 				}
 			}
 		}
 
+		/**
+		 * Adds data attributes for counter resets to matching elements.
+		 * Resolves CSS variables when possible.
+		 * @param {DocumentFragment} parsed - The parsed DOM fragment.
+		 * @param {Object} counter - The counter object.
+		 */
 		processCounterResets(parsed, counter) {
-			let reset;
 			for (let r in counter.resets) {
-				reset = counter.resets[r];
-				// Find elements for resets
+				let reset = counter.resets[r];
 				let resetElements = parsed.querySelectorAll(reset.selector);
-				// Add counter data
 				for (var i = 0; i < resetElements.length; i++) {
 					let value = reset.number;
 					if (typeof value === "string" && value.startsWith("--")) {
-						// The value is specified using a CSS variable (custom property).
-						// FIXME: We get the variable value only from the inline style of the element because at this point the
-						// element is detached and thus using:
-						//
-						//		getComputedStyle(resetElements[i]).getPropertyValue(value)
-						//
-						// always returns an empty string. We could try to temporarily attach the element to get its computed style,
-						// but for now using the inline style is enough for us.
+						// Attempt to get value from inline style
 						value = resetElements[i].style.getPropertyValue(value) || 0;
 					}
-					resetElements[i].setAttribute("data-counter-"+ counter.name +"-reset", value);
+					resetElements[i].setAttribute(
+						`data-counter-${counter.name}-reset`,
+						value,
+					);
 					if (resetElements[i].getAttribute("data-counter-reset")) {
-						resetElements[i].setAttribute("data-counter-reset", resetElements[i].getAttribute("data-counter-reset") + " " + counter.name);
+						resetElements[i].setAttribute(
+							"data-counter-reset",
+							resetElements[i].getAttribute("data-counter-reset") +
+								" " +
+								counter.name,
+						);
 					} else {
 						resetElements[i].setAttribute("data-counter-reset", counter.name);
 					}
@@ -30491,6 +33220,11 @@
 			}
 		}
 
+		/**
+		 * Calculates and adds counter values on elements.
+		 * @param {DocumentFragment} parsed - The parsed DOM fragment.
+		 * @param {Object} counter - The counter object.
+		 */
 		addCounterValues(parsed, counter) {
 			let counterName = counter.name;
 
@@ -30498,7 +33232,13 @@
 				return;
 			}
 
-			let elements = parsed.querySelectorAll("[data-counter-"+ counterName +"-reset], [data-counter-"+ counterName +"-increment]");
+			let elements = parsed.querySelectorAll(
+				"[data-counter-" +
+					counterName +
+					"-reset], [data-counter-" +
+					counterName +
+					"-increment]",
+			);
 
 			let count = 0;
 			let element;
@@ -30511,8 +33251,8 @@
 				resetDelta = 0;
 				incrementArray = [];
 
-				if (element.hasAttribute("data-counter-"+ counterName +"-reset")) {
-					reset = element.getAttribute("data-counter-"+ counterName +"-reset");
+				if (element.hasAttribute("data-counter-" + counterName + "-reset")) {
+					reset = element.getAttribute("data-counter-" + counterName + "-reset");
 					resetValue = parseInt(reset);
 
 					// Use negative increment value inplace of reset
@@ -30522,14 +33262,15 @@
 					count = resetValue;
 				}
 
-				if (element.hasAttribute("data-counter-"+ counterName +"-increment")) {
-
-					increment = element.getAttribute("data-counter-"+ counterName +"-increment");
+				if (element.hasAttribute("data-counter-" + counterName + "-increment")) {
+					increment = element.getAttribute(
+						"data-counter-" + counterName + "-increment",
+					);
 					incrementValue = parseInt(increment);
 
 					count += incrementValue;
 
-					element.setAttribute("data-counter-"+counterName+"-value", count);
+					element.setAttribute("data-counter-" + counterName + "-value", count);
 
 					incrementArray.push(`${counterName} ${incrementValue}`);
 				}
@@ -30537,17 +33278,21 @@
 				if (incrementArray.length > 0) {
 					this.incrementCounterForElement(element, incrementArray);
 				}
-
 			}
 		}
-
+		/**
+		 * Ensures the footnote marker counter is included in the counter list.
+		 * If "footnote-maker" is already present, it does nothing.
+		 *
+		 * @param {Object} list - The CSS AST list node to modify.
+		 */
 		addFootnoteMarkerCounter(list) {
 			let markers = [];
 			csstree.walk(list, {
 				visit: "Identifier",
 				enter: (identNode, iItem, iList) => {
 					markers.push(identNode.name);
-				}
+				},
 			});
 
 			// Already added
@@ -30557,43 +33302,64 @@
 
 			list.insertData({
 				type: "WhiteSpace",
-				value: " "
+				value: " ",
 			});
 
 			list.insertData({
 				type: "Identifier",
-				name: "footnote-marker"
+				name: "footnote-marker",
 			});
 
 			list.insertData({
 				type: "WhiteSpace",
-				value: " "
+				value: " ",
 			});
 
 			list.insertData({
 				type: "Number",
-				value: 0
+				value: 0,
 			});
 		}
+
+		/**
+		 * Increment the CSS counters for a specific element, merging with existing increments.
+		 *
+		 * @param {HTMLElement} element - The element to update.
+		 * @param {string[]} incrementArray - Array of counter-increment strings, e.g. ['c1 1', 'c2 -3'].
+		 */
 
 		incrementCounterForElement(element, incrementArray) {
 			if (!element || !incrementArray || incrementArray.length === 0) return;
 
 			const ref = element.dataset.ref;
-			const increments = Array.from(this.styleSheet.cssRules).filter((rule) => {
-				return rule.selectorText === `[data-ref="${element.dataset.ref}"]:not([data-split-from])`
-							 && rule.style[0] === "counter-increment";
-			}).map(rule => rule.style.counterIncrement);
+			const increments = Array.from(this.styleSheet.cssRules)
+				.filter((rule) => {
+					return (
+						rule.selectorText ===
+							`[data-ref="${element.dataset.ref}"]:not([data-split-from])` &&
+						rule.style[0] === "counter-increment"
+					);
+				})
+				.map((rule) => rule.style.counterIncrement);
 
 			// Merge the current increments by summing the values because we generate both a decrement and an increment when the
 			// element resets and increments the counter at the same time. E.g. ['c1 -7', 'c1 1'] should lead to 'c1 -6'.
-			increments.push(this.mergeIncrements(incrementArray,
-				(prev, next) => (parseInt(prev) || 0) + (parseInt(next) || 0)));
+			increments.push(
+				this.mergeIncrements(
+					incrementArray,
+					(prev, next) => (parseInt(prev) || 0) + (parseInt(next) || 0),
+				),
+			);
 
 			// Keep the last value for each counter when merging with the previous increments. E.g. ['c1 -7 c2 3', 'c1 1']
 			// should lead to 'c1 1 c2 3'.
-			const counterIncrement = this.mergeIncrements(increments, (prev, next) => next);
-			this.insertRule(`[data-ref="${ref}"]:not([data-split-from]) { counter-increment: ${counterIncrement} }`);
+			const counterIncrement = this.mergeIncrements(
+				increments,
+				(prev, next) => next,
+			);
+			this.insertRule(
+				`[data-ref="${ref}"]:not([data-split-from]) { counter-increment: ${counterIncrement} }`,
+			);
 		}
 
 		/**
@@ -30606,20 +33372,23 @@
 		 */
 		mergeIncrements(incrementArray, operator) {
 			const increments = {};
-			incrementArray.forEach(increment => {
+			incrementArray.forEach((increment) => {
 				let values = increment.split(" ");
-				for (let i = 0; i < values.length; i+=2) {
+				for (let i = 0; i < values.length; i += 2) {
 					increments[values[i]] = operator(increments[values[i]], values[i + 1]);
 				}
 			});
 
-			return Object.entries(increments).map(([key, value]) => `${key} ${value}`).join(" ");
+			return Object.entries(increments)
+				.map(([key, value]) => `${key} ${value}`)
+				.join(" ");
 		}
-
 		afterPageLayout(pageElement, page) {
 			let resets = [];
 
-			let pgreset = pageElement.querySelectorAll("[data-counter-page-reset]:not([data-split-from])");
+			let pgreset = pageElement.querySelectorAll(
+				"[data-counter-page-reset]:not([data-split-from])",
+			);
 			pgreset.forEach((reset) => {
 				const ref = reset.dataset && reset.dataset.ref;
 				if (ref && this.resetCountersMap.has(ref)) ; else {
@@ -30631,7 +33400,9 @@
 				}
 			});
 
-			let notereset = pageElement.querySelectorAll("[data-counter-footnote-reset]:not([data-split-from])");
+			let notereset = pageElement.querySelectorAll(
+				"[data-counter-footnote-reset]:not([data-split-from])",
+			);
 			notereset.forEach((reset) => {
 				let value = reset.dataset.counterFootnoteReset;
 				resets.push(`footnote ${value}`);
@@ -30639,16 +33410,34 @@
 			});
 
 			if (resets.length) {
-				this.styleSheet.insertRule(`[data-page-number="${pageElement.dataset.pageNumber}"] { counter-increment: none; counter-reset: ${resets.join(" ")} }`, this.styleSheet.cssRules.length);
+				this.styleSheet.insertRule(
+					`[data-page-number="${pageElement.dataset.pageNumber}"] { counter-increment: none; counter-reset: ${resets.join(" ")} }`,
+					this.styleSheet.cssRules.length,
+				);
 			}
 		}
-
 	}
 
+	/**
+	 * Handles ordered list (`<ol>`) processing across paginated content.
+	 * Extends the base Handler class to manage list item numbering before and after pagination.
+	 */
 	class Lists extends Handler {
+		/**
+		 * Constructs a Lists handler.
+		 * @param {Object} chunker - The chunker instance used for splitting content into pages.
+		 * @param {Object} polisher - The polisher instance for style processing.
+		 * @param {Object} caller - The caller instance managing lifecycle hooks.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 		}
+
+		/**
+		 * Hook called after the entire content is parsed but before layout.
+		 * Adds `data-item-num` attributes to `<li>` elements in ordered lists for later processing.
+		 * @param {Document|HTMLElement} content - The parsed document or element.
+		 */
 		afterParsed(content) {
 			const orderedLists = content.querySelectorAll("ol");
 
@@ -30657,6 +33446,14 @@
 			}
 		}
 
+		/**
+		 * Hook called after a page is laid out.
+		 * Updates the `start` attribute of `<ol>` elements to ensure numbering continuity across pages.
+		 * @param {HTMLElement} pageElement - The DOM element for the current page.
+		 * @param {Object} page - The page object with metadata.
+		 * @param {Object|null} breakToken - The break token representing where content broke across pages.
+		 * @param {Object} chunker - The chunker instance.
+		 */
 		afterPageLayout(pageElement, page, breakToken, chunker) {
 			var orderedLists = pageElement.getElementsByTagName("ol");
 			for (var list of orderedLists) {
@@ -30666,6 +33463,11 @@
 			}
 		}
 
+		/**
+		 * Adds `data-item-num` attributes to each `<li>` in an ordered list.
+		 * This helps track correct numbering even when the list spans multiple pages.
+		 * @param {HTMLOListElement} list - The ordered list to process.
+		 */
 		addDataNumbers(list) {
 			let start = 1;
 			if (list.hasAttribute("start")) {
@@ -30679,117 +33481,261 @@
 				items[i].setAttribute("data-item-num", i + start);
 			}
 		}
-
 	}
 
+	/**
+	 * Handles `position: fixed` elements in paged media.
+	 *
+	 * Since fixed positioning does not behave as expected in paged outputs,
+	 * this handler collects all `position: fixed` elements during parsing,
+	 * removes them from the flow, and re-inserts them absolutely positioned
+	 * at the top of every page during layout.
+	 */
 	class PositionFixed extends Handler {
+		/**
+		 * Creates an instance of PositionFixed.
+		 *
+		 * @param {Object} chunker - The chunker instance used for pagination.
+		 * @param {Object} polisher - The polisher instance responsible for styles.
+		 * @param {Object} caller - The object coordinating the handlers.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
+
+			/** @type {CSSStyleSheet} */
 			this.styleSheet = polisher.styleSheet;
+
+			/**
+			 * Array of selectors that match `position: fixed` elements.
+			 * @type {string[]}
+			 */
 			this.fixedElementsSelector = [];
+
+			/**
+			 * Collected DOM elements that matched fixed position rules.
+			 * These are inserted back on each page during layout.
+			 * @type {HTMLElement[]}
+			 */
 			this.fixedElements = [];
 		}
 
+		/**
+		 * Intercepts `position: fixed` declarations, saves their selector,
+		 * and removes the declaration from the stylesheet.
+		 *
+		 * @param {Object} declaration - The CSS AST node for the declaration.
+		 * @param {Object} dItem - The item in the declaration list.
+		 * @param {Object} dList - The full declaration list.
+		 * @param {Object} rule - The rule containing this declaration.
+		 */
 		onDeclaration(declaration, dItem, dList, rule) {
-			if (declaration.property === "position" && declaration.value.children.first().name === "fixed") {
+			if (
+				declaration.property === "position" &&
+				declaration.value.children.first().name === "fixed"
+			) {
 				let selector = csstree.generate(rule.ruleNode.prelude);
 				this.fixedElementsSelector.push(selector);
 				dList.remove(dItem);
 			}
 		}
 
+		/**
+		 * After parsing the full document, this method finds all elements
+		 * that matched `position: fixed`, applies `position: absolute` instead,
+		 * removes them from the DOM flow, and stores them for re-insertion.
+		 *
+		 * @param {DocumentFragment} fragment - The parsed document fragment.
+		 */
 		afterParsed(fragment) {
-			this.fixedElementsSelector.forEach(fixedEl => {
-				fragment.querySelectorAll(`${fixedEl}`).forEach(el => {
+			this.fixedElementsSelector.forEach((fixedEl) => {
+				fragment.querySelectorAll(fixedEl).forEach((el) => {
 					el.style.setProperty("position", "absolute");
 					this.fixedElements.push(el);
-					el.remove();
+					el.remove(); // remove from flow
 				});
 			});
 		}
 
+		/**
+		 * After each page layout, this method re-inserts all collected fixed
+		 * elements into the top of the page, effectively simulating `position: fixed`.
+		 *
+		 * @param {HTMLElement} pageElement - The DOM element for the current page.
+		 * @param {Object} page - Metadata or state for the current page.
+		 * @param {Object} breakToken - Information about content breaks (unused here).
+		 */
 		afterPageLayout(pageElement, page, breakToken) {
-			this.fixedElements.forEach(el => {
+			this.fixedElements.forEach((el) => {
 				const clone = el.cloneNode(true);
-				pageElement.querySelector(".pagedjs_pagebox").insertAdjacentElement("afterbegin", clone);
+				pageElement
+					.querySelector(".pagedjs_pagebox")
+					.insertAdjacentElement("afterbegin", clone);
 			});
 		}
 	}
 
+	/**
+	 * Handles `counter-increment` rules related to the `page` counter.
+	 *
+	 * This class identifies `counter-increment: page` declarations that appear outside
+	 * of the `@page` context and applies them by inserting equivalent CSS custom property
+	 * rules. This allows for controlling page-based counters from regular content.
+	 *
+	 * Reference: https://www.w3.org/TR/css-page-3/#page-based-counters
+	 */
 	class PageCounterIncrement extends Handler {
+		/**
+		 * Constructs a PageCounterIncrement handler.
+		 *
+		 * @param {Object} chunker - The chunker instance used during pagination.
+		 * @param {Object} polisher - The polisher instance used for styling.
+		 * @param {Object} caller - The caller coordinating the handlers.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 
+			/** @type {CSSStyleSheet} */
 			this.styleSheet = polisher.styleSheet;
+
+			/**
+			 * Tracks page counter increments and resets by selector.
+			 * Only the "page" counter is processed.
+			 * @type {{
+			 *   name: string,
+			 *   increments: Object.<string, {selector: string, number: number}>,
+			 *   resets: Object
+			 * }}
+			 */
 			this.pageCounter = {
 				name: "page",
 				increments: {},
-				resets: {}
+				resets: {}, // Not used yet
 			};
 		}
 
+		/**
+		 * Handles CSS declarations during parsing.
+		 * Specifically looks for `counter-increment: page` and collects them.
+		 *
+		 * @param {Object} declaration - The CSS declaration AST node.
+		 * @param {Object} dItem - The item in the declaration list.
+		 * @param {Object} dList - The list of declarations.
+		 * @param {Object} rule - The parent rule node.
+		 */
 		onDeclaration(declaration, dItem, dList, rule) {
 			const property = declaration.property;
 
 			if (property === "counter-increment") {
 				let inc = this.handleIncrement(declaration, rule);
 				if (inc) {
-					dList.remove(dItem);
+					dList.remove(dItem); // Remove original declaration
 				}
 			}
 		}
 
+		/**
+		 * Applies the processed counter-increments as CSS custom properties.
+		 *
+		 * @param {*} _ - Unused parameter (parsed content).
+		 */
 		afterParsed(_) {
 			for (const inc in this.pageCounter.increments) {
 				const increment = this.pageCounter.increments[inc];
-				this.insertRule(`${increment.selector} { --pagedjs-page-counter-increment: ${increment.number} }`);
+				console.log(increment); // Debug logging
+				this.insertRule(
+					`${increment.selector} { --pagedjs-page-counter-increment: ${increment.number} }`,
+				);
 			}
 		}
 
+		/**
+		 * Parses a `counter-increment` declaration and determines if it's relevant.
+		 *
+		 * @param {Object} declaration - The `counter-increment` declaration node.
+		 * @param {Object} rule - The parent rule node.
+		 * @returns {Object|undefined} The parsed increment object or undefined if ignored.
+		 */
 		handleIncrement(declaration, rule) {
 			const identifier = declaration.value.children.first();
-			const number = declaration.value.children.getSize() > 1 ? declaration.value.children.last().value : 1;
+			const number =
+				declaration.value.children.getSize() > 1
+					? declaration.value.children.last().value
+					: 1;
 			const name = identifier && identifier.name;
 
+			// Skip target-counter-* pseudo counters
 			if (name && name.indexOf("target-counter-") === 0) {
 				return;
 			}
-			// A counter named page is automatically created and incremented by 1 on every page of the document,
-			// unless the counter-increment property in the page context explicitly specifies a different increment for the page counter.
-			// https://www.w3.org/TR/css-page-3/#page-based-counters
+
+			// Only process 'page' counter
 			if (name !== "page") {
 				return;
 			}
-			// the counter-increment property is not defined on the page context (i.e. @page rule), ignoring...
+
+			// Skip if declaration is already inside @page rule
 			if (rule.ruleNode.name === "page" && rule.ruleNode.type === "Atrule") {
 				return;
 			}
+
+			// Convert selector to string
 			const selector = csstree.generate(rule.ruleNode.prelude);
-			return this.pageCounter.increments[selector] = {
+
+			// Store for later rule insertion
+			return (this.pageCounter.increments[selector] = {
 				selector: selector,
-				number
-			};
+				number,
+			});
 		}
 
+		/**
+		 * Inserts a rule into the active stylesheet.
+		 *
+		 * @param {string} rule - The CSS rule string to insert.
+		 */
 		insertRule(rule) {
 			this.styleSheet.insertRule(rule, this.styleSheet.cssRules.length);
 		}
 	}
 
+	/**
+	 * Handler for emulating pseudo-selectors like `:first-of-type`, `:last-of-type`, and `:nth-of-type`
+	 * by converting them into attribute-based selectors that can be used for styling after layout.
+	 */
 	class NthOfType extends Handler {
+		/**
+		 * Constructs the NthOfType handler.
+		 * @param {Object} chunker - The chunker instance used to split content into pages.
+		 * @param {Object} polisher - The polisher instance for handling styles.
+		 * @param {Object} caller - The caller instance managing lifecycle hooks.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 
+			/** @type {CSSStyleSheet} */
 			this.styleSheet = polisher.styleSheet;
+
+			/**
+			 * Map of selectors and their associated UUID and declarations.
+			 * @type {Object}
+			 */
 			this.selectors = {};
 		}
 
+		/**
+		 * Hook called during CSS rule parsing.
+		 * Intercepts `:first-of-type`, `:last-of-type`, and `:nth-of-type` selectors,
+		 * removes the rule, and stores the relevant declarations and a UUID for later use.
+		 *
+		 * @param {Object} ruleNode - The AST node representing the CSS rule.
+		 * @param {Object} ruleItem - The rule item in the CSS rule list.
+		 * @param {Object} rulelist - The list of all CSS rules.
+		 */
 		onRule(ruleNode, ruleItem, rulelist) {
 			let selector = csstree.generate(ruleNode.prelude);
 			if (selector.match(/:(first|last|nth)-of-type/)) {
-				
 				let declarations = csstree.generate(ruleNode.block);
-				declarations = declarations.replace(/[{}]/g,"");
+				declarations = declarations.replace(/[{}]/g, "");
 
 				let uuid = "nth-of-type-" + UUID();
 
@@ -30797,27 +33743,40 @@
 					if (!this.selectors[s]) {
 						this.selectors[s] = [uuid, declarations];
 					} else {
-						this.selectors[s][1] = `${this.selectors[s][1]};${declarations}` ;
+						this.selectors[s][1] = `${this.selectors[s][1]};${declarations}`;
 					}
 				});
 
-				rulelist.remove(ruleItem);
+				rulelist.remove(ruleItem); // Remove original pseudo selector rule
 			}
 		}
 
+		/**
+		 * Hook called after the entire content is parsed but before layout.
+		 * Applies the transformed attribute-based selectors to relevant elements.
+		 *
+		 * @param {Document|HTMLElement} parsed - The parsed document or content element.
+		 */
 		afterParsed(parsed) {
 			this.processSelectors(parsed, this.selectors);
 		}
 
+		/**
+		 * Applies unique `data-nth-of-type` attributes to elements matching selectors,
+		 * and dynamically inserts the converted rules into the stylesheet.
+		 *
+		 * @param {Document|HTMLElement} parsed - The parsed content.
+		 * @param {Object} selectors - Map of selectors and their UUID + declarations.
+		 */
 		processSelectors(parsed, selectors) {
-			// add the new attributes to matching elements
 			for (let s in selectors) {
 				let elements = parsed.querySelectorAll(s);
 
-				for (var i = 0; i < elements.length; i++) {
+				for (let i = 0; i < elements.length; i++) {
 					let dataNthOfType = elements[i].getAttribute("data-nth-of-type");
 
-					if (dataNthOfType && dataNthOfType != "") {
+					if (dataNthOfType && dataNthOfType !== "") {
+						// Append new UUID to existing attribute
 						dataNthOfType = `${dataNthOfType},${selectors[s][0]}`;
 						elements[i].setAttribute("data-nth-of-type", dataNthOfType);
 					} else {
@@ -30825,6 +33784,7 @@
 					}
 				}
 
+				// Insert a new CSS rule using attribute selector
 				let rule = `*[data-nth-of-type*='${selectors[s][0]}'] { ${selectors[s][1]}; }`;
 				this.styleSheet.insertRule(rule, this.styleSheet.cssRules.length);
 			}
@@ -30832,46 +33792,74 @@
 	}
 
 	class Following extends Handler {
+		/**
+		 * Creates an instance of Following handler.
+		 *
+		 * @param {Object} chunker - The chunker instance.
+		 * @param {Object} polisher - The polisher instance.
+		 * @param {Object} caller - The caller instance.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 
+			/**
+			 * Reference to the stylesheet where new CSS rules will be inserted.
+			 */
 			this.styleSheet = polisher.styleSheet;
+
+			/**
+			 * Stores selectors with their associated UUIDs and declarations.
+			 * Structure: { selector: [uuid, declarations] }
+			 */
 			this.selectors = {};
 		}
 
 		onRule(ruleNode, ruleItem, rulelist) {
-			let selector = csstree.generate(ruleNode.prelude);
-			// LOCAL PATCH: the Following handler is designed for the adjacent
-			// sibling combinator (`a + b`).  The original regex `/\+/` also
-			// matched the `+` *inside* `:nth-of-type(7n + 1)` formulas, which
-			// caused the handler to remove the rule from the AST and led to
-			// "item doesn't belong to list" later when the walker re-visited.
-			// Strip parenthesised groups before testing so nth-formula `+` is
-			// ignored.
-			const __plusOutsideParens = selector.replace(/\([^)]*\)/g, "");
-			if (/\+/.test(__plusOutsideParens)) {
+			const selector = csstree.generate(ruleNode.prelude);
 
-				let declarations = csstree.generate(ruleNode.block);
-				declarations = declarations.replace(/[{}]/g,"");
+			// Strip :nth-*() bodies before testing for `+` so the formula's
+			// plus (e.g. :nth-of-type(7n+1)) isn't mistaken for an adjacent-
+			// sibling combinator.
+			const NTH_PSEUDO = /:nth-(?:child|last-child|of-type|last-of-type)\(\s*[^)]*\)/gi;
+			if (!/\+/.test(selector.replace(NTH_PSEUDO, ""))) return;
 
-				let uuid = "following-" + UUID();
+			let declarations = csstree.generate(ruleNode.block);
+			declarations = declarations.replace(/[{}]/g, "");
 
-				selector.split(",").forEach((s) => {
-					if (!this.selectors[s]) {
-						this.selectors[s] = [uuid, declarations];
-					} else {
-						this.selectors[s][1] = `${this.selectors[s][1]};${declarations}` ;
-					}
+			let uuid = "following-" + UUID();
+
+			// Walk SelectorList children instead of splitting by "," so that
+			// commas inside :where()/:is()/:not() stay inside their pseudo.
+			const recordSelector = (s) => {
+				if (!this.selectors[s]) {
+					this.selectors[s] = [uuid, declarations];
+				} else {
+					this.selectors[s][1] = `${this.selectors[s][1]};${declarations}`;
+				}
+			};
+
+			if (ruleNode.prelude.type === "SelectorList" && ruleNode.prelude.children) {
+				ruleNode.prelude.children.forEach((selectorNode) => {
+					recordSelector(csstree.generate(selectorNode));
 				});
-
-				rulelist.remove(ruleItem);
+			} else {
+				recordSelector(selector);
 			}
-		}
 
+			rulelist.remove(ruleItem);
+		}
 		afterParsed(parsed) {
 			this.processSelectors(parsed, this.selectors);
 		}
 
+		/**
+		 * For each stored selector, finds matching elements in the parsed document,
+		 * adds a data-following attribute with the selector's UUID,
+		 * and inserts corresponding CSS rules into the stylesheet.
+		 *
+		 * @param {Document} parsed - The parsed document to query elements from.
+		 * @param {Object} selectors - Map of selectors with UUID and declarations.
+		 */
 		processSelectors(parsed, selectors) {
 			// add the new attributes to matching elements
 			for (let s in selectors) {
@@ -30894,31 +33882,69 @@
 		}
 	}
 
+	/**
+	 * Handles the parsing, layout, and rendering of footnotes in paged content.
+	 *
+	 * Manages footnote policies, markers, calls, layout overflow, and alignment.
+	 * Extends the generic Handler class.
+	 */
 	class Footnotes extends Handler {
+		/**
+		 * Creates an instance of Footnotes.
+		 * @param {object} chunker - The chunker instance handling content chunks.
+		 * @param {object} polisher - The polisher instance handling polishing/layout.
+		 * @param {object} caller - The caller instance managing handler orchestration.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 
+			/**
+			 * Stores footnote selectors and their properties.
+			 * @type {Object.<string, {selector: string, policy: string, display: string}>}
+			 */
 			this.footnotes = {};
+
+			/**
+			 * Array of DOM fragments that need layout recalculation.
+			 * @type {Array<Node>}
+			 */
 			this.needsLayout = [];
+
+			/**
+			 * Array of footnote nodes that overflowed and are pending reinsertion.
+			 * @type {Array<Element>}
+			 */
+			this.overflow = [];
 		}
 
+		/**
+		 * Handles CSS declarations related to footnotes during parsing.
+		 * Detects `float: footnote`, `footnote-policy`, and `footnote-display` properties.
+		 *
+		 * @param {object} declaration - The CSS declaration node.
+		 * @param {object} dItem - Declaration item in the list.
+		 * @param {object} dList - Declaration list.
+		 * @param {object} rule - The CSS rule node.
+		 */
 		onDeclaration(declaration, dItem, dList, rule) {
 			let property = declaration.property;
 			if (property === "float") {
-				let identifier = declaration.value.children && declaration.value.children.first();
+				let identifier =
+					declaration.value.children && declaration.value.children.first();
 				let location = identifier && identifier.name;
 				if (location === "footnote") {
 					let selector = csstree.generate(rule.ruleNode.prelude);
 					this.footnotes[selector] = {
 						selector: selector,
 						policy: "auto",
-						display: "block"
+						display: "block",
 					};
 					dList.remove(dItem);
 				}
 			}
 			if (property === "footnote-policy") {
-				let identifier = declaration.value.children && declaration.value.children.first();
+				let identifier =
+					declaration.value.children && declaration.value.children.first();
 				let policy = identifier && identifier.name;
 				if (policy) {
 					let selector = csstree.generate(rule.ruleNode.prelude);
@@ -30929,7 +33955,8 @@
 				}
 			}
 			if (property === "footnote-display") {
-				let identifier = declaration.value.children && declaration.value.children.first();
+				let identifier =
+					declaration.value.children && declaration.value.children.first();
 				let display = identifier && identifier.name;
 				let selector = csstree.generate(rule.ruleNode.prelude);
 				if (display && this.footnotes[selector]) {
@@ -30941,21 +33968,28 @@
 			}
 		}
 
+		/**
+		 * Transforms pseudo selectors `::footnote-marker` and `::footnote-call`
+		 * into attribute selectors with pseudo-elements to enable footnote rendering.
+		 *
+		 * @param {object} pseudoNode - The pseudo selector node.
+		 * @param {object} pItem - The item in pseudo selector list.
+		 * @param {object} pList - The pseudo selector list.
+		 * @param {string} selector - The full selector string.
+		 * @param {object} rule - The CSS rule node.
+		 */
 		onPseudoSelector(pseudoNode, pItem, pList, selector, rule) {
 			let name = pseudoNode.name;
 			if (name === "footnote-marker") {
-				// switch ::footnote-marker to [data-footnote-marker]::before
 				let prelude = rule.ruleNode.prelude;
 				let newPrelude = new csstree.List();
 
-				// Can't get remove to work, so just copying everything else
 				prelude.children.first().children.each((node) => {
 					if (node.type !== "PseudoElementSelector") {
 						newPrelude.appendData(node);
 					}
 				});
 
-				// Add our data call
 				newPrelude.appendData({
 					type: "AttributeSelector",
 					name: {
@@ -30965,34 +33999,29 @@
 					flags: null,
 					loc: null,
 					matcher: null,
-					value: null
+					value: null,
 				});
 
-				// Add new pseudo element
 				newPrelude.appendData({
 					type: "PseudoElementSelector",
 					name: "marker",
 					loc: null,
-					children: null
+					children: null,
 				});
 
 				prelude.children.first().children = newPrelude;
 			}
 
 			if (name === "footnote-call") {
-				// switch ::footnote-call to [data-footnote-call]::after
-
 				let prelude = rule.ruleNode.prelude;
 				let newPrelude = new csstree.List();
 
-				// Can't get remove to work, so just copying everything else
 				prelude.children.first().children.each((node) => {
 					if (node.type !== "PseudoElementSelector") {
 						newPrelude.appendData(node);
 					}
 				});
 
-				// Add our data call
 				newPrelude.appendData({
 					type: "AttributeSelector",
 					name: {
@@ -31002,79 +34031,93 @@
 					flags: null,
 					loc: null,
 					matcher: null,
-					value: null
+					value: null,
 				});
 
-				// Add new pseudo element
 				newPrelude.appendData({
 					type: "PseudoElementSelector",
 					name: "after",
 					loc: null,
-					children: null
+					children: null,
 				});
 
 				prelude.children.first().children = newPrelude;
 			}
 		}
 
+		/**
+		 * After parsing, processes and applies footnote attributes to matching elements.
+		 *
+		 * @param {Document} parsed - The parsed DOM document or fragment.
+		 */
 		afterParsed(parsed) {
 			this.processFootnotes(parsed, this.footnotes);
 		}
 
+		/**
+		 * Finds elements matching footnote selectors and adds footnote attributes.
+		 * Also marks their container parents with data attributes to indicate presence of notes.
+		 *
+		 * @param {Document|Element} parsed - The root parsed element.
+		 * @param {Object} notes - The footnotes configuration object.
+		 */
 		processFootnotes(parsed, notes) {
 			for (let n in notes) {
-				// Find elements
 				let elements = parsed.querySelectorAll(n);
 				let element;
 				let note = notes[n];
 				for (var i = 0; i < elements.length; i++) {
 					element = elements[i];
-					// Add note type
 					element.setAttribute("data-note", "footnote");
 					element.setAttribute("data-break-before", "avoid");
 					element.setAttribute("data-note-policy", note.policy || "auto");
 					element.setAttribute("data-note-display", note.display || "block");
-					// Mark all parents
 					this.processFootnoteContainer(element);
 				}
 			}
 		}
 
+		/**
+		 * Walks up the DOM from a footnote element to find its container.
+		 * Marks the closest container or last element with 'data-has-notes' attribute.
+		 *
+		 * @param {Element} node - The footnote element.
+		 */
 		processFootnoteContainer(node) {
-			// Find the container
 			let element = node.parentElement;
 			let prevElement = element;
-			// Walk up the dom until we find a container element
 			while (element) {
 				if (isContainer(element)) {
-					// Add flag to the previous non-container element that will render with children
 					prevElement.setAttribute("data-has-notes", "true");
 					break;
 				}
-
 				prevElement = element;
 				element = element.parentElement;
-
-				// If no containers were found and there are no further parents flag the last element
 				if (!element) {
 					prevElement.setAttribute("data-has-notes", "true");
 				}
 			}
 		}
 
+		/**
+		 * Processes a node during rendering to find and handle footnotes within it.
+		 *
+		 * @param {Node} node - The DOM node to render.
+		 */
 		renderNode(node) {
 			if (node.nodeType == 1) {
-				// Get all notes
 				let notes;
 
-				// Ingnore html element nodes, like mathml
 				if (!node.dataset) {
 					return;
 				}
 
 				if (node.dataset.note === "footnote") {
 					notes = [node];
-				} else if (node.dataset.hasNotes || node.querySelectorAll("[data-note='footnote']")) {
+				} else if (
+					node.dataset.hasNotes ||
+					node.querySelectorAll("[data-note='footnote']")
+				) {
 					notes = node.querySelectorAll("[data-note='footnote']");
 				}
 
@@ -31084,6 +34127,12 @@
 			}
 		}
 
+		/**
+		 * Finds visible footnotes within a node and moves them into the footnote area.
+		 *
+		 * @param {NodeListOf<Element>} notes - List of footnote elements.
+		 * @param {Element} node - The container node to check visibility against.
+		 */
 		findVisibleFootnotes(notes, node) {
 			let area, size, right;
 			area = node.closest(".pagedjs_page_content");
@@ -31096,52 +34145,27 @@
 				let left = bounds.left;
 
 				if (left < right) {
-					// Add call for the note
 					this.moveFootnote(currentNote, node.closest(".pagedjs_area"), true);
 				}
 			}
 		}
 
-		moveFootnote(node, pageArea, needsNoteCall) {
-			// let pageArea = node.closest(".pagedjs_area");
-			let noteArea = pageArea.querySelector(".pagedjs_footnote_area");
-			let noteContent = noteArea.querySelector(".pagedjs_footnote_content");
-			let noteInnerContent = noteContent.querySelector(".pagedjs_footnote_inner_content");
+		/**
+		 * Recalculates the height of footnote content and adjusts page CSS variables
+		 * to ensure proper layout according to footnote policy and overflow.
+		 *
+		 * @param {Element} node - The footnote node.
+		 * @param {Element} noteContent - The container of footnote content.
+		 * @param {Element} pageArea - The page area element.
+		 * @param {Element|null} noteCall - The footnote call element.
+		 * @param {boolean} needsNoteCall - Whether the footnote call should be rendered.
+		 */
 
-			if (!isElement(node)) {
-				return;
-			}
-
-			// Add call for the note
-			let noteCall;
-			if (needsNoteCall) {
-				noteCall = this.createFootnoteCall(node);
-			}
-
-			// Remove the break before attribute for future layout
-			node.removeAttribute("data-break-before");
-
-			// Check if note already exists for overflow
-			let existing = noteInnerContent.querySelector(`[data-ref="${node.dataset.ref}"]`);
-			if (existing) {
-				// Remove the note from the flow but no need to render it again
-				node.remove();
-				return;
-			}
-
-			// Add the note node
-			noteInnerContent.appendChild(node);
-
+		recalcFootnotesHeight(node, noteContent, pageArea, noteCall, needsNoteCall) {
 			// Remove empty class
 			if (noteContent.classList.contains("pagedjs_footnote_empty")) {
 				noteContent.classList.remove("pagedjs_footnote_empty");
 			}
-
-			// Add marker
-			node.dataset.footnoteMarker = node.dataset.ref;
-
-			// Add Id
-			node.id = `note-${node.dataset.ref}`;
 
 			// Get note content size
 			let height = noteContent.scrollHeight;
@@ -31155,6 +34179,7 @@
 
 			// Check element sizes
 			let noteCallBounds = noteCall && noteCall.getBoundingClientRect();
+			let noteArea = pageArea.querySelector(".pagedjs_footnote_area");
 			let noteAreaBounds = noteArea.getBoundingClientRect();
 
 			// Get the @footnote margins
@@ -31196,7 +34221,7 @@
 					let parentParagraph = noteCall.closest("p").previousElementSibling;
 					if (parentParagraph) {
 						noteCallOffset = Math.ceil(
-							parentParagraph.getBoundingClientRect().bottom
+							parentParagraph.getBoundingClientRect().bottom,
 						);
 					} else {
 						noteCallOffset = Math.ceil(rangeBounds.bottom);
@@ -31208,7 +34233,9 @@
 			// Space between the top of the footnotes area and the bottom of the footnote call
 			let noteDelta = noteCallPosition ? notAreaTop - noteCallPosition : 0;
 			// Space needed for the force a break for the policy of the footnote
-			let notePolicyDelta = noteCallPosition ? Math.floor(noteAreaBounds.top) - noteCallOffset : 0;
+			let notePolicyDelta = noteCallPosition
+				? Math.floor(noteAreaBounds.top) - noteCallOffset
+				: 0;
 			let hasNotes = noteArea.querySelector("[data-note='footnote']");
 			if (needsNoteCall && noteCallBounds.left > right) {
 				// Note is offscreen and will be chunked to the next page on overflow
@@ -31225,25 +34252,95 @@
 				// Call was previously added, force adding footnote
 				pageArea.style.setProperty(
 					"--pagedjs-footnotes-height",
-					`${height + total}px`
+					`${height + total}px`,
 				);
 			} else if (noteCallPosition < noteAreaBounds.top - contentDelta) {
 				// the current note content will fit without pushing the call to the next page
 				pageArea.style.setProperty(
 					"--pagedjs-footnotes-height",
-					`${height + noteContentMargins + noteContentBorders}px`
+					`${height + noteContentMargins + noteContentBorders}px`,
 				);
-			} else {
+			} else if (notePolicyDelta > 0) {
 				// set height to just before note call
 				pageArea.style.setProperty(
 					"--pagedjs-footnotes-height",
-					`${noteAreaBounds.height + notePolicyDelta}px`
+					`${noteAreaBounds.height + notePolicyDelta}px`,
+				);
+				let noteInnerContent = noteContent.querySelector(
+					".pagedjs_footnote_inner_content",
 				);
 				noteInnerContent.style.height =
 					noteAreaBounds.height + notePolicyDelta - total + "px";
 			}
 		}
 
+		/**
+		 * Moves a footnote node to the footnote area of a given page.
+		 * @param {Element} node - The footnote element to move.
+		 * @param {Element} pageArea - The page container element containing footnotes.
+		 * @param {boolean} needsNoteCall - Whether a footnote call link should be created.
+		 * @returns {void}
+		 */
+		moveFootnote(node, pageArea, needsNoteCall) {
+			// let pageArea = node.closest(".pagedjs_area");
+			let noteArea = pageArea.querySelector(".pagedjs_footnote_area");
+			let noteContent = noteArea.querySelector(".pagedjs_footnote_content");
+			let noteInnerContent = noteContent.querySelector(
+				".pagedjs_footnote_inner_content",
+			);
+
+			if (!isElement(node)) {
+				return;
+			}
+
+			// Add call for the note but only if it's not overflow.
+			// If it is overflow, the parentElement will be null.
+			let noteCall;
+			if (needsNoteCall) {
+				if (node.parentElement) {
+					noteCall = this.createFootnoteCall(node);
+				} else {
+					let ref = node.dataset["ref"];
+					noteCall = pageArea.querySelector(`[data-ref="${ref}"]`);
+				}
+			}
+
+			// Remove the break before attribute for future layout
+			node.removeAttribute("data-break-before");
+
+			// Check if note already exists for overflow
+			let existing = noteInnerContent.querySelector(
+				`[data-ref="${node.dataset.ref}"]`,
+			);
+			if (existing) {
+				// Remove the note from the flow but no need to render it again
+				node.remove();
+				return;
+			}
+
+			// Add the note node
+			noteInnerContent.appendChild(node);
+
+			// Add marker
+			node.dataset.footnoteMarker = node.dataset.ref;
+
+			// Add Id
+			node.id = `note-${node.dataset.ref}`;
+
+			this.recalcFootnotesHeight(
+				node,
+				noteContent,
+				pageArea,
+				noteCall,
+				needsNoteCall,
+			);
+		}
+
+		/**
+		 * Creates a footnote call (link) element that points to the footnote.
+		 * @param {Element} node - The footnote element to create a call for.
+		 * @returns {HTMLAnchorElement} The created footnote call anchor element.
+		 */
 		createFootnoteCall(node) {
 			let parentElement = node.parentElement;
 			let footnoteCall = document.createElement("a");
@@ -31265,17 +34362,28 @@
 			return footnoteCall;
 		}
 
+		/**
+		 * Called after the page layout is complete to handle footnote overflow and layout.
+		 * @param {Element} pageElement - The page's root element in the DOM.
+		 * @param {Object} page - The page object containing footnotes and layout info.
+		 * @param {Object|null} breakToken - The token representing a page break, if any.
+		 * @param {Object} chunker - The chunker instance managing page chunks.
+		 * @returns {void}
+		 */
 		afterPageLayout(pageElement, page, breakToken, chunker) {
 			let pageArea = pageElement.querySelector(".pagedjs_area");
 			let noteArea = page.footnotesArea;
 			let noteContent = noteArea.querySelector(".pagedjs_footnote_content");
-			let noteInnerContent = noteArea.querySelector(".pagedjs_footnote_inner_content");
+			let noteInnerContent = noteArea.querySelector(
+				".pagedjs_footnote_inner_content",
+			);
 
 			let noteContentBounds = noteContent.getBoundingClientRect();
 			let { width } = noteContentBounds;
 
 			noteInnerContent.style.columnWidth = Math.round(width) + "px";
-			noteInnerContent.style.columnGap = "calc(var(--pagedjs-margin-right) + var(--pagedjs-margin-left))";
+			noteInnerContent.style.columnGap =
+				"calc(var(--pagedjs-margin-right) + var(--pagedjs-margin-left))";
 
 			// Get overflow
 			let layout = new Layout(noteArea, undefined, chunker.settings);
@@ -31283,19 +34391,83 @@
 
 			if (overflow) {
 				let { startContainer, startOffset } = overflow;
-				let startIsNode;
-				if (isElement(startContainer)) {
-					let start = startContainer.childNodes[startOffset];
-					startIsNode = isElement(start) && start.hasAttribute("data-footnote-marker");
+				let extracted;
+				let footnoteContainer = isText(startContainer)
+					? startContainer.parentElement.closest("[data-footnote-marker]")
+					: startContainer.closest("[data-footnote-marker]");
+				let notEntireNote = !footnoteContainer || startOffset;
+				if (!notEntireNote) {
+					let pos = startContainer;
+					while (pos && pos !== footnoteContainer) {
+						pos = pos.previousSibling || pos.parentNode;
+						if (isText(pos)) {
+							notEntireNote = true;
+							break;
+						}
+					}
 				}
 
-				let extracted = overflow.extractContents();
+				if (notEntireNote) {
+					// Assuming overflow is not multipart.
+					extracted = overflow.extractContents();
 
-				if (!startIsNode) {
 					let splitChild = extracted.firstElementChild;
-					splitChild.dataset.splitFrom = splitChild.dataset.ref;
+
+					// Add any DOM structure above this node, but remove any text
+					// content from it.
+					// Assumes the footnote content is not anything complicated enough
+					// to need the more complicated handling that we do for the main
+					// content.
+					let parentRange = document.createRange();
+					parentRange.selectNode(footnoteContainer);
+					parentRange.setEndAfter(footnoteContainer);
+					let cloned = parentRange.cloneContents();
+					let walker = walk$2(cloned.firstChild, cloned);
+
+					let toDelete = undefined;
+					let next, pos, replacePos, done;
+					while (!done) {
+						if (isElement(pos)) {
+							if (pos.dataset.ref == splitChild?.dataset.ref) {
+								replacePos = pos;
+							}
+
+							if (pos.dataset.footnoteMarker) {
+								// Make sure counter isn't incremented and no new marker id rendered.
+								pos.dataset.splitFrom = true;
+								delete pos.dataset.footnoteMarker;
+							}
+						}
+						next = walker.next();
+						pos = next.value;
+						done = next.done;
+
+						if (toDelete) {
+							toDelete.remove();
+							toDelete = undefined;
+						}
+						if (isText(pos)) {
+							toDelete = pos;
+							replacePos = pos.parentElement;
+						}
+					}
+
+					if (splitChild) {
+						splitChild.dataset.splitFrom = splitChild.dataset.ref;
+						replacePos.parentNode.replaceChild(extracted, replacePos);
+					} else {
+						replacePos.appendChild(extracted);
+					}
+
+					extracted = cloned;
 
 					this.handleAlignment(noteInnerContent.lastElementChild);
+				} else {
+					// Adjust the range to take the entire footnote.
+					let range = document.createRange();
+					range.selectNode(footnoteContainer);
+					range.setEndAfter(footnoteContainer);
+					extracted = range.extractContents();
 				}
 
 				this.needsLayout.push(extracted);
@@ -31312,7 +34484,7 @@
 				let noteContentBorders = this.borderHeight(noteContent);
 				pageArea.style.setProperty(
 					"--pagedjs-footnotes-height",
-					`${height + noteContentMargins + noteContentBorders + noteContentPadding}px`
+					`${height + noteContentMargins + noteContentBorders + noteContentPadding}px`,
 				);
 
 				// Hide footnote content if empty
@@ -31324,20 +34496,21 @@
 					chunker.clonePage(page);
 				} else {
 					let breakBefore, previousBreakAfter;
+					let firstOverflowNode = breakToken.overflow?.node;
 					if (
-						breakToken.node &&
-						typeof breakToken.node.dataset !== "undefined" &&
-						typeof breakToken.node.dataset.previousBreakAfter !== "undefined"
+						firstOverflowNode &&
+						typeof firstOverflowNode.dataset !== "undefined" &&
+						typeof firstOverflowNode.dataset.previousBreakAfter !== "undefined"
 					) {
-						previousBreakAfter = breakToken.node.dataset.previousBreakAfter;
+						previousBreakAfter = firstOverflowNode.dataset.previousBreakAfter;
 					}
 
 					if (
-						breakToken.node &&
-						typeof breakToken.node.dataset !== "undefined" &&
-						typeof breakToken.node.dataset.breakBefore !== "undefined"
+						firstOverflowNode &&
+						typeof firstOverflowNode.dataset !== "undefined" &&
+						typeof firstOverflowNode.dataset.breakBefore !== "undefined"
 					) {
-						breakBefore = breakToken.node.dataset.breakBefore;
+						breakBefore = firstOverflowNode.dataset.breakBefore;
 					}
 
 					if (breakBefore || previousBreakAfter) {
@@ -31347,6 +34520,12 @@
 			}
 			noteInnerContent.style.height = "auto";
 		}
+
+		/**
+		 * Handles alignment properties for the last split footnote element.
+		 * @param {Element} node - The footnote element to apply alignment on.
+		 * @returns {void}
+		 */
 
 		handleAlignment(node) {
 			let styles = window.getComputedStyle(node);
@@ -31359,6 +34538,11 @@
 			}
 		}
 
+		/**
+		 * Called before laying out a page, to process any pending footnotes that need moving.
+		 * @param {Object} page - The page object containing DOM and layout data.
+		 * @returns {void}
+		 */
 		beforePageLayout(page) {
 			while (this.needsLayout.length) {
 				let fragment = this.needsLayout.shift();
@@ -31367,33 +34551,86 @@
 					this.moveFootnote(
 						node,
 						page.element.querySelector(".pagedjs_area"),
-						false
+						false,
 					);
 				});
 			}
 		}
 
+		/**
+		 * Called after overflow content is removed; updates footnotes accordingly.
+		 * @param {Element} removed - The DOM fragment containing removed overflow nodes.
+		 * @param {Element} rendered - The DOM element where content is currently rendered.
+		 * @returns {void}
+		 */
 		afterOverflowRemoved(removed, rendered) {
 			// Find the page area
 			let area = rendered.closest(".pagedjs_area");
+			if (!area) {
+				return;
+			}
+
 			// Get any rendered footnotes
-			let notes = area.querySelectorAll(".pagedjs_footnote_area [data-note='footnote']");
+			let notes = area.querySelectorAll(
+				".pagedjs_footnote_area [data-note='footnote']",
+			);
 			for (let n = 0; n < notes.length; n++) {
 				const note = notes[n];
 				// Check if the call for that footnote has been removed with the overflow
-				let call = removed.querySelector(`[data-footnote-call="${note.dataset.ref}"]`);
+				let call = removed.querySelector(
+					`[data-footnote-call="${note.dataset.ref}"]`,
+				);
 				if (call) {
 					note.remove();
+					this.overflow.push(note);
 				}
 			}
 			// Hide footnote content if empty
-			let noteInnerContent = area.querySelector(".pagedjs_footnote_inner_content");
+			let noteInnerContent = area.querySelector(
+				".pagedjs_footnote_inner_content",
+			);
 			if (noteInnerContent && noteInnerContent.childNodes.length === 0) {
 				noteInnerContent.parentElement.classList.add("pagedjs_footnote_empty");
 			}
 		}
 
-		marginsHeight(element, total=true) {
+		/**
+		 * Called after overflow content is added; reattaches footnotes and recalculates heights.
+		 * @param {Element} rendered - The DOM element where new content has been rendered.
+		 * @returns {void}
+		 */
+		afterOverflowAdded(rendered) {
+			let notes = rendered.querySelectorAll("[data-note='footnote']");
+			if (notes && notes.length) {
+				this.findVisibleFootnotes(notes, rendered);
+			}
+
+			let area = rendered.closest(".pagedjs_area");
+			let noteContent = area.querySelector(".pagedjs_footnote_content");
+			let notesInnerContent = area.querySelector(
+				".pagedjs_footnote_inner_content",
+			);
+
+			if (this.overflow.length) {
+				this.overflow.forEach((item) => {
+					notesInnerContent.appendChild(item);
+					let call = rendered.querySelector(
+						`[data-ref="${item.dataset["ref"]}"]`,
+					);
+					this.recalcFootnotesHeight(item, noteContent, area, call, false);
+				});
+
+				this.overflow = [];
+			}
+		}
+
+		/**
+		 * Calculates the total vertical margin height of an element.
+		 * @param {Element} element - The DOM element to calculate margin height for.
+		 * @param {boolean} [total=true] - Whether to include bottom margin in the total.
+		 * @returns {number} The sum of the top (and optionally bottom) margin in pixels.
+		 */
+		marginsHeight(element, total = true) {
 			let styles = window.getComputedStyle(element);
 			let marginTop = parseInt(styles.marginTop);
 			let marginBottom = parseInt(styles.marginBottom);
@@ -31407,7 +34644,13 @@
 			return margin;
 		}
 
-		paddingHeight(element, total=true) {
+		/**
+		 * Calculates the total vertical padding height of an element.
+		 * @param {Element} element - The DOM element to calculate padding height for.
+		 * @param {boolean} [total=true] - Whether to include bottom padding in the total.
+		 * @returns {number} The sum of the top (and optionally bottom) padding in pixels.
+		 */
+		paddingHeight(element, total = true) {
 			let styles = window.getComputedStyle(element);
 			let paddingTop = parseInt(styles.paddingTop);
 			let paddingBottom = parseInt(styles.paddingBottom);
@@ -31421,7 +34664,13 @@
 			return padding;
 		}
 
-		borderHeight(element, total=true) {
+		/**
+		 * Calculates the total vertical border height of an element.
+		 * @param {Element} element - The DOM element to calculate border height for.
+		 * @param {boolean} [total=true] - Whether to include bottom border in the total.
+		 * @returns {number} The sum of the top (and optionally bottom) border width in pixels.
+		 */
+		borderHeight(element, total = true) {
 			let styles = window.getComputedStyle(element);
 			let borderTop = parseInt(styles.borderTop);
 			let borderBottom = parseInt(styles.borderBottom);
@@ -31450,14 +34699,45 @@
 		Footnotes
 	];
 
+	/**
+	 * Handles CSS Running Headers/Footers using the `position: running()` and `content: element()` CSS features.
+	 *
+	 * Tracks selectors with running headers, manages their capture and placement,
+	 * and applies them during page layout.
+	 *
+	 * @class
+	 * @extends Handler
+	 */
 	class RunningHeaders extends Handler {
+		/**
+		 * Creates an instance of RunningHeaders.
+		 *
+		 * @param {Object} chunker - The chunker instance controlling content chunking.
+		 * @param {Object} polisher - The polisher instance controlling polishing/styling.
+		 * @param {Object} caller - The caller or controller invoking this handler.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 
+			/**
+			 * Stores running header selectors keyed by the running identifier.
+			 */
 			this.runningSelectors = {};
+
+			/**
+			 * Stores element() CSS content references keyed by selector string.
+			 */
 			this.elements = {};
 		}
 
+		/**
+		 * Processes CSS declarations to find and store `position: running()` and `content: element()` rules.
+		 *
+		 * @param {Object} declaration - The CSS declaration node.
+		 * @param {Object} dItem - Declaration item (not used here).
+		 * @param {Object} dList - Declaration list (not used here).
+		 * @param {Object} rule - The CSS rule node that contains the declaration.
+		 */
 		onDeclaration(declaration, dItem, dList, rule) {
 			if (declaration.property === "position") {
 				let selector = csstree.generate(rule.ruleNode.prelude);
@@ -31467,54 +34747,43 @@
 					let value;
 					csstree.walk(declaration, {
 						visit: "Function",
-						enter: (node, item, list) => {
+						enter: (node) => {
 							value = node.children.first().name;
-						}
+						},
 					});
 
 					this.runningSelectors[value] = {
 						identifier: identifier,
 						value: value,
-						selector: selector
+						selector: selector,
 					};
 				}
 			}
 
 			if (declaration.property === "content") {
-
 				csstree.walk(declaration, {
 					visit: "Function",
-					enter: (funcNode, fItem, fList) => {
-
+					enter: (funcNode) => {
 						if (funcNode.name.indexOf("element") > -1) {
-
 							let selector = csstree.generate(rule.ruleNode.prelude);
-
 							let func = funcNode.name;
-
 							let value = funcNode.children.first().name;
-
 							let args = [value];
-
-							// we only handle first for now
-							let style = "first";
+							let style = "first"; // Currently only supports 'first'
 
 							selector.split(",").forEach((s) => {
-								// remove before / after
 								s = s.replace(/::after|::before/, "");
-
 								this.elements[s] = {
 									func: func,
 									args: args,
 									value: value,
-									style: style ,
+									style: style,
 									selector: s,
-									fullSelector: selector
+									fullSelector: selector,
 								};
 							});
 						}
-
-					}
+					},
 				});
 			}
 		}
@@ -31529,7 +34798,6 @@
 						header.style.display = "none";
 					}
 				}
-
 			}
 		}
 
@@ -31538,33 +34806,26 @@
 				let set = this.runningSelectors[name];
 				let selected = fragment.querySelector(set.selector);
 				if (selected) {
-					// let cssVar;
 					if (set.identifier === "running") {
-						// cssVar = selected.textContent.replace(/\\([\s\S])|(["|'])/g,"\\$1$2");
-						// this.styleSheet.insertRule(`:root { --string-${name}: "${cssVar}"; }`, this.styleSheet.cssRules.length);
-						// fragment.style.setProperty(`--string-${name}`, `"${cssVar}"`);
 						set.first = selected;
 					} else {
-						console.warn(set.value + "needs css replacement");
+						console.warn(set.value + " needs CSS replacement");
 					}
 				}
 			}
 
-			// move elements
 			if (!this.orderedSelectors) {
 				this.orderedSelectors = this.orderSelectors(this.elements);
 			}
 
 			for (let selector of this.orderedSelectors) {
 				if (selector) {
-
 					let el = this.elements[selector];
 					let selected = fragment.querySelector(selector);
 					if (selected) {
 						let running = this.runningSelectors[el.args[0]];
 						if (running && running.first) {
 							selected.innerHTML = ""; // Clear node
-							// selected.classList.add("pagedjs_clear-after"); // Clear ::after
 							let clone = running.first.cloneNode(true);
 							clone.style.display = null;
 							selected.appendChild(clone);
@@ -31575,17 +34836,20 @@
 		}
 
 		/**
-		* Assign a weight to @page selector classes
-		* 1) page
-		* 2) left & right
-		* 3) blank
-		* 4) first & nth
-		* 5) named page
-		* 6) named left & right
-		* 7) named first & nth
-		* @param {string} [s] selector string
-		* @return {int} weight
-		*/
+		 * Assigns a weight to @page selector classes for ordering.
+		 *
+		 * Weights:
+		 * 1) page
+		 * 2) left & right
+		 * 3) blank
+		 * 4) first & nth
+		 * 5) named page
+		 * 6) named left & right
+		 * 7) named first & nth
+		 *
+		 * @param {string} [s] - The selector string.
+		 * @returns {number} Weight value for ordering.
+		 */
 		pageWeight(s) {
 			let weight = 1;
 			let selector = s.split(" ");
@@ -31597,7 +34861,10 @@
 				case 4:
 					if (/^pagedjs_[\w-]+_first_page$/.test(parts[3])) {
 						weight = 7;
-					} else if (parts[3] === "pagedjs_left_page" || parts[3] === "pagedjs_right_page") {
+					} else if (
+						parts[3] === "pagedjs_left_page" ||
+						parts[3] === "pagedjs_right_page"
+					) {
 						weight = 6;
 					}
 					break;
@@ -31615,7 +34882,10 @@
 						weight = 4;
 					} else if (parts[1] === "pagedjs_blank_page") {
 						weight = 3;
-					} else if (parts[1] === "pagedjs_left_page" || parts[1] === "pagedjs_right_page") {
+					} else if (
+						parts[1] === "pagedjs_left_page" ||
+						parts[1] === "pagedjs_right_page"
+					) {
 						weight = 2;
 					}
 					break;
@@ -31631,13 +34901,13 @@
 		}
 
 		/**
-		* Orders the selectors based on weight
-		*
-		* Does not try to deduplicate base on specifity of the selector
-		* Previous matched selector will just be overwritten
-		* @param {obj} [obj] selectors object
-		* @return {Array} orderedSelectors
-		*/
+		 * Orders selectors based on their page weight.
+		 *
+		 * Does not deduplicate selectors; later selectors overwrite previous ones.
+		 *
+		 * @param {Object<string, any>} obj - The selectors object.
+		 * @returns {Array<string>} Ordered selectors array.
+		 */
 		orderSelectors(obj) {
 			let selectors = Object.keys(obj);
 			let weighted = {
@@ -31647,7 +34917,7 @@
 				4: [],
 				5: [],
 				6: [],
-				7: []
+				7: [],
 			};
 
 			let orderedSelectors = [];
@@ -31657,50 +34927,109 @@
 				weighted[w].unshift(s);
 			}
 
-			for (var i = 1; i <= 7; i++) {
+			for (let i = 1; i <= 7; i++) {
 				orderedSelectors = orderedSelectors.concat(weighted[i]);
 			}
 
 			return orderedSelectors;
 		}
 
+		/**
+		 * Adjusts CSS text before parsing.
+		 *
+		 * Fixes parsing issues with `element()` by renaming it to `element-ident()`.
+		 *
+		 * @param {string} text - The CSS text to parse.
+		 * @param {Object} sheet - The CSS stylesheet object.
+		 */
 		beforeTreeParse(text, sheet) {
 			// element(x) is parsed as image element selector, so update element to element-ident
-			sheet.text = text.replace(/element[\s]*\(([^|^#)]*)\)/g, "element-ident($1)");
+			sheet.text = text.replace(
+				/element[\s]*\(([^|^#)]*)\)/g,
+				"element-ident($1)",
+			);
 		}
 	}
 
+	/**
+	 * Cleans pseudo-element content strings by:
+	 * - Trimming specified characters from the start and end (default: quotes and spaces).
+	 * - Escaping quotes.
+	 * - Replacing newlines with CSS-compatible `\00000A` notation.
+	 *
+	 * @param {string|null} el - The pseudo-element content string (e.g., from `content` CSS property).
+	 * @param {string} [trim="\"' "] - Characters to trim from both ends of the string.
+	 * @returns {string|undefined} The cleaned content string, or `undefined` if input is null or undefined.
+	 */
 	function cleanPseudoContent(el, trim = "\"' ") {
-		if(el == null) return;
+		if (el == null) return;
 		return el
-			.replace(new RegExp(`^[${trim}]+`), "")
-			.replace(new RegExp(`[${trim}]+$`), "")
-			.replace(/["']/g, match => {
-				return "\\" + match;
-			})
-			.replace(/[\n]/g, match => {
-				return "\\00000A";
-			});
+			.replace(new RegExp(`^[${trim}]+`), "") // Trim leading characters
+			.replace(new RegExp(`[${trim}]+$`), "") // Trim trailing characters
+			.replace(/["']/g, (match) => "\\" + match) // Escape quotes
+			.replace(/[\n]/g, () => "\\00000A"); // Replace newlines with CSS newline
 	}
 
+	/**
+	 * Removes specific pseudo-elements from a CSS selector string.
+	 * Currently strips:
+	 * - `::footnote-call`
+	 * - `::footnote-marker`
+	 *
+	 * @param {string|null} el - The CSS selector string to clean.
+	 * @returns {string|undefined} The cleaned selector string, or `undefined` if input is null or undefined.
+	 */
 	function cleanSelector(el) {
-		if(el == null) return;
-		return el
-			.replace(new RegExp("::footnote-call", "g"), "")
-			.replace(new RegExp("::footnote-marker", "g"), "");
+		if (el == null) return;
+		return el.replace(/::footnote-call/g, "").replace(/::footnote-marker/g, "");
 	}
 
+	/**
+	 * Handles CSS string-set properties to create and manage CSS custom properties for first, last, start, and first-except string values on paged content.
+	 * Parses the `string-set` CSS declaration, transforms `string()` function content, and updates CSS variables on each page after layout.
+	 *
+	 * @class
+	 * @extends Handler
+	 */
 	class StringSets extends Handler {
+		/**
+		 * Creates an instance of StringSets.
+		 *
+		 * @param {Object} chunker - Chunker instance to manage content chunking.
+		 * @param {Object} polisher - Polisher instance for post-processing.
+		 * @param {Object} caller - Calling controller instance.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 
+			/**
+			 * Stores selectors and related string-set info keyed by identifier.
+			 * @type {Object<string, {identifier: string, func: string, value: string, selector: string}>}
+			 */
 			this.stringSetSelectors = {};
-			this.type;
-			// pageLastString = last string variable defined on the page
-			this.pageLastString;
 
+			/**
+			 * Holds the type of string currently processed (e.g. "first", "last").
+			 * @type {string|undefined}
+			 */
+			this.type;
+
+			/**
+			 * Keeps track of the last string value per identifier on the previous page.
+			 * @type {Object<string, string>|undefined}
+			 */
+			this.pageLastString;
 		}
-		
+
+		/**
+		 * Handles CSS declarations, looking specifically for `string-set` declarations.
+		 * Parses identifiers and functions, storing them with selectors.
+		 *
+		 * @param {Object} declaration - The CSS declaration node.
+		 * @param {Object} dItem - Declaration item (unused here).
+		 * @param {Object} dList - Declaration list (unused here).
+		 * @param {Object} rule - The CSS rule node containing the declaration.
+		 */
 		onDeclaration(declaration, dItem, dList, rule) {
 			if (declaration.property === "string-set") {
 				let selector = csstree.generate(rule.ruleNode.prelude);
@@ -31730,167 +35059,211 @@
 						identifier,
 						func,
 						value,
-						selector
+						selector,
 					};
 				});
-
 			}
 		}
 
+		/**
+		 * Processes `string()` CSS function nodes within content declarations,
+		 * transforming them into CSS variables referencing pagedjs-generated custom properties.
+		 *
+		 * @param {Object} funcNode - The function node representing `string()`.
+		 * @param {Object} fItem - Function item node (unused here).
+		 * @param {Object} fList - Function list node (unused here).
+		 * @param {Object} declaration - The CSS declaration node.
+		 * @param {Object} rule - The CSS rule node.
+		 */
 		onContent(funcNode, fItem, fList, declaration, rule) {
-
 			if (funcNode.name === "string") {
 				let identifier = funcNode.children && funcNode.children.first().name;
 				this.type = funcNode.children.last().name;
 				funcNode.name = "var";
 				funcNode.children = new csstree.List();
 
-	 
-				if(this.type === "first" || this.type === "last" || this.type === "start" || this.type === "first-except"){
+				if (
+					this.type === "first" ||
+					this.type === "last" ||
+					this.type === "start" ||
+					this.type === "first-except"
+				) {
 					funcNode.children.append(
 						funcNode.children.createItem({
 							type: "Identifier",
 							loc: null,
-							name: "--pagedjs-string-" + this.type + "-" + identifier
-						})
+							name: `--pagedjs-string-${this.type}-${identifier}`,
+						}),
 					);
-				}else {
+				} else {
 					funcNode.children.append(
 						funcNode.children.createItem({
 							type: "Identifier",
 							loc: null,
-							name: "--pagedjs-string-first-" + identifier
-						})
+							name: `--pagedjs-string-first-${identifier}`,
+						}),
 					);
 				}
 			}
 		}
 
+		/**
+		 * Called after page layout to update CSS custom properties for string-set variables.
+		 * Computes first, last, start, and first-except string values and sets them as CSS variables.
+		 *
+		 * @param {DocumentFragment} fragment - The DOM fragment for the current page.
+		 */
 		afterPageLayout(fragment) {
-
-		
-			if ( this.pageLastString === undefined )
-			{
+			if (this.pageLastString === undefined) {
 				this.pageLastString = {};
 			}
 
-			
 			for (let name of Object.keys(this.stringSetSelectors)) {
-		
 				let set = this.stringSetSelectors[name];
 				let value = set.value;
 				let func = set.func;
 				let selected = fragment.querySelectorAll(set.selector);
 
-				// Get the last found string for the current identifier
-				let stringPrevPage = ( name in this.pageLastString ) ? this.pageLastString[name] : "";
+				// Previous page's last string value for this identifier
+				let stringPrevPage =
+					name in this.pageLastString ? this.pageLastString[name] : "";
 
 				let varFirst, varLast, varStart, varFirstExcept;
 
-				if(selected.length == 0){
-					// if there is no sel. on the page
+				if (selected.length === 0) {
+					// No matches on this page; carry forward previous value
 					varFirst = stringPrevPage;
 					varLast = stringPrevPage;
 					varStart = stringPrevPage;
 					varFirstExcept = stringPrevPage;
-				}else {
-
+				} else {
 					selected.forEach((sel) => {
-						// push each content into the array to define in the variable the first and the last element of the page.
 						if (func === "content") {
-							this.pageLastString[name] = selected[selected.length - 1].textContent;
+							this.pageLastString[name] =
+								selected[selected.length - 1].textContent;
+						} else if (func === "attr") {
+							this.pageLastString[name] =
+								selected[selected.length - 1].getAttribute(value) || "";
 						}
+					});
 
-						if (func === "attr") {
-							this.pageLastString[name] = selected[selected.length - 1].getAttribute(value) || "";
-						}
-
-					});	
-
-					/* FIRST */
-		
+					// FIRST
 					if (func === "content") {
 						varFirst = selected[0].textContent;
-					}
-
-					if (func === "attr") {
+					} else if (func === "attr") {
 						varFirst = selected[0].getAttribute(value) || "";
 					}
 
-
-					/* LAST */
-
+					// LAST
 					if (func === "content") {
 						varLast = selected[selected.length - 1].textContent;
-					}
-
-					if (func === "attr") {
+					} else if (func === "attr") {
 						varLast = selected[selected.length - 1].getAttribute(value) || "";
 					}
 
-
-					/* START */
-
-					// Hack to find if the sel. is the first elem of the page / find a better way 
+					// START — heuristic: element at the top of page content
 					let selTop = selected[0].getBoundingClientRect().top;
 					let pageContent = selected[0].closest(".pagedjs_page_content");
 					let pageContentTop = pageContent.getBoundingClientRect().top;
 
-					if(selTop == pageContentTop){
+					if (selTop === pageContentTop) {
 						varStart = varFirst;
-					}else {
+					} else {
 						varStart = stringPrevPage;
 					}
 
-					/* FIRST EXCEPT */
-
+					// FIRST EXCEPT — currently empty string, can be implemented as needed
 					varFirstExcept = "";
-					
 				}
 
-				fragment.style.setProperty(`--pagedjs-string-first-${name}`, `"${cleanPseudoContent(varFirst)}`);
-				fragment.style.setProperty(`--pagedjs-string-last-${name}`, `"${cleanPseudoContent(varLast)}`);
-				fragment.style.setProperty(`--pagedjs-string-start-${name}`, `"${cleanPseudoContent(varStart)}`);
-				fragment.style.setProperty(`--pagedjs-string-first-except-${name}`, `"${cleanPseudoContent(varFirstExcept)}`);
-				
-		
+				fragment.style.setProperty(
+					`--pagedjs-string-first-${name}`,
+					`"${cleanPseudoContent(varFirst)}"`,
+				);
+				fragment.style.setProperty(
+					`--pagedjs-string-last-${name}`,
+					`"${cleanPseudoContent(varLast)}"`,
+				);
+				fragment.style.setProperty(
+					`--pagedjs-string-start-${name}`,
+					`"${cleanPseudoContent(varStart)}"`,
+				);
+				fragment.style.setProperty(
+					`--pagedjs-string-first-except-${name}`,
+					`"${cleanPseudoContent(varFirstExcept)}"`,
+				);
 			}
 		}
-		
-
 	}
 
+	/**
+	 * Handler for processing CSS target-counter() functions.
+	 *
+	 * Parses CSS rules using target-counter(), replaces them with CSS counters,
+	 * and dynamically manages counter-reset rules based on page layout.
+	 *
+	 * This allows counters to track values of elements targeted via attributes,
+	 * supporting complex page-based counters in paged media.
+	 *
+	 * @extends Handler
+	 */
 	class TargetCounters extends Handler {
+		/**
+		 * Creates an instance of TargetCounters.
+		 *
+		 * @param {Object} chunker - The chunker instance managing pagination.
+		 * @param {Object} polisher - The polisher instance responsible for CSS injection and post-processing.
+		 * @param {Object} caller - The caller or controller managing this handler.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 
+			/**
+			 * Reference to the stylesheet where counter rules will be inserted.
+			 * @type {CSSStyleSheet}
+			 */
 			this.styleSheet = polisher.styleSheet;
 
+			/**
+			 * Stores parsed target counter definitions keyed by selector.
+			 * @type {Object<string, Object>}
+			 */
 			this.counterTargets = {};
 		}
 
+		/**
+		 * Processes CSS content function nodes to detect and handle `target-counter()` functions.
+		 * Replaces the function with a CSS counter variable and stores necessary metadata.
+		 *
+		 * @param {Object} funcNode - The CSS function node representing `target-counter()`.
+		 * @param {Object} fItem - The current function node item (unused).
+		 * @param {Object} fList - The function list (unused).
+		 * @param {Object} declaration - The CSS declaration node.
+		 * @param {Object} rule - The CSS rule node containing the declaration.
+		 */
 		onContent(funcNode, fItem, fList, declaration, rule) {
 			if (funcNode.name === "target-counter") {
+				// Extract the selector for this rule
 				let selector = csstree.generate(rule.ruleNode.prelude);
 
+				// Get the first child function name (usually attr)
 				let first = funcNode.children.first();
 				let func = first.name;
 
+				// Full generated CSS value of the target-counter function
 				let value = csstree.generate(funcNode);
 
+				// Extract arguments (identifiers) for the first child function
 				let args = [];
-
 				first.children.forEach((child) => {
 					if (child.type === "Identifier") {
-
 						args.push(child.name);
 					}
 				});
 
-				let counter;
-				let style;
-				let styleIdentifier;
+				let counter, style, styleIdentifier;
 
+				// Extract counter name and optional style identifier
 				funcNode.children.forEach((child) => {
 					if (child.type === "Identifier") {
 						if (!counter) {
@@ -31902,8 +35275,10 @@
 					}
 				});
 
+				// Generate a unique CSS variable name for this counter
 				let variable = "target-counter-" + UUID();
 
+				// Support multiple selectors by splitting and adding each individually
 				selector.split(",").forEach((s) => {
 					this.counterTargets[s] = {
 						func: func,
@@ -31913,58 +35288,86 @@
 						style: style,
 						selector: s,
 						fullSelector: selector,
-						variable: variable
+						variable: variable,
 					};
 				});
 
-				// Replace with counter
+				// Replace the original target-counter() function with a CSS counter() function
 				funcNode.name = "counter";
 				funcNode.children = new csstree.List();
 				funcNode.children.appendData({
 					type: "Identifier",
 					loc: 0,
-					name: variable
+					name: variable,
 				});
 
+				// If a style identifier was provided, append it as a second argument
 				if (styleIdentifier) {
-					funcNode.children.appendData({type: "Operator", loc: null, value: ","});
+					funcNode.children.appendData({
+						type: "Operator",
+						loc: null,
+						value: ",",
+					});
 					funcNode.children.appendData(styleIdentifier);
 				}
 			}
 		}
 
+		/**
+		 * Called after page layout to update CSS rules for counters targeting elements in the pages.
+		 * Inserts CSS rules dynamically to reset counters on elements matching the target selectors.
+		 *
+		 * @param {DocumentFragment} fragment - The fragment of the current page.
+		 * @param {Object} page - The page object (unused here).
+		 * @param {Object} breakToken - The pagination break token (unused here).
+		 * @param {Object} chunker - The chunker instance containing the pagesArea DOM.
+		 */
 		afterPageLayout(fragment, page, breakToken, chunker) {
 			Object.keys(this.counterTargets).forEach((name) => {
 				let target = this.counterTargets[name];
+				// Split selector by pseudo elements/classes
 				let split = target.selector.split(/::?/g);
 				let query = split[0];
 
-				let queried = chunker.pagesArea.querySelectorAll(query + ":not([data-" + target.variable + "])");
+				// Select elements not yet processed (without the data attribute)
+				let queried = chunker.pagesArea.querySelectorAll(
+					query + ":not([data-" + target.variable + "])",
+				);
 
-				queried.forEach((selected, index) => {
-					// TODO: handle func other than attr
+				queried.forEach((selected) => {
+					// Currently only supports `attr` function; skip others
 					if (target.func !== "attr") {
 						return;
 					}
+
+					// Get the attribute value used for targeting
 					let val = attr(selected, target.args);
 					let element = chunker.pagesArea.querySelector(querySelectorEscape(val));
 
 					if (element) {
+						// Generate a unique selector id for this instance
 						let selector = UUID();
+
+						// Mark the selected element as processed
 						selected.setAttribute("data-" + target.variable, selector);
-						// TODO: handle other counter types (by query)
+
+						// Handle pseudo elements if present
 						let pseudo = "";
 						if (split.length > 1) {
 							pseudo += "::" + split[1];
 						}
+
 						if (target.counter === "page") {
+							// Calculate page counter value by checking page resets and increments
 							let pages = chunker.pagesArea.querySelectorAll(".pagedjs_page");
 							let pg = 0;
 							for (let i = 0; i < pages.length; i++) {
 								let page = pages[i];
 								let styles = window.getComputedStyle(page);
 								let reset = styles["counter-reset"].replace("page", "").trim();
-								let increment = styles["counter-increment"].replace("page", "").trim();
+								let increment = styles["counter-increment"]
+									.replace("page", "")
+									.trim();
 
 								if (reset !== "none") {
 									pg = parseInt(reset);
@@ -31973,23 +35376,36 @@
 									pg += parseInt(increment);
 								}
 
-								if (page.contains(element)){
+								if (page.contains(element)) {
 									break;
 								}
 							}
-							this.styleSheet.insertRule(`[data-${target.variable}="${selector}"]${pseudo} { counter-reset: ${target.variable} ${pg}; }`, this.styleSheet.cssRules.length);
+
+							// Insert CSS rule to reset the custom counter variable on the targeted element
+							this.styleSheet.insertRule(
+								`[data-${target.variable}="${selector}"]${pseudo} { counter-reset: ${target.variable} ${pg}; }`,
+								this.styleSheet.cssRules.length,
+							);
 						} else {
-							let value = element.getAttribute(`data-counter-${target.counter}-value`);
+							// For other counters, get the value from a data attribute and set it
+							let value = element.getAttribute(
+								`data-counter-${target.counter}-value`,
+							);
 							if (value) {
-								this.styleSheet.insertRule(`[data-${target.variable}="${selector}"]${pseudo} { counter-reset: ${target.variable} ${target.variable} ${parseInt(value)}; }`, this.styleSheet.cssRules.length);
+								this.styleSheet.insertRule(
+									`[data-${target.variable}="${selector}"]${pseudo} { counter-reset: ${target.variable} ${target.variable} ${parseInt(value)}; }`,
+									this.styleSheet.cssRules.length,
+								);
 							}
 						}
 
-						// force redraw
-						let el = document.querySelector(`[data-${target.variable}="${selector}"]`);
+						// Force browser redraw by toggling display style
+						let el = document.querySelector(
+							`[data-${target.variable}="${selector}"]`,
+						);
 						if (el) {
 							el.style.display = "none";
-							el.clientHeight;
+							el.clientHeight; // trigger reflow
 							el.style.removeProperty("display");
 						}
 					}
@@ -31998,44 +35414,71 @@
 		}
 	}
 
-	// import { nodeAfter } from "../../utils/dom";
-
 	class TargetText extends Handler {
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 
+			/** @type {CSSStyleSheet} */
 			this.styleSheet = polisher.styleSheet;
+
+			/** Stores target-text info keyed by selector */
 			this.textTargets = {};
+
+			/** Stores content strings from ::before pseudo */
 			this.beforeContent = "";
+
+			/** Stores content strings from ::after pseudo */
 			this.afterContent = "";
+
+			/** The current selector string */
 			this.selector = {};
 		}
 
+		/**
+		 * Processes `target-text()` CSS function.
+		 * Extracts selector, arguments, and optional style,
+		 * then replaces the function with a CSS variable reference.
+		 *
+		 * @param {Object} funcNode - AST node for the CSS function.
+		 * @param {Object} fItem - function node item (unused here).
+		 * @param {Object} fList - function list (unused here).
+		 * @param {Object} declaration - CSS declaration node (unused).
+		 * @param {Object} rule - CSS rule node containing the declaration.
+		 */
 		onContent(funcNode, fItem, fList, declaration, rule) {
 			if (funcNode.name === "target-text") {
+				// Get the full selector string for the rule
 				this.selector = csstree.generate(rule.ruleNode.prelude);
+
+				// Extract the first and last function arguments
 				let first = funcNode.children.first();
 				let last = funcNode.children.last();
+
+				// The function inside target-text, e.g., "attr"
 				let func = first.name;
 
+				// Serialized original function value
 				let value = csstree.generate(funcNode);
 
+				// Extract arguments from first function's children
 				let args = [];
-
-				first.children.forEach(child => {
+				first.children.forEach((child) => {
 					if (child.type === "Identifier") {
 						args.push(child.name);
 					}
 				});
 
+				// Optional style argument (like "before", "after", etc.)
 				let style;
 				if (last !== first) {
 					style = last.name;
 				}
 
+				// Generate a unique CSS variable name for this target-text instance
 				let variable = "--pagedjs-" + UUID();
 
-				this.selector.split(",").forEach(s => {
+				// Support multiple selectors separated by commas
+				this.selector.split(",").forEach((s) => {
 					this.textTargets[s] = {
 						func: func,
 						args: args,
@@ -32043,38 +35486,44 @@
 						style: style || "content",
 						selector: s,
 						fullSelector: this.selector,
-						variable: variable
+						variable: variable,
 					};
 				});
 
-				// Replace with variable
+				// Replace target-text() with var(--pagedjs-UUID)
 				funcNode.name = "var";
 				funcNode.children = new csstree.List();
 				funcNode.children.appendData({
 					type: "Identifier",
 					loc: 0,
-					name: variable
+					name: variable,
 				});
 			}
 		}
 
-		//   parse this on the ONCONTENT : get all before and after and replace the value with a variable
+		/**
+		 * Extracts content strings from ::before and ::after pseudo-elements,
+		 * used to populate dynamic CSS variables later.
+		 *
+		 * @param {Object} pseudoNode - AST node for the pseudo-element selector.
+		 * @param {Object} pItem - pseudo node item (unused).
+		 * @param {Object} pList - pseudo list (unused).
+		 * @param {string} selector - The selector string for this rule.
+		 * @param {Object} rule - The CSS rule node containing properties.
+		 */
 		onPseudoSelector(pseudoNode, pItem, pList, selector, rule) {
-			// console.log(pseudoNode);
-			// console.log(rule);
-
-			rule.ruleNode.block.children.forEach(properties => {
+			rule.ruleNode.block.children.forEach((properties) => {
 				if (pseudoNode.name === "before" && properties.property === "content") {
-					// let beforeVariable = "--pagedjs-" + UUID();
-
-					let contenu = properties.value.children;
-					contenu.forEach(prop => {
+					properties.value.children.forEach((prop) => {
 						if (prop.type === "String") {
 							this.beforeContent = prop.value;
 						}
 					});
-				} else if (pseudoNode.name === "after" && properties.property === "content") {
-					properties.value.children.forEach(prop => {
+				} else if (
+					pseudoNode.name === "after" &&
+					properties.property === "content"
+				) {
+					properties.value.children.forEach((prop) => {
 						if (prop.type === "String") {
 							this.afterContent = prop.value;
 						}
@@ -32083,35 +35532,57 @@
 			});
 		}
 
+		/**
+		 * Called after the document fragment is parsed.
+		 * Queries elements matching the stored selectors,
+		 * extracts text or pseudo content, and injects
+		 * corresponding CSS custom properties with sanitized values.
+		 *
+		 * @param {DocumentFragment} fragment - The current page fragment.
+		 */
 		afterParsed(fragment) {
-			Object.keys(this.textTargets).forEach(name => {
+			Object.keys(this.textTargets).forEach((name) => {
 				let target = this.textTargets[name];
-				let split = target.selector.split("::");
+
+				// Split selector to separate pseudo elements if any
+				let split = target.selector.split(/::?/g);
 				let query = split[0];
+
 				let queried = fragment.querySelectorAll(query);
 				let textContent;
-				queried.forEach((selected, index) => {
+
+				queried.forEach((selected) => {
+					// Get the attribute value(s) for targeting (usually attr selectors)
 					let val = attr(selected, target.args);
 					let element = fragment.querySelector(querySelectorEscape(val));
+
 					if (element) {
-						// content & first-letter & before & after refactorized
 						if (target.style) {
 							this.selector = UUID();
 							selected.setAttribute("data-target-text", this.selector);
 
-							let psuedo = "";
+							let pseudo = "";
 							if (split.length > 1) {
-								psuedo += "::" + split[1];
+								pseudo += "::" + split[1];
 							}
-							
+
+							// Determine the content depending on style (before, after, first-letter, or normal content)
 							if (target.style === "before" || target.style === "after") {
 								const pseudoType = `${target.style}Content`;
 								textContent = cleanPseudoContent(this[pseudoType]);
 							} else {
 								textContent = cleanPseudoContent(element.textContent, " ");
 							}
-							textContent = target.style === "first-letter" ? textContent.charAt(0) : textContent;
-							this.styleSheet.insertRule(`[data-target-text="${this.selector}"]${psuedo} { ${target.variable}: "${textContent}" }`);
+
+							// If style is first-letter, take only first char
+							if (target.style === "first-letter") {
+								textContent = textContent.charAt(0);
+							}
+
+							// Insert CSS rule to assign the variable with the extracted content
+							this.styleSheet.insertRule(
+								`[data-target-text="${this.selector}"]${pseudo} { ${target.variable}: "${textContent}" }`,
+							);
 						} else {
 							console.warn("missed target", val);
 						}
@@ -32128,25 +35599,56 @@
 		TargetText
 	];
 
+	/**
+	 * Filters and normalizes whitespace-only text nodes that are not visually meaningful.
+	 *
+	 * Removes or replaces ignorable text nodes (e.g., extra line breaks, tabs, or spaces)
+	 * except in contexts where whitespace is meaningful (e.g., inside `<pre>` tags).
+	 *
+	 * @class
+	 * @extends Handler
+	 */
 	class WhiteSpaceFilter extends Handler {
+		/**
+		 * Create a WhiteSpaceFilter instance.
+		 *
+		 * @param {Object} chunker - Handles document chunking.
+		 * @param {Object} polisher - Handles CSS polishing/styling.
+		 * @param {Object} caller - The invoking processor or engine.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 		}
 
+		/**
+		 * Filters out or normalizes ignorable whitespace-only text nodes from content.
+		 *
+		 * @param {DocumentFragment | HTMLElement} content - The DOM content to filter.
+		 */
 		filter(content) {
-
-			filterTree(content, (node) => {
-				return this.filterEmpty(node);
-			}, NodeFilter.SHOW_TEXT);
-
+			filterTree(
+				content,
+				(node) => {
+					return this.filterEmpty(node);
+				},
+				NodeFilter.SHOW_TEXT,
+			);
 		}
 
+		/**
+		 * Determines whether a text node should be removed or normalized.
+		 * Replaces content with a single space if it's between significant siblings,
+		 * and removes the node if it's safe to do so.
+		 *
+		 * @param {Text} node - The text node to evaluate.
+		 * @returns {number} A NodeFilter constant indicating filter behavior.
+		 */
 		filterEmpty(node) {
 			if (node.textContent.length > 1 && isIgnorable(node)) {
+				const parent = node.parentNode;
+				const pre = isElement(parent) && parent.closest("pre");
 
-				// Do not touch the content if text is pre-formatted
-				let parent = node.parentNode;
-				let pre = isElement(parent) && parent.closest("pre");
+				// Skip if inside <pre> or similar white-space preserving context
 				if (pre) {
 					return NodeFilter.FILTER_REJECT;
 				}
@@ -32155,68 +35657,98 @@
 				const nextSibling = nextSignificantNode(node);
 
 				if (nextSibling === null && previousSibling === null) {
-					// we should not remove a Node that does not have any siblings.
+					// Only node — keep it, but normalize to a single space
 					node.textContent = " ";
 					return NodeFilter.FILTER_REJECT;
 				}
-				if (nextSibling === null) {
-					// we can safely remove this node
-					return NodeFilter.FILTER_ACCEPT;
-				}
-				if (previousSibling === null) {
-					// we can safely remove this node
+
+				if (nextSibling === null || previousSibling === null) {
+					// Safe to remove
 					return NodeFilter.FILTER_ACCEPT;
 				}
 
-				// replace the content with a single space
+				// Normalize to a single space
 				node.textContent = " ";
-
-				// TODO: we also need to preserve sequences of white spaces when the parent has "white-space" rule:
-				// pre
-				// Sequences of white space are preserved. Lines are only broken at newline characters in the source and at <br> elements.
-				//
-				// pre-wrap
-				// Sequences of white space are preserved. Lines are broken at newline characters, at <br>, and as necessary to fill line boxes.
-				//
-				// pre-line
-				// Sequences of white space are collapsed. Lines are broken at newline characters, at <br>, and as necessary to fill line boxes.
-				//
-				// break-spaces
-				// The behavior is identical to that of pre-wrap, except that:
-				// - Any sequence of preserved white space always takes up space, including at the end of the line.
-				// - A line breaking opportunity exists after every preserved white space character, including between white space characters.
-				// - Such preserved spaces take up space and do not hang, and thus affect the box’s intrinsic sizes (min-content size and max-content size).
-				//
-				// See: https://developer.mozilla.org/en-US/docs/Web/CSS/white-space#Values
-
-				return NodeFilter.FILTER_REJECT;
-			} else {
 				return NodeFilter.FILTER_REJECT;
 			}
-		}
 
+			return NodeFilter.FILTER_REJECT;
+		}
 	}
 
+	// TODO: we also need to preserve sequences of white spaces when the parent has "white-space" rule:
+	// pre Sequences of white space are preserved. Lines are only broken at newline characters in the source and at <br> elements.
+	//
+	// pre-wrap
+	// Sequences of white space are preserved. Lines are broken at newline characters, at <br>, and as necessary to fill line boxes.
+	//
+	// pre-line
+	// Sequences of white space are collapsed. Lines are broken at newline characters, at <br>, and as necessary to fill line boxes.
+	//
+	// break-spaces
+	// The behavior is identical to that of pre-wrap, except that:
+	// - Any sequence of preserved white space always takes up space, including at the end of the line.
+	// - A line breaking opportunity exists after every preserved white space character, including between white space characters.
+	// - Such preserved spaces take up space and do not hang, and thus affect the box’s intrinsic sizes (min-content size and max-content size).
+	//
+	// See: https://developer.mozilla.org/en-US/docs/Web/CSS/white-space#Values
+
+	/**
+	 * Handler that filters out HTML comment nodes from the content.
+	 *
+	 * @class
+	 * @extends Handler
+	 */
 	class CommentsFilter extends Handler {
+		/**
+		 * Create a CommentsFilter instance.
+		 *
+		 * @param {Object} chunker - The chunker responsible for managing document chunks.
+		 * @param {Object} polisher - The polisher responsible for post-processing or styling.
+		 * @param {Object} caller - The main object calling the handler (likely the flow controller).
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 		}
 
+		/**
+		 * Removes comment nodes from the provided content.
+		 *
+		 * @param {DocumentFragment | HTMLElement} content - The DOM content to be filtered.
+		 */
 		filter(content) {
 			filterTree(content, null, NodeFilter.SHOW_COMMENT);
 		}
-
 	}
 
+	/**
+	 * Handler that removes all <script> elements from the content.
+	 *
+	 * @class
+	 * @extends Handler
+	 */
 	class ScriptsFilter extends Handler {
+		/**
+		 * Create a ScriptsFilter instance.
+		 *
+		 * @param {Object} chunker - Responsible for managing document chunks during rendering.
+		 * @param {Object} polisher - Handles post-processing and styling of content.
+		 * @param {Object} caller - The entity invoking this handler (e.g., layout controller).
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
 		}
 
+		/**
+		 * Removes all <script> elements from the given DOM content.
+		 *
+		 * @param {DocumentFragment | HTMLElement} content - The DOM content to sanitize.
+		 */
 		filter(content) {
-			content.querySelectorAll("script").forEach( script => { script.remove(); });
+			content.querySelectorAll("script").forEach((script) => {
+				script.remove();
+			});
 		}
-
 	}
 
 	var clearCut = {};
@@ -32346,51 +35878,94 @@
 		}; 
 	} (clearCut));
 
+	/**
+	 * Handler that identifies and marks elements styled with `display: none` from CSS or inline styles.
+	 *
+	 * @class
+	 * @extends Handler
+	 */
 	class UndisplayedFilter extends Handler {
+		/**
+		 * Creates an instance of UndisplayedFilter.
+		 *
+		 * @param {Object} chunker - The chunker managing document flow.
+		 * @param {Object} polisher - The polisher managing post-processing.
+		 * @param {Object} caller - The entity invoking the handler.
+		 */
 		constructor(chunker, polisher, caller) {
 			super(chunker, polisher, caller);
+
+			/**
+			 * A map of CSS selectors to display rules (`display: none`, etc).
+			 * @type {Object.<string, Object>}
+			 */
 			this.displayRules = {};
 		}
 
+		/**
+		 * Captures display declarations during CSS parsing.
+		 *
+		 * @param {Object} declaration - The CSS declaration node.
+		 * @param {Object} dItem - The declaration item in the AST.
+		 * @param {Array} dList - The list of declarations.
+		 * @param {Object} rule - The associated CSS rule.
+		 */
 		onDeclaration(declaration, dItem, dList, rule) {
 			if (declaration.property === "display") {
-				let selector = csstree.generate(rule.ruleNode.prelude);
-				let value = declaration.value.children.first().name;
+				const selector = csstree.generate(rule.ruleNode.prelude);
+				const value = declaration.value.children.first().name;
 
 				selector.split(",").forEach((s) => {
 					this.displayRules[s] = {
 						value: value,
 						selector: s,
 						specificity: clearCut.calculateSpecificity(s),
-						important: declaration.important
+						important: declaration.important,
 					};
 				});
 			}
 		}
 
+		/**
+		 * Filters out or marks elements that are not meant to be displayed.
+		 *
+		 * @param {HTMLElement | DocumentFragment} content - The DOM content to be filtered.
+		 */
 		filter(content) {
-			let { matches, selectors } = this.sortDisplayedSelectors(content, this.displayRules);
+			const { matches, selectors } = this.sortDisplayedSelectors(
+				content,
+				this.displayRules,
+			);
 
-			// Find matching elements that have display styles
+			// Process CSS-based display: none
 			for (let i = 0; i < matches.length; i++) {
-				let element = matches[i];
-				let selector = selectors[i];
-				let displayValue = selector[selector.length-1].value;
-				if(this.removable(element) && displayValue === "none") {
+				const element = matches[i];
+				const selector = selectors[i];
+				const displayValue = selector[selector.length - 1].value;
+
+				if (this.removable(element) && displayValue === "none") {
 					element.dataset.undisplayed = "undisplayed";
 				}
 			}
 
-			// Find elements that have inline styles
-			let styledElements = content.querySelectorAll("[style]");
+			// Process inline styles
+			const styledElements = content.querySelectorAll("[style]");
 			for (let i = 0; i < styledElements.length; i++) {
-				let element = styledElements[i];
+				const element = styledElements[i];
 				if (this.removable(element)) {
 					element.dataset.undisplayed = "undisplayed";
 				}
 			}
 		}
 
+		/**
+		 * Sorts display rules based on `!important` and specificity, used for resolving conflicts.
+		 *
+		 * @private
+		 * @param {Object} a - First display rule.
+		 * @param {Object} b - Second display rule.
+		 * @returns {number} Sort order.
+		 */
 		sorter(a, b) {
 			if (a.important && !b.important) {
 				return 1;
@@ -32403,13 +35978,23 @@
 			return a.specificity - b.specificity;
 		}
 
-		sortDisplayedSelectors(content, displayRules=[]) {
+		/**
+		 * Matches display rules against elements and sorts them by specificity and importance.
+		 *
+		 * @param {HTMLElement | DocumentFragment} content - The DOM content to search.
+		 * @param {Object.<string, Object>} displayRules - CSS display rules to apply.
+		 * @returns {{ matches: HTMLElement[], selectors: Object[][] }} Matched elements and their rules.
+		 */
+		sortDisplayedSelectors(content, displayRules = {}) {
 			let matches = [];
 			let selectors = [];
+
 			for (let d in displayRules) {
-				let displayItem = displayRules[d];
-				let selector = displayItem.selector;
+				const displayItem = displayRules[d];
+				const selector = displayItem.selector;
+
 				let query = [];
+
 				try {
 					try {
 						query = content.querySelectorAll(selector);
@@ -32419,10 +36004,12 @@
 				} catch (e) {
 					query = [];
 				}
-				let elements = Array.from(query);
+
+				const elements = Array.from(query);
+
 				for (let e of elements) {
-					if (matches.includes(e)) {
-						let index = matches.indexOf(e);
+					const index = matches.indexOf(e);
+					if (index !== -1) {
 						selectors[index].push(displayItem);
 						selectors[index] = selectors[index].sort(this.sorter);
 					} else {
@@ -32435,10 +36022,18 @@
 			return { matches, selectors };
 		}
 
+		/**
+		 * Determines whether an element is removable based on its inline display style.
+		 *
+		 * @param {HTMLElement} element - The element to check.
+		 * @returns {boolean} True if the element is considered removable.
+		 */
 		removable(element) {
-			if (element.style &&
-					element.style.display !== "" &&
-					element.style.display !== "none") {
+			if (
+				element.style &&
+				element.style.display !== "" &&
+				element.style.display !== "none"
+			) {
 				return false;
 			}
 
@@ -33010,60 +36605,99 @@
 
 	var pipe$1 = /*@__PURE__*/getDefaultExportFromCjs(pipe);
 
-	let registeredHandlers = [...pagedMediaHandlers, ...generatedContentHandlers, ...filters];
+	/**
+	 * Array of all registered handler classes, composed from different modules.
+	 * @type {Array<Function>}
+	 */
+	let registeredHandlers = [
+		...pagedMediaHandlers,
+		...generatedContentHandlers,
+		...filters,
+	];
 
+	/**
+	 * Class responsible for instantiating and managing handler instances.
+	 * Emits events from all handlers through itself.
+	 */
 	class Handlers {
+		/**
+		 * Creates a new Handlers manager.
+		 * @param {Object} chunker - The chunker object used by handlers.
+		 * @param {Object} polisher - The polisher object used by handlers.
+		 * @param {Object} caller - The caller object used by handlers.
+		 */
 		constructor(chunker, polisher, caller) {
+			/** @private @type {Array<Object>} */
+			this.handlers = [];
 
 			registeredHandlers.forEach((Handler) => {
-				let handler = new Handler(chunker, polisher, caller);
+				const handler = new Handler(chunker, polisher, caller);
+				this.handlers.push(handler);
 				pipe$1(handler, this);
 			});
 		}
 	}
 
+	// Mix event-emitter methods into Handlers prototype
 	EventEmitter(Handlers.prototype);
 
-	function registerHandlers() {
-		for (var i = 0; i < arguments.length; i++) {
-			registeredHandlers.push(arguments[i]);
-		}
+	/**
+	 * Adds new handler classes to the list of registered handlers.
+	 * @param {...Function} handlers - One or more handler classes to register.
+	 */
+	function registerHandlers(...handlers) {
+		registeredHandlers.push(...handlers);
 	}
 
+	/**
+	 * Creates and initializes a new Handlers instance.
+	 * @param {Object} chunker - The chunker object to pass to handlers.
+	 * @param {Object} polisher - The polisher object to pass to handlers.
+	 * @param {Object} caller - The caller object to pass to handlers.
+	 * @returns {Handlers} The initialized Handlers instance.
+	 */
 	function initializeHandlers(chunker, polisher, caller) {
-		let handlers = new Handlers(chunker, polisher, caller);
-		return handlers;
+		return new Handlers(chunker, polisher, caller);
 	}
 
+	/**
+	 * The main class responsible for preparing, chunking, styling, and rendering content into paginated previews.
+	 *
+	 * Emits events:
+	 * - `page`: when a page is rendered
+	 * - `rendering`: when rendering starts
+	 * - `rendered`: when rendering finishes
+	 * - `size`: when page size is set
+	 * - `atpages`: when @page rules are processed
+	 */
 	class Previewer {
+		/**
+		 * Create a new Previewer instance.
+		 * @param {Object} [options] - Optional configuration settings for rendering.
+		 */
 		constructor(options) {
-			// this.preview = this.getParams("preview") !== "false";
-
 			this.settings = options || {};
 
-			// Process styles
 			this.polisher = new Polisher(false);
 
-			// Chunk contents
 			this.chunker = new Chunker(undefined, undefined, this.settings);
 
-			// Hooks
-			this.hooks = {};
-			this.hooks.beforePreview = new Hook(this);
-			this.hooks.afterPreview = new Hook(this);
+			this.hooks = {
+				beforePreview: new Hook(this),
+				afterPreview: new Hook(this),
+			};
 
-			// default size
 			this.size = {
 				width: {
 					value: 8.5,
-					unit: "in"
+					unit: "in",
 				},
 				height: {
 					value: 11,
-					unit: "in"
+					unit: "in",
 				},
 				format: undefined,
-				orientation: undefined
+				orientation: undefined,
 			};
 
 			this.chunker.on("page", (page) => {
@@ -33075,6 +36709,10 @@
 			});
 		}
 
+		/**
+		 * Initializes handler modules (like footnotes, counters, etc.) and sets up relevant events.
+		 * @returns {EventEmitter} - The handler system that manages internal processing hooks.
+		 */
 		initializeHandlers() {
 			let handlers = initializeHandlers(this.chunker, this.polisher, this);
 
@@ -33091,33 +36729,44 @@
 			return handlers;
 		}
 
+		/**
+		 * Registers handlers with custom logic or extensions.
+		 * @returns {*} - The result of the registerHandlers function.
+		 */
 		registerHandlers() {
 			return registerHandlers.apply(registerHandlers, arguments);
 		}
 
+		/**
+		 * Retrieve a query parameter from the current URL.
+		 * @param {string} name - Name of the parameter.
+		 * @returns {string} - Value of the parameter if found.
+		 */
 		getParams(name) {
 			let param;
 			let url = new URL(window.location);
 			let params = new URLSearchParams(url.search);
-			for(var pair of params.entries()) {
-				if(pair[0] === name) {
+			for (var pair of params.entries()) {
+				if (pair[0] === name) {
 					param = pair[1];
 				}
 			}
-
 			return param;
 		}
 
+		/**
+		 * Wraps the contents of the `<body>` in a `<template>` element if not already present.
+		 * This is used to preserve the original content for chunking and layout.
+		 *
+		 * @returns {DocumentFragment} - The wrapped content.
+		 */
 		wrapContent() {
-			// Wrap body in template tag
 			let body = document.querySelector("body");
-
-			// Check if a template exists
-			let template;
-			template = body.querySelector(":scope > template[data-ref='pagedjs-content']");
+			let template = body.querySelector(
+				":scope > template[data-ref='pagedjs-content']",
+			);
 
 			if (!template) {
-				// Otherwise create one
 				template = document.createElement("template");
 				template.dataset.ref = "pagedjs-content";
 				template.innerHTML = body.innerHTML;
@@ -33128,24 +36777,33 @@
 			return template.content;
 		}
 
-		removeStyles(doc=document) {
-			// Get all stylesheets
-			const stylesheets = Array.from(doc.querySelectorAll("link[rel='stylesheet']:not([data-pagedjs-ignore], [media~='screen'])"));
-			// Get inline styles
-			const inlineStyles = Array.from(doc.querySelectorAll("style:not([data-pagedjs-inserted-styles], [data-pagedjs-ignore], [media~='screen'])"));
+		/**
+		 * Removes stylesheets and inline `<style>` elements that should not be processed.
+		 * Also returns the list of removed styles for reprocessing later.
+		 *
+		 * @param {Document} [doc=document] - The document to process styles from.
+		 * @returns {Array} - Array of stylesheet hrefs or inline style objects.
+		 */
+		removeStyles(doc = document) {
+			const stylesheets = Array.from(
+				doc.querySelectorAll(
+					"link[rel='stylesheet']:not([data-pagedjs-ignore], [media~='screen'])",
+				),
+			);
+			const inlineStyles = Array.from(
+				doc.querySelectorAll(
+					"style:not([data-pagedjs-inserted-styles], [data-pagedjs-ignore], [media~='screen'])",
+				),
+			);
 			const elements = [...stylesheets, ...inlineStyles];
+
 			return elements
-				// preserve order
-				.sort(function (element1, element2) {
-					const position = element1.compareDocumentPosition(element2);
-					if (position === Node.DOCUMENT_POSITION_PRECEDING) {
-						return 1;
-					} else if (position === Node.DOCUMENT_POSITION_FOLLOWING) {
-						return -1;
-					}
+				.sort((a, b) => {
+					const position = a.compareDocumentPosition(b);
+					if (position === Node.DOCUMENT_POSITION_PRECEDING) return 1;
+					if (position === Node.DOCUMENT_POSITION_FOLLOWING) return -1;
 					return 0;
 				})
-				// extract the href
 				.map((element) => {
 					if (element.nodeName === "STYLE") {
 						const obj = {};
@@ -33157,13 +36815,20 @@
 						element.remove();
 						return element.href;
 					}
-					// ignore
 					console.warn(`Unable to process: ${element}, ignoring.`);
 				});
 		}
 
+		/**
+		 * Main method for rendering content into paged preview.
+		 * Triggers hooks and events, applies stylesheets, chunks the content, and returns the flow result.
+		 *
+		 * @param {HTMLElement|DocumentFragment|string} [content] - The content to render.
+		 * @param {Array<string|Object>} [stylesheets] - List of stylesheet hrefs or inline styles to apply.
+		 * @param {HTMLElement|string} [renderTo] - Element or selector where rendered content will be inserted.
+		 * @returns {Promise<Object>} - Resolves to the rendered flow object with performance and size metadata.
+		 */
 		async preview(content, stylesheets, renderTo) {
-
 			await this.hooks.beforePreview.trigger(content, renderTo);
 
 			if (!content) {
@@ -33175,19 +36840,17 @@
 			}
 
 			this.polisher.setup();
-
 			this.handlers = this.initializeHandlers();
 
 			await this.polisher.add(...stylesheets);
 
 			let startTime = performance.now();
 
-			// Render flow
 			let flow = await this.chunker.flow(content, renderTo);
 
 			let endTime = performance.now();
 
-			flow.performance = (endTime - startTime);
+			flow.performance = endTime - startTime;
 			flow.size = this.size;
 
 			this.emit("rendered", flow);
@@ -33198,6 +36861,7 @@
 		}
 	}
 
+	// Add event emitter behavior to the Previewer prototype
 	EventEmitter(Previewer.prototype);
 
 	var Paged = /*#__PURE__*/Object.freeze({
@@ -33211,21 +36875,50 @@
 		registeredHandlers: registeredHandlers
 	});
 
+	/**
+	 * Expose the Paged API to the global window object.
+	 * Useful for debugging or for external scripts that want to access the API.
+	 * @global
+	 */
 	window.Paged = Paged;
 
-	let ready = new Promise(function(resolve, reject){
-		if (document.readyState === "interactive" || document.readyState === "complete") {
+	/**
+	 * A promise that resolves when the DOM is ready (interactive or complete).
+	 * Used to defer preview rendering until the page is ready.
+	 *
+	 * @type {Promise<"interactive"|"complete">}
+	 */
+	let ready = new Promise(function (resolve, reject) {
+		if (
+			document.readyState === "interactive" ||
+			document.readyState === "complete"
+		) {
 			resolve(document.readyState);
 			return;
 		}
 
-		document.onreadystatechange = function ($) {
+		document.onreadystatechange = function () {
 			if (document.readyState === "interactive") {
 				resolve(document.readyState);
 			}
 		};
 	});
 
+	/**
+	 * Configuration object for controlling the preview behavior.
+	 * Can be set via the global `window.PagedConfig` or defaults are used.
+	 *
+	 * @typedef {Object} PagedConfig
+	 * @property {boolean} [auto=true] - Whether to automatically render on load.
+	 * @property {function} [before] - Function to run before rendering.
+	 * @property {function} [after] - Function to run after rendering, receives result.
+	 * @property {string|HTMLElement} [content] - Selector or element to render.
+	 * @property {string[]} [stylesheets] - Array of stylesheet URLs or paths.
+	 * @property {HTMLElement|string} [renderTo] - Where to render the output.
+	 * @property {Object} [settings] - Additional settings passed to the Previewer.
+	 */
+
+	/** @type {PagedConfig} */
 	let config = window.PagedConfig || {
 		auto: true,
 		before: undefined,
@@ -33233,22 +36926,40 @@
 		content: undefined,
 		stylesheets: undefined,
 		renderTo: undefined,
-		settings: undefined
+		settings: undefined,
 	};
 
+	/**
+	 * Initialize the previewer with optional settings from config.
+	 *
+	 * @type {Previewer}
+	 */
 	let previewer = new Previewer(config.settings);
 
+	/**
+	 * Main logic that runs once the DOM is ready.
+	 * - Executes `before` hook if defined
+	 * - Triggers `previewer.preview()` if `auto` is not explicitly disabled
+	 * - Executes `after` hook with result if defined
+	 */
 	ready.then(async function () {
 		let done;
+
+		// Call optional hook before preview
 		if (config.before) {
 			await config.before();
 		}
 
-		if(config.auto !== false) {
-			done = await previewer.preview(config.content, config.stylesheets, config.renderTo);
+		// Automatically render content if not disabled
+		if (config.auto !== false) {
+			done = await previewer.preview(
+				config.content,
+				config.stylesheets,
+				config.renderTo,
+			);
 		}
 
-
+		// Call optional hook after preview
 		if (config.after) {
 			await config.after(done);
 		}
