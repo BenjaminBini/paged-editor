@@ -35,19 +35,18 @@ import { MD_ALERT_KINDS, MD_KNOWN_CONTAINERS } from "./container-registry.js";
 
 let _ctx: Record<string, any> | null = null;
 
-const PAGE_BREAK_TEXT_RE: RegExp = /\n[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
-const PAGE_BREAK_RAW_RE: RegExp = /\n\n?[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
-const STANDALONE_PAGE_BREAK_RE: RegExp =
-  /^[ \t]*(?:\\newpage|\/newpage)[ \t]*$/;
-const AO_GRID_COL_HEADER_RE: RegExp = /^:::col-(\d+)[ \t]*\r?\n?/gm;
-// Generic `:::name [attrs]\n…body…\n:::` container. Dispatched by name.
-const MD_CONTAINER_BLOCK_RE: RegExp =
-  /^:::([a-z][a-z0-9-]*)(?:[ \t]+([^\n]*))?\r?\n([\s\S]*?)\r?\n:::[ \t]*(?:\r?\n|$)/;
+const PAGE_BREAK_TEXT_RE: RegExp = /\n[ \t]*:::newpage[ \t]*$/;
+const PAGE_BREAK_RAW_RE: RegExp = /\n\n?[ \t]*:::newpage[ \t]*$/;
+const STANDALONE_PAGE_BREAK_RE: RegExp = /^[ \t]*:::newpage[ \t]*$/;
+const AO_GRID_COL_HEADER_RE: RegExp =
+  /^:::col(?:-(\d+))?(?![a-z0-9-])[ \t]*\r?\n?/gm;
+// Generic `:::name [attrs]\n…body…\n:::` container — depth-tracked tokenizer
+// inside `marked.use({ extensions })` below. Inner directives (col-N, card,
+// feature, step) reuse the `:::name` syntax but carry trailing text and do
+// not open a depth level.
 const MD_CONTAINER_START_RE: RegExp = /(?:^|\n):::[a-z]/;
 // MD_ALERT_KINDS and MD_KNOWN_CONTAINERS are derived from container-registry.ts.
 const MD_STEP_HEADER_RE: RegExp = /^:::step[ \t]+([^\n]+)\r?\n/gm;
-const MD_CARD_HEADER_RE: RegExp = /^:::card[ \t]+([^\n]+)\r?\n/gm;
-const MD_FEATURE_HEADER_RE: RegExp = /^:::feature[ \t]+([^\n]+)\r?\n/gm;
 const MD_ATTR_RE: RegExp = /(\w+)="([^"]*)"/g;
 const IMAGE_ALIGNMENT_VALUES: Set<string> = new Set([
   "left",
@@ -384,51 +383,38 @@ function renderNumberedGridContainer(body: string, sl: string): string {
   return `<div class="md-numbered-grid"${sl}>\n${tiles}\n</div>\n`;
 }
 
-// `:::card-grid` with inner `:::card TITLE | PHASE` headers.
-// Each item is a card with auto-numbered display digit (01…07), title, optional
-// phase tag, and a markdown list (parsed as the item's content). Renders as a
-// 4-column grid with rotating BEORN palette — designed for "prestations detail"
-// or similar "N deliverables with sub-bullets" views.
-function renderCardGridContainer(body: string, sl: string): string {
-  MD_CARD_HEADER_RE.lastIndex = 0;
-  const headers: Array<{
-    title: string;
-    phase: string;
-    at: number;
-    end: number;
-  }> = [];
-  let hm: RegExpExecArray | null;
-  while ((hm = MD_CARD_HEADER_RE.exec(body)) !== null) {
-    const parts = hm[1].split("|").map((p) => p.trim());
-    headers.push({
-      title: parts[0] || "",
-      phase: parts[1] || "",
-      at: hm.index,
-      end: hm.index + hm[0].length,
-    });
-  }
-  if (!headers.length) return "";
-  const items = headers
-    .map((h, i) => {
-      const start = h.end;
-      const end = i + 1 < headers.length ? headers[i + 1].at : body.length;
-      const content = body.slice(start, end).replace(/\n+$/, "");
-      const inner = marked.parse(content) as string;
-      const num = String(i + 1).padStart(2, "0");
-      const phase = h.phase
-        ? `<span class="md-card-grid-phase">${marked.parseInline(h.phase)}</span>`
-        : "";
-      return `<div class="md-card-grid-card">\n<div class="md-card-grid-left"><span class="md-card-grid-num">${num}</span><span class="md-card-grid-title">${marked.parseInline(h.title)}</span>${phase}</div>\n${inner}</div>`;
-    })
-    .join("\n");
-  return `<div class="md-card-grid"${sl}>\n${items}\n</div>\n`;
+// `:::card title="…" phase="…" num="…"` — single card. Body is rendered as
+// markdown (typically a bulleted list). Embed multiple `:::card` blocks inside
+// `:::ao-grid` to lay them out in a grid; CSS provides nth-child colour
+// rotation when cards are direct children of `.ao-grid`.
+function renderCardContainer(
+  attrsRaw: string,
+  body: string,
+  sl: string,
+): string {
+  const attrs = parseContainerAttrs(attrsRaw);
+  const title = attrs.title || "";
+  const phase = attrs.phase || "";
+  const num = attrs.num || "";
+  const inner = marked.parse(body) as string;
+  const numHtml = num
+    ? `<span class="md-card-num">${marked.parseInline(num)}</span>`
+    : "";
+  const titleHtml = title
+    ? `<span class="md-card-title">${marked.parseInline(title)}</span>`
+    : "";
+  const phaseHtml = phase
+    ? `<span class="md-card-phase">${marked.parseInline(phase)}</span>`
+    : "";
+  return `<div class="md-card"${sl}>\n<div class="md-card-left">${numHtml}${titleHtml}${phaseHtml}</div>\n${inner}</div>\n`;
 }
 
-// `:::feature-grid` with inner `:::feature title="…" status="…" level="…" image="…" caption="…" layout="row|col"`.
-// Each :::feature opens a card (implicit close on next :::feature or end of block).
-// Body after the header is rendered as markdown and becomes the card description.
-// Layout = row (card spans both grid columns, text + image side-by-side);
-// Layout = col or no image (card takes one grid column, text + optional image below).
+// `:::feature title="…" status="…" level="…" image="…" caption="…" layout="row|col"`.
+// Standalone fiche de fonctionnalité (formerly an inner directive of feature-grid).
+// Body is rendered as markdown and becomes the card description. Layout = row
+// (text + image side-by-side, full-width); col or no image (text + optional
+// image below, half-width). Embed multiple `:::feature` inside `:::ao-grid` to
+// dispose them in a grid.
 // Status → Conforme (green) / Paramétrage (amber) / À préciser (grey).
 // Level  → Obligatoire (red) / Souhaitée (blue) / Information (grey).
 const FEATURE_STATUS_LABELS: Record<string, string> = {
@@ -480,134 +466,119 @@ function normalizeFeatureLevel(value: string): string {
   if (v.startsWith("info")) return "information";
   return "";
 }
-function renderFeatureGridContainer(body: string, sl: string): string {
-  MD_FEATURE_HEADER_RE.lastIndex = 0;
-  const headers: Array<{ attrsRaw: string; at: number; end: number }> = [];
-  let hm: RegExpExecArray | null;
-  while ((hm = MD_FEATURE_HEADER_RE.exec(body)) !== null) {
-    headers.push({
-      attrsRaw: hm[1],
-      at: hm.index,
-      end: hm.index + hm[0].length,
-    });
+function renderFeatureContainer(
+  attrsRaw: string,
+  body: string,
+  sl: string,
+): string {
+  const attrs = parseContainerAttrs(attrsRaw);
+  const title = attrs.title || "";
+  const requirement = attrs.requirement || "";
+  const statusKey = normalizeFeatureStatus(attrs.status || "");
+  const levelKey = normalizeFeatureLevel(attrs.level || "");
+  const refCode = attrs.ref || "";
+  const image = attrs.image || "";
+  const caption = attrs.caption || "";
+  // Coverage source (LumApps doc, BEORN ref, …) — *not* the requirement source.
+  const coverageSource = attrs.coverageSource || attrs.source || "";
+  const coverageSourceHref =
+    attrs.coverageSourceHref ||
+    attrs.coverageSourceUrl ||
+    attrs.sourceHref ||
+    attrs.sourceUrl ||
+    "";
+  const wantsRow = (attrs.layout || "").toLowerCase() === "row";
+  // row → full-width card, meta column on the left (design "non-compact");
+  // col → half-width card, inline meta rail at top (design "compact").
+  const layout = wantsRow ? "row" : "col";
+  const innerHtml = body.trim() ? (marked.parse(body) as string) : "";
+
+  const statusLabel = statusKey ? FEATURE_STATUS_LABELS[statusKey] : "";
+  const levelLabel = levelKey ? FEATURE_LEVEL_LABELS[levelKey] : "";
+  const titleHtml = title
+    ? `<span class="md-feature-title">${marked.parseInline(title)}</span>`
+    : "";
+  const requirementHtml = requirement
+    ? `<div class="md-feature-requirement">${marked.parseInline(requirement)}</div>`
+    : "";
+  const bodyHtml = innerHtml
+    ? `<div class="md-feature-body">${innerHtml}</div>`
+    : "";
+
+  // Status dot (small colored circle) used in both layouts next to the status label.
+  const statusDot = statusKey
+    ? `<span class="md-feature-dot md-feature-dot-${statusKey}"></span>`
+    : "";
+
+  // Meta column (row/non-compact) — stacked Statut / Exigence / Réf.
+  const metaColHtml =
+    statusLabel || levelLabel || refCode
+      ? `<div class="md-feature-meta">` +
+        (statusLabel
+          ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Statut</div>` +
+            `<div class="md-feature-meta-value">${statusDot}${escapeHtml(statusLabel)}</div></div>`
+          : "") +
+        (levelLabel
+          ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Exigence</div>` +
+            `<div class="md-feature-meta-value md-feature-level-${levelKey}">${escapeHtml(levelLabel)}</div></div>`
+          : "") +
+        (refCode
+          ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Réf.</div>` +
+            `<div class="md-feature-meta-value">${escapeHtml(refCode)}</div></div>`
+          : "") +
+        `</div>`
+      : "";
+
+  // Inline rail (col/compact) — Statut · Exigence · Réf on one line.
+  const railItems: string[] = [];
+  if (statusLabel)
+    railItems.push(
+      `<span class="md-feature-rail-item">${statusDot}${escapeHtml(statusLabel)}</span>`,
+    );
+  if (levelLabel)
+    railItems.push(
+      `<span class="md-feature-rail-item"><span class="md-feature-rail-hint">Exig.</span><span class="md-feature-level-${levelKey}">${escapeHtml(levelLabel)}</span></span>`,
+    );
+  if (refCode)
+    railItems.push(
+      `<span class="md-feature-rail-item"><span class="md-feature-rail-hint">Réf.</span>${escapeHtml(refCode)}</span>`,
+    );
+  const railHtml = railItems.length
+    ? `<div class="md-feature-rail">${railItems.join("")}</div>`
+    : "";
+
+  let mediaHtml = "";
+  if (image) {
+    const href = resolveAssetUrl(image);
+    const captionHtml = caption
+      ? `<figcaption class="md-feature-caption">${marked.parseInline(caption)}</figcaption>`
+      : "";
+    mediaHtml = `<figure class="md-feature-media"><div class="md-feature-media-frame"><img src="${escapeHtml(href)}" alt="${escapeHtml(title)}"></div>${captionHtml}</figure>`;
   }
-  if (!headers.length) return "";
-  const items = headers
-    .map((h, i) => {
-      const start = h.end;
-      const end = i + 1 < headers.length ? headers[i + 1].at : body.length;
-      const content = body.slice(start, end).replace(/\n+$/, "");
-      const attrs = parseContainerAttrs(h.attrsRaw);
-      const title = attrs.title || "";
-      const requirement = attrs.requirement || "";
-      const statusKey = normalizeFeatureStatus(attrs.status || "");
-      const levelKey = normalizeFeatureLevel(attrs.level || "");
-      const refCode = attrs.ref || "";
-      const image = attrs.image || "";
-      const caption = attrs.caption || "";
-      // Coverage source (LumApps doc, BEORN ref, …) — *not* the requirement source.
-      const coverageSource = attrs.coverageSource || attrs.source || "";
-      const coverageSourceHref =
-        attrs.coverageSourceHref ||
-        attrs.coverageSourceUrl ||
-        attrs.sourceHref ||
-        attrs.sourceUrl ||
-        "";
-      const wantsRow = (attrs.layout || "").toLowerCase() === "row";
-      // row → full-width card, meta column on the left (design "non-compact");
-      // col → half-width card, inline meta rail at top (design "compact").
-      const layout = wantsRow ? "row" : "col";
-      const innerHtml = content.trim() ? (marked.parse(content) as string) : "";
 
-      const statusLabel = statusKey ? FEATURE_STATUS_LABELS[statusKey] : "";
-      const levelLabel = levelKey ? FEATURE_LEVEL_LABELS[levelKey] : "";
-      const titleHtml = title
-        ? `<span class="md-feature-title">${marked.parseInline(title)}</span>`
-        : "";
-      const requirementHtml = requirement
-        ? `<div class="md-feature-requirement">${marked.parseInline(requirement)}</div>`
-        : "";
-      const bodyHtml = innerHtml
-        ? `<div class="md-feature-body">${innerHtml}</div>`
-        : "";
+  // Show full source text/URL — no truncation. CSS word-break handles
+  // overflow without expanding card width.
+  const sourceLabelHtml = coverageSource
+    ? coverageSourceHref
+      ? `<a class="md-feature-source" href="${escapeHtml(coverageSourceHref)}">${marked.parseInline(coverageSource)}</a>`
+      : `<span class="md-feature-source">${marked.parseInline(coverageSource)}</span>`
+    : "";
+  const sourceHtml = coverageSource
+    ? `<div class="md-feature-source-line">${sourceLabelHtml}</div>`
+    : "";
 
-      // Status dot (small colored circle) used in both layouts next to the status label.
-      const statusDot = statusKey
-        ? `<span class="md-feature-dot md-feature-dot-${statusKey}"></span>`
-        : "";
+  const statusClass = statusKey ? ` md-feature-status-${statusKey}` : "";
+  const layoutClass = ` md-feature-${layout}`;
 
-      // Meta column (row/non-compact) — stacked Statut / Exigence / Réf.
-      const metaColHtml =
-        statusLabel || levelLabel || refCode
-          ? `<div class="md-feature-meta">` +
-            (statusLabel
-              ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Statut</div>` +
-                `<div class="md-feature-meta-value">${statusDot}${escapeHtml(statusLabel)}</div></div>`
-              : "") +
-            (levelLabel
-              ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Exigence</div>` +
-                `<div class="md-feature-meta-value md-feature-level-${levelKey}">${escapeHtml(levelLabel)}</div></div>`
-              : "") +
-            (refCode
-              ? `<div class="md-feature-meta-block"><div class="md-feature-meta-label">Réf.</div>` +
-                `<div class="md-feature-meta-value">${escapeHtml(refCode)}</div></div>`
-              : "") +
-            `</div>`
-          : "";
-
-      // Inline rail (col/compact) — Statut · Exigence · Réf on one line.
-      const railItems: string[] = [];
-      if (statusLabel)
-        railItems.push(
-          `<span class="md-feature-rail-item">${statusDot}${escapeHtml(statusLabel)}</span>`,
-        );
-      if (levelLabel)
-        railItems.push(
-          `<span class="md-feature-rail-item"><span class="md-feature-rail-hint">Exig.</span><span class="md-feature-level-${levelKey}">${escapeHtml(levelLabel)}</span></span>`,
-        );
-      if (refCode)
-        railItems.push(
-          `<span class="md-feature-rail-item"><span class="md-feature-rail-hint">Réf.</span>${escapeHtml(refCode)}</span>`,
-        );
-      const railHtml = railItems.length
-        ? `<div class="md-feature-rail">${railItems.join("")}</div>`
-        : "";
-
-      let mediaHtml = "";
-      if (image) {
-        const href = resolveAssetUrl(image);
-        const captionHtml = caption
-          ? `<figcaption class="md-feature-caption">${marked.parseInline(caption)}</figcaption>`
-          : "";
-        mediaHtml = `<figure class="md-feature-media"><div class="md-feature-media-frame"><img src="${escapeHtml(href)}" alt="${escapeHtml(title)}"></div>${captionHtml}</figure>`;
-      }
-
-      // Show full source text/URL — no truncation. CSS word-break handles
-      // overflow without expanding card width.
-      const sourceLabelHtml = coverageSource
-        ? coverageSourceHref
-          ? `<a class="md-feature-source" href="${escapeHtml(coverageSourceHref)}">${marked.parseInline(coverageSource)}</a>`
-          : `<span class="md-feature-source">${marked.parseInline(coverageSource)}</span>`
-        : "";
-      const sourceHtml = coverageSource
-        ? `<div class="md-feature-source-line">${sourceLabelHtml}</div>`
-        : "";
-
-      const statusClass = statusKey ? ` md-feature-status-${statusKey}` : "";
-      const layoutClass = ` md-feature-${layout}`;
-
-      if (layout === "row") {
-        // Non-compact: meta col left, body right; if image, body splits into text+image (image 200px right).
-        const bodyCol = mediaHtml
-          ? `<div class="md-feature-body-split">${bodyHtml}${mediaHtml}</div>`
-          : bodyHtml;
-        return `<div class="md-feature${layoutClass}${statusClass}">${metaColHtml}<div class="md-feature-content">${titleHtml}${requirementHtml}${bodyCol}${sourceHtml}</div></div>`;
-      }
-      // Compact: rail on top, title, requirement, body, optional image below, source link at the foot.
-      return `<div class="md-feature${layoutClass}${statusClass}">${railHtml}${titleHtml}${requirementHtml}${bodyHtml}${mediaHtml}${sourceHtml}</div>`;
-    })
-    .join("\n");
-  return `<div class="md-feature-grid"${sl}>\n${items}\n</div>\n`;
+  if (layout === "row") {
+    // Non-compact: meta col left, body right; if image, body splits into text+image (image 200px right).
+    const bodyCol = mediaHtml
+      ? `<div class="md-feature-body-split">${bodyHtml}${mediaHtml}</div>`
+      : bodyHtml;
+    return `<div class="md-feature${layoutClass}${statusClass}"${sl}>${metaColHtml}<div class="md-feature-content">${titleHtml}${requirementHtml}${bodyCol}${sourceHtml}</div></div>\n`;
+  }
+  // Compact: rail on top, title, requirement, body, optional image below, source link at the foot.
+  return `<div class="md-feature${layoutClass}${statusClass}"${sl}>${railHtml}${titleHtml}${requirementHtml}${bodyHtml}${mediaHtml}${sourceHtml}</div>\n`;
 }
 
 // `:::heatmap` — contract-lifecycle heat-matrix with milestones on top.
@@ -810,49 +781,67 @@ function renderTimelineContainer(body: string, sl: string): string {
   return `<div class="md-timeline"${sl}>\n${steps}\n</div>\n`;
 }
 
-// Render the content of an ```ao-grid fenced block as a 12-column grid.
-// Body syntax:
-//   :::col-8
-//   <any markdown>
-//   :::col-4
-//   <any markdown>
-// Each :::col-N header (N = 1..12) opens a column spanning N/12. Columns
-// are implicitly closed by the next :::col-N or by the end of the fence.
-function renderAoGridBlock(
-  body: string,
-  sourceLineAttr: string,
-  blockIdAttr = "",
-  styleAttr = "",
-): string {
+// Render the body of a `:::ao-grid … :::` container as a 12-column grid.
+// Two modes:
+//   (a) Column headers — `:::col-8` / `:::col` lines split the body. Explicit
+//       `:::col-N` spans N/12; bare `:::col` shares the remainder evenly.
+//       Columns are implicitly closed by the next `:::col[-N]` or end of body.
+//   (b) No column headers — the body is parsed as standard markdown and
+//       embedded directly inside `.ao-grid`. Useful for embedding
+//       `:::card` / `:::feature` containers; their CSS layout classes
+//       (e.g. `.md-feature-row` → `grid-column: 1 / -1`) impose the width.
+function renderAoGridBlock(body: string, rootAttrs: string): string {
   AO_GRID_COL_HEADER_RE.lastIndex = 0;
   const headers: Array<{
-    span: number;
+    rawSpan: number | null;
     headerStart: number;
     contentStart: number;
   }> = [];
   let hm: RegExpExecArray | null;
   while ((hm = AO_GRID_COL_HEADER_RE.exec(body)) !== null) {
-    const rawSpan = parseInt(hm[1], 10);
-    const span = Math.max(
-      1,
-      Math.min(12, Number.isFinite(rawSpan) ? rawSpan : 6),
-    );
+    const widthRaw = hm[1];
+    const parsed = widthRaw != null ? parseInt(widthRaw, 10) : NaN;
+    const rawSpan = Number.isFinite(parsed)
+      ? Math.max(1, Math.min(12, parsed))
+      : null;
     headers.push({
-      span,
+      rawSpan,
       headerStart: hm.index,
       contentStart: hm.index + hm[0].length,
     });
   }
-  if (!headers.length) return "";
+  if (!headers.length) {
+    // Direct-embed mode — body is rendered as markdown; nested containers
+    // (`:::card`, `:::feature`, …) are tokenized by mdContainer recursively.
+    const inner = body.trim() ? (marked.parse(body) as string) : "";
+    return `<div class="ao-grid"${rootAttrs}>\n${inner}</div>\n`;
+  }
+  const explicitTotal = headers.reduce(
+    (acc, h) => acc + (h.rawSpan ?? 0),
+    0,
+  );
+  const bareCount = headers.filter((h) => h.rawSpan == null).length;
+  const remaining = Math.max(0, 12 - explicitTotal);
+  const baseShare = bareCount > 0 ? Math.floor(remaining / bareCount) : 0;
+  const extraShare = bareCount > 0 ? remaining - baseShare * bareCount : 0;
+  let bareIdx = 0;
   const cols = headers.map((h, i) => {
+    let span: number;
+    if (h.rawSpan != null) {
+      span = h.rawSpan;
+    } else {
+      span = baseShare + (bareIdx < extraShare ? 1 : 0);
+      span = Math.max(1, Math.min(12, span));
+      bareIdx++;
+    }
     const start = h.contentStart;
     const end =
       i + 1 < headers.length ? headers[i + 1].headerStart : body.length;
     const content = body.slice(start, end).replace(/\n+$/, "");
     const inner = marked.parse(content) as string;
-    return `<div class="ao-grid-col" style="grid-column: span ${h.span}">\n${inner}</div>`;
+    return `<div class="ao-grid-col" style="grid-column: span ${span}">\n${inner}</div>`;
   });
-  return `<div class="ao-grid"${sourceLineAttr}${blockIdAttr}${styleAttr}>\n${cols.join("\n")}\n</div>\n`;
+  return `<div class="ao-grid"${rootAttrs}>\n${cols.join("\n")}\n</div>\n`;
 }
 
 marked.use({
@@ -861,8 +850,10 @@ marked.use({
       // Generic `:::name [attrs]\n…body…\n:::` container. Name dispatches to
       // the appropriate renderer (alert / stat-tiles / quote / timeline). Unknown
       // names return undefined so marked falls through to its default
-      // tokenizers. Containers cannot be nested — a bare `:::` line always
-      // closes the nearest container.
+      // tokenizers. Containers may nest: each `:::name` line opens a level,
+      // each bare `:::` line closes the nearest open level. Inner directives
+      // (col-N, card, feature, step) carry trailing text after `:::name`
+      // and never open a depth level.
       name: "mdContainer",
       level: "block",
       start(src: string): number | undefined {
@@ -872,16 +863,45 @@ marked.use({
         return offset + (m[0].startsWith("\n") ? 1 : 0);
       },
       tokenizer(src: string): MarkedToken | undefined {
-        const match = MD_CONTAINER_BLOCK_RE.exec(src);
-        if (!match) return undefined;
-        const name = match[1];
+        const openMatch = src.match(
+          /^:::([a-z][a-z0-9-]*)(?:[ \t]+([^\n]*))?\r?\n/,
+        );
+        if (!openMatch) return undefined;
+        const name = openMatch[1];
         if (!MD_KNOWN_CONTAINERS.has(name)) return undefined;
+        const attrs = openMatch[2] || "";
+        const bodyStart = openMatch[0].length;
+        const len = src.length;
+        let pos = bodyStart;
+        let depth = 1;
+        let bodyEnd = -1;
+        let rawEnd = -1;
+        while (pos < len) {
+          const lineEnd = src.indexOf("\n", pos);
+          const lineLast = lineEnd === -1 ? len : lineEnd;
+          const line = src.slice(pos, lineLast).replace(/[ \t]+$/, "");
+          if (line === ":::") {
+            depth--;
+            if (depth === 0) {
+              bodyEnd = pos;
+              rawEnd = lineEnd === -1 ? len : lineEnd + 1;
+              break;
+            }
+          } else {
+            const om = line.match(/^:::([a-z][a-z0-9-]*)(?=$|[ \t])/);
+            if (om && MD_KNOWN_CONTAINERS.has(om[1])) depth++;
+          }
+          if (lineEnd === -1) break;
+          pos = lineEnd + 1;
+        }
+        if (depth !== 0 || bodyEnd === -1) return undefined;
+        const text = src.slice(bodyStart, bodyEnd).replace(/\n+$/, "");
         return {
           type: "mdContainer",
-          raw: match[0],
+          raw: src.slice(0, rawEnd),
           name,
-          attrs: match[2] || "",
-          text: match[3] || "",
+          attrs,
+          text,
         } as unknown as MarkedToken;
       },
       renderer(token: MarkedToken): string {
@@ -903,10 +923,18 @@ marked.use({
           return renderStatTilesContainer(body, rootAttrs);
         if (name === "numbered-grid")
           return renderNumberedGridContainer(body, rootAttrs);
-        if (name === "card-grid")
-          return renderCardGridContainer(body, rootAttrs);
-        if (name === "feature-grid")
-          return renderFeatureGridContainer(body, rootAttrs);
+        if (name === "card")
+          return renderCardContainer(
+            (token.attrs as string) || "",
+            body,
+            rootAttrs,
+          );
+        if (name === "feature")
+          return renderFeatureContainer(
+            (token.attrs as string) || "",
+            body,
+            rootAttrs,
+          );
         if (name === "heatmap") return renderHeatmapContainer(body, rootAttrs);
         if (name === "quote")
           return renderQuoteContainer(
@@ -916,6 +944,7 @@ marked.use({
           );
         if (name === "timeline")
           return renderTimelineContainer(body, rootAttrs);
+        if (name === "ao-grid") return renderAoGridBlock(body, rootAttrs);
         return "";
       },
     },
@@ -1014,13 +1043,12 @@ marked.use({
       }
       const text = this.parser.parseInline(token.tokens);
       const stripped = text.replace(/<[^>]*>/g, "").trim();
-      if (stripped === "\\newpage" || stripped === "/newpage") {
+      if (stripped === ":::newpage") {
         return `<div class="page-break"${sl}${blockIdAttr}${styleAttr}></div>\n`;
       }
-      // \spacer[10px] or /spacer[10px] — invisible full-width block with a
-      // caller-chosen height. Accepts either prefix, mirroring \newpage /
-      // /newpage. Value accepts any CSS length (px, rem, em, %, vh).
-      const spacerMatch = stripped.match(/^[\\/]spacer\[([^\]]*)\]$/);
+      // :::spacer 10px — invisible full-width block.
+      // Accepts any CSS length (px, rem, em, %, vh).
+      const spacerMatch = stripped.match(/^:::spacer[ \t]+([^\n]+)$/);
       if (spacerMatch) {
         const rawHeight = spacerMatch[1].trim();
         const safeHeight =
@@ -1116,9 +1144,6 @@ marked.use({
       if (lang === "mermaid") {
         const idx = pushToMermaidQueue(text || "");
         return `<div class="mermaid-diagram"${sl}${blockIdAttr}${styleAttr} data-mermaid-idx="${idx}"></div>\n`;
-      }
-      if (lang === "ao-grid") {
-        return renderAoGridBlock(text || "", sl, blockIdAttr, styleAttr);
       }
       const langClass = lang ? ` class="language-${escapeHtml(lang)}"` : "";
       return `<pre${sl}${blockIdAttr}${styleAttr}><code${langClass}>${escapeHtml(text || "")}</code></pre>\n`;

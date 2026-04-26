@@ -19,7 +19,7 @@ Notre expertise se structure autour de quatre domaines complémentaires :
 
 Dans le cadre spécifique des projets intranet et portails collaboratifs, BEORN intervient sur l'ensemble de la chaîne de valeur : intégration des styles et de l'identité graphique, configuration fonctionnelle, développement de composants sur mesure, intégration avec les systèmes d'information existants (Microsoft 365, Google Workspace, annuaires, applications métier), et accompagnement au changement.
 
-/newpage
+:::newpage
 
 ## Le partenariat BEORN / LumApps
 

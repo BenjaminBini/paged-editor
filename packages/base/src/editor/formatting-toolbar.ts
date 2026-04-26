@@ -436,8 +436,8 @@ function openBlocksMenu(button: HTMLElement): void {
     blockItem("Code block", () => insertBlockSnippet("```\ncode\n```", 4, 8)),
     blockItem("Horizontal rule", () => insertBlockSnippet("---")),
     { separator: true },
-    blockItem("Page break  (\\newpage)", () => insertBlockSnippet("\\newpage")),
-    blockItem("Spacer  (\\spacer[20px])", () => insertBlockSnippet("\\spacer[20px]")),
+    blockItem("Page break  (:::newpage)", () => insertBlockSnippet(":::newpage")),
+    blockItem("Spacer  (:::spacer 20px)", () => insertBlockSnippet(":::spacer 20px")),
   ]);
 }
 
@@ -466,7 +466,7 @@ function openComponentsMenu(button: HTMLElement): void {
     ),
     compItem("Card grid", () =>
       insertBlockSnippet(
-        ":::card-grid\n:::card Cadrage | Phase 1\n- Atelier besoins\n- Architecture cible\n:::card Implémentation | Phase 2\n- Dev itératif\n- Tests automatisés\n:::",
+        ':::ao-grid\n:::card title="Cadrage" phase="Phase 1" num="01"\n- Atelier besoins\n- Architecture cible\n:::\n\n:::card title="Implémentation" phase="Phase 2" num="02"\n- Dev itératif\n- Tests automatisés\n:::\n:::',
       ),
     ),
     compItem("Heatmap", () =>
@@ -485,7 +485,7 @@ function openComponentsMenu(button: HTMLElement): void {
     { separator: true },
     compItem("12-col grid  (ao-grid)", () =>
       insertBlockSnippet(
-        "```ao-grid\n:::col-8\nColonne principale (8/12)\n:::col-4\nColonne latérale (4/12)\n```",
+        ":::ao-grid\n:::col-8\nColonne principale (8/12)\n:::col-4\nColonne latérale (4/12)\n:::",
       ),
     ),
   ]);
@@ -500,7 +500,7 @@ interface HelpItem {
   // `renderMd` means: render this markdown snippet through marked and drop
   // the result into a sandbox iframe that loads pdf.css. That way the
   // preview matches the real preview exactly (alert chips with their real
-  // SVG icons, stat-tiles / numbered-grid / card-grid / heatmap / timeline, etc.).
+  // SVG icons, stat-tiles / numbered-grid / cards / heatmap / timeline, etc.).
   // `preview` is a static inline-styled HTML string for things that don't
   // exercise pdf.css (bold/italic/heading mockup).
   renderMd?: string;
@@ -767,8 +767,8 @@ const HELP_CATEGORIES: HelpCategory[] = [
   {
     title: "Page flow",
     items: [
-      { name: "Page break", desc: "Force a page break at the current location (export + preview).", syntax: "\\newpage\n\nor\n\n/newpage", preview: previewPageBreak },
-      { name: "Spacer", desc: "Invisible full-width block with a caller-chosen height. Accepts any CSS length.", syntax: "\\spacer[40px]\n\nor\n\n/spacer[2rem]", preview: previewSpacer },
+      { name: "Page break", desc: "Force a page break at the current location (export + preview).", syntax: ":::newpage", preview: previewPageBreak },
+      { name: "Spacer", desc: "Invisible full-width block with a caller-chosen height. Accepts any CSS length.", syntax: ":::spacer 40px\n\nor\n\n:::spacer 2rem", preview: previewSpacer },
     ],
   },
   {
@@ -787,11 +787,12 @@ const HELP_CATEGORIES: HelpCategory[] = [
     items: [
       { name: ":::stat-tiles", desc: "Grid of large-number tiles with label and optional note. One non-empty line per tile. Syntax: `VALUE | LABEL | NOTE`. NOTE is optional.", syntax: ":::stat-tiles\n18 ans | Expertise portails | Depuis 2007\n100+ | Projets livrés\n< 4 h | Temps de réponse | SLA P1\n99,9 % | Disponibilité cible\n:::", renderMd: ":::stat-tiles\n18 ans | Expertise | Depuis 2007\n100+ | Projets livrés\n< 4 h | Réponse\n99,9 % | Dispo\n:::" },
       { name: ":::numbered-grid", desc: "Numbered tile grid (auto 01-07, capped at 7). Syntax: `TITLE | PITCH`.", syntax: ":::numbered-grid\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps intégré\n:::", renderMd: ":::numbered-grid\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps\n:::" },
-      { name: ":::card-grid", desc: "Grid of cards with title, tag, and bullet list. Uses `:::card TITLE | PHASE` sub-headers with a bulleted body per card.", syntax: ":::card-grid\n:::card Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::card Implémentation | Phase 2\n- Dev itératif\n- Tests\n:::", renderMd: ":::card-grid\n:::card Cadrage | Phase 1\n- Atelier besoins\n- Architecture\n:::card Implémentation | Phase 2\n- Dev itératif\n:::" },
+      { name: ":::card", desc: "Standalone card (title + phase tag + body). Embed multiple `:::card` inside `:::ao-grid` to lay them out in a 4-up grid with palette rotation.", syntax: ':::ao-grid\n:::card title="Cadrage" phase="Phase 1" num="01"\n- Atelier besoins\n- Architecture\n:::\n:::card title="Implémentation" phase="Phase 2" num="02"\n- Dev itératif\n- Tests\n:::\n:::', renderMd: ':::ao-grid\n:::card title="Cadrage" phase="Phase 1" num="01"\n- Atelier besoins\n- Architecture\n:::\n:::card title="Implémentation" phase="Phase 2" num="02"\n- Dev itératif\n:::\n:::' },
+      { name: ":::feature", desc: "Standalone fiche de fonctionnalité (titre + statut + niveau + description + image optionnelle). Embed dans `:::ao-grid` pour disposer plusieurs fiches : `layout=\"row\"` = pleine largeur, `layout=\"col\"` = demi-largeur.", syntax: ':::ao-grid\n:::feature title="Brouillons" status="conforme" level="obligatoire"\nSave as draft natif sur tous les content types.\n:::\n:::', renderMd: ':::ao-grid\n:::feature title="Brouillons" status="conforme" level="obligatoire"\nSave as draft natif sur tous les content types.\n:::\n:::' },
       { name: ":::heatmap", desc: "Heat matrix with optional milestone track. Config block (columns/milestones) + `---` + data rows `Title | T T T …` where T is X/■ = on, o/• = event, else off.", syntax: ":::heatmap\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev     | . X X X .\n:::", renderMd: ":::heatmap\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick-off@0, Go-live@3\n---\nAnalyse | X X o . .\nDev | . X X X .\nTests | . . X X X\n:::" },
       { name: ":::quote", desc: "Blockquote with author/role attribution.", syntax: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::', renderMd: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::' },
       { name: ":::timeline", desc: "Vertical timeline. Each `:::step TITLE | META` starts a new step with markdown body.", syntax: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::", renderMd: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::step Étape 3 | J+10\nDescription.\n:::" },
-      { name: "12-column grid (`ao-grid`)", desc: "Fenced code block of kind `ao-grid`. Each `:::col-N` opens a column spanning N/12.", syntax: "```ao-grid\n:::col-8\nColonne principale\n:::col-4\nColonne latérale\n```", renderMd: "```ao-grid\n:::col-8\nColonne principale (8/12)\n:::col-4\nLatérale (4/12)\n```" },
+      { name: ":::ao-grid", desc: "Grille 12 colonnes. `:::col-N` (N = 1..12) fixe la largeur ; `:::col` (sans largeur) partage à parts égales les colonnes restantes.", syntax: ":::ao-grid\n:::col-8\nColonne principale\n:::col\nColonne latérale (largeur auto)\n:::", renderMd: ":::ao-grid\n:::col-8\nColonne principale (8/12)\n:::col\nLatérale (auto 4/12)\n:::" },
     ],
   },
   {
@@ -825,11 +826,11 @@ const COMPONENT_PREVIEWS: Record<string, MenuPreview> = {
   "Alert — Tip": { renderMd: ":::tip\nHelpful tip.\n:::" },
   "Stat tiles": { renderMd: ":::stat-tiles\n18 ans | Expertise | Depuis 2007\n100+ | Projets\n< 4 h | Réponse\n99,9 % | Dispo\n:::" },
   "Numbered grid": { renderMd: ":::numbered-grid\nQualité | Zéro régression\nRéactivité | SLA < 4 h\nSécurité | DevSecOps\n:::" },
-  "Card grid": { renderMd: ":::card-grid\n:::card Cadrage | Phase 1\n- Atelier\n- Architecture\n:::card Impl | Phase 2\n- Dev\n:::" },
+  "Card grid": { renderMd: ':::ao-grid\n:::card title="Cadrage" phase="Phase 1" num="01"\n- Atelier\n- Architecture\n:::\n:::card title="Impl" phase="Phase 2" num="02"\n- Dev\n:::\n:::' },
   "Heatmap": { renderMd: ":::heatmap\ncolumns: S1, S2, S3:mise, S4:expl, S5:fin\nmilestones: Kick@0, Go-live@3\n---\nAnalyse | X X o . .\nDev | . X X X .\n:::" },
   "Quote": { renderMd: ':::quote author="Nom Prénom" role="Rôle"\nTexte de la citation.\n:::' },
   "Timeline": { renderMd: ":::timeline\n:::step Étape 1 | J+0\nDescription.\n:::step Étape 2 | J+5\nDescription.\n:::" },
-  "12-col grid  (ao-grid)": { renderMd: "```ao-grid\n:::col-8\nColonne principale\n:::col-4\nLatérale\n```" },
+  "12-col grid  (ao-grid)": { renderMd: ":::ao-grid\n:::col-8\nColonne principale\n:::col-4\nLatérale\n:::" },
 };
 
 const BLOCK_PREVIEWS: Record<string, MenuPreview> = {
@@ -838,8 +839,8 @@ const BLOCK_PREVIEWS: Record<string, MenuPreview> = {
   "Blockquote": { renderMd: "> Quote text." },
   "Code block": { renderMd: "```js\nconst x = 1;\n```" },
   "Horizontal rule": { renderMd: "---" },
-  "Page break  (\\newpage)": { html: previewPageBreak },
-  "Spacer  (\\spacer[20px])": { html: previewSpacer },
+  "Page break  (:::newpage)": { html: previewPageBreak },
+  "Spacer  (:::spacer 20px)": { html: previewSpacer },
 };
 
 function escapeHtml(s: string): string {

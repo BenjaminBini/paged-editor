@@ -21,8 +21,7 @@
 
 export type ContainerKind =
   | "alert" // :::info, :::warning, etc. — six fixed variants
-  | "block" // :::stat-tiles, :::quote, :::timeline, etc.
-  | "layout-fence" // ```ao-grid …``` — code-fenced layout container
+  | "block" // :::stat-tiles, :::quote, :::timeline, :::ao-grid, :::card, :::feature, etc.
   | "visualization-fence"; // ```mermaid …```, ```echarts …```
 
 export interface ContainerAttribute {
@@ -81,20 +80,23 @@ const BLOCK_SPECS: readonly ContainerSpec[] = [
       ":::numbered-grid\nSouveraineté | Hébergement français certifié HDS\nQualité | Démarche ISO 9001 en vigueur\nExpertise | 15 ans de pratique AO publics\n:::",
   },
   {
-    name: "card-grid",
+    name: "card",
     kind: "block",
     description:
-      "Grille de cartes auto-numérotées (titre + tag + puces). Utile pour détailler des prestations.",
-    innerDirectives: ["card"],
+      "Carte (titre + tag de phase + corps). À embed dans `:::ao-grid` pour disposer plusieurs cartes en grille (la position dans la grille définit la couleur de palette).",
+    attributes: [
+      { name: "title", required: true, description: "Titre de la carte." },
+      { name: "phase", required: false, description: "Tag de phase / chapitrage affiché sous le titre." },
+      { name: "num", required: false, description: "Numéro à afficher (ex. `01`). Si omis, aucun numéro." },
+    ],
     example:
-      ":::card-grid\n:::card Cadrage | Phase 1\n- Audit de l'existant\n- Cadrage des besoins\n\n:::card Réalisation | Phase 2\n- Développement itératif\n- Recettes intermédiaires\n:::",
+      ':::ao-grid\n:::card title="Cadrage" phase="Phase 1" num="01"\n- Audit de l\'existant\n- Cadrage des besoins\n:::\n\n:::card title="Réalisation" phase="Phase 2" num="02"\n- Développement itératif\n- Recettes intermédiaires\n:::\n:::',
   },
   {
-    name: "feature-grid",
+    name: "feature",
     kind: "block",
     description:
-      "Grille de fiches de fonctionnalités (titre + statut + niveau + description + illustration optionnelle). Chaque `:::feature` ouvre une fiche. Layout row (texte + image côte à côte, carte pleine largeur) ou col (empilé, demi-largeur). Layout row ignoré sans image.",
-    innerDirectives: ["feature"],
+      "Fiche de fonctionnalité (titre + statut + niveau + description + illustration optionnelle). À embed dans `:::ao-grid` pour disposer plusieurs fiches : layout row = pleine largeur, layout col = demi-largeur. Layout row ignoré sans image.",
     attributes: [
       { name: "title", required: true, description: "Titre de la fiche." },
       { name: "requirement", required: false, description: "Énoncé de l'exigence (repris tel quel de la grille JSON source). Affiché pleine largeur sous le titre." },
@@ -108,7 +110,7 @@ const BLOCK_SPECS: readonly ContainerSpec[] = [
       { name: "layout", required: false, description: "row (pleine largeur, méta en colonne gauche, image 200 px à droite) ou col (demi-largeur, méta en rail haut, image 16/9 en bas). Défaut col." },
     ],
     example:
-      ':::feature-grid\n:::feature title="Brouillons d\'articles" status="conforme" level="obligatoire" ref="M-112" image="assets/slides/slide-112.png" caption="Slide 112" layout="row"\nSave as draft natif sur tous les content types. Statut Draft explicite, visible uniquement par les éditeurs.\n\n:::feature title="Transfert en masse" status="preciser" level="obligatoire"\nActions groupées limitées à la suppression ; le bulk author change passe par API.\n:::',
+      ':::ao-grid\n:::feature title="Brouillons d\'articles" status="conforme" level="obligatoire" ref="M-112" image="assets/slides/slide-112.png" caption="Slide 112" layout="row"\nSave as draft natif sur tous les content types. Statut Draft explicite, visible uniquement par les éditeurs.\n:::\n\n:::feature title="Transfert en masse" status="preciser" level="obligatoire"\nActions groupées limitées à la suppression ; le bulk author change passe par API.\n:::\n:::',
   },
   {
     name: "heatmap",
@@ -140,17 +142,14 @@ const BLOCK_SPECS: readonly ContainerSpec[] = [
     example:
       ":::timeline\n:::step Cadrage | 2 semaines\nAudit existant, validation hypothèses, plan détaillé.\n\n:::step Réalisation | 4 sprints\nDéveloppement itératif avec livraisons intermédiaires.\n:::",
   },
-];
-
-const LAYOUT_SPECS: readonly ContainerSpec[] = [
   {
     name: "ao-grid",
-    kind: "layout-fence",
+    kind: "block",
     description:
-      "Bloc de code fencé (```ao-grid) définissant une grille 12 colonnes. Chaque `:::col-N` ouvre une colonne de N/12.",
-    innerDirectives: ["col-N"],
+      "Grille 12 colonnes. Deux modes : (a) `:::col-N` (N = 1..12) fixe la largeur à N/12 ; `:::col` (sans largeur) partage à parts égales les colonnes restantes ; total > 12 = retour à la ligne. (b) Sans `:::col`, embarque directement des composants (`:::card`, `:::feature`, …) dont la largeur est imposée par le CSS du composant.",
+    innerDirectives: ["col", "col-N", "card", "feature"],
     example:
-      "```ao-grid\n:::col-8\n## Contexte métier\nParagraphe long avec citations {src:CCTP p.14 §3.2}.\n:::col-4\n![Schéma](assets/archi.png)\n```",
+      ":::ao-grid\n:::col-8\n## Contexte métier\nParagraphe long avec citations {src:CCTP p.14 §3.2}.\n:::col\n![Schéma](assets/archi.png)\n:::",
   },
 ];
 
@@ -176,7 +175,6 @@ const VIZ_SPECS: readonly ContainerSpec[] = [
 export const CONTAINER_REGISTRY: readonly ContainerSpec[] = [
   ...ALERT_SPECS,
   ...BLOCK_SPECS,
-  ...LAYOUT_SPECS,
   ...VIZ_SPECS,
 ];
 

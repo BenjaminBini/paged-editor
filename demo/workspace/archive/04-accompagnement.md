@@ -16,7 +16,7 @@ Notre rôle de conseil prendra tout son sens dans le cadre de vos chantiers d'é
 >*   **Accompagnement éditorial et refonte de contenus :** Avec plus de 200 actualités à la Une depuis 2022 et 400 000 vues annuelles, Magellan est un outil vivant. Nous vous accompagnerons dans la refonte de contenus existants et la création de nouveaux formats, afin de garantir que l'architecture de l'information reste claire, pertinente et visuellement attractive pour vos 650 collaborateurs.
 
 
-/newpage
+:::newpage
 
 ## Nos engagements
 Afin de garantir une disponibilité maximale de la plateforme et une réactivité à toute épreuve, nous nous engageons sur le SLA suivant :

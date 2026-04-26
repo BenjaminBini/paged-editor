@@ -97,9 +97,9 @@ Le texte qui suit une image alignée à gauche ou à droite s'écoule autour d'e
 
 ## Saut de page
 
-Le marqueur `/newpage` (ou `\newpage`) sur sa propre ligne insère un saut de page Paged.js. Il peut apparaître à la fin d'un paragraphe, après une liste ou seul sur une ligne.
+Le marqueur `:::newpage` sur sa propre ligne insère un saut de page Paged.js. Il peut apparaître à la fin d'un paragraphe, après une liste ou seul sur une ligne.
 
-/newpage
+:::newpage
 
 ## Mermaid
 

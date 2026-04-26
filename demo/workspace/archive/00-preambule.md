@@ -4,7 +4,7 @@ Ce document constitue la réponse de **BEORN Technologies** au marché BF/COM/26
 
 ![Logo de Bruxelles Formation](assets/pasted-image-20260410-143632-377.png|255px|center)
 
-/newpage
+:::newpage
 
 
 ## L'intranet de Bruxelles Formation
@@ -60,7 +60,7 @@ BEORN Technologies, partenaire certifié LumApps (Certified Partner), propose un
   </div>
 </div>
 
-/newpage
+:::newpage
 
 ## Structure de notre offre
 

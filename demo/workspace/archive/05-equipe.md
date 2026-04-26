@@ -74,7 +74,7 @@ Le chef de projet est l'interlocuteur unique identifié par le CSC. Il assure la
 
 Le consultant fonctionnel assure l'accompagnement fonctionnel, l'analyse des besoins, la conception de solutions et l'accompagnement éditorial. Il prend en charge le recueil et l'analyse des besoins issus du sondage, la proposition de solutions fonctionnelles, la configuration de la plateforme (espaces, navigation, droits, workflows), l'accompagnement à la création et à la refonte de contenus, ainsi que la formation des contributeurs. Ses compétences clés incluent l'administration LumApps, l'UX intranet, la gestion de contenus et Microsoft 365. Francophone.
 
-/newpage
+:::newpage
 
 ### Intégrateur technique LumApps
 

@@ -951,54 +951,50 @@ figure.md-image figcaption {
   margin: 0;
 }
 
-/* ── Card grid (:::card-grid + inner :::card TITRE | PHASE) ──
-   7 auto-numbered cards laid out in a 4-column grid (4 + 3 wrap for 7
-   items). Each card holds a big palette number, a coloured hairline,
-   title, optional phase tag, then the markdown list the author wrote
-   inside the item. Bullets inherit the card's palette colour. */
-.md-card-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  column-gap: var(--space-md);
-  row-gap: 1.5rem;
-  margin: var(--space-md) 0;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-.md-card-grid-card {
+/* ── Card (:::card title="…" phase="…" num="…") ──
+   Standalone card. Embed multiple cards inside `:::ao-grid` to lay them out
+   in a grid; CSS gives each card a default `span 3` (4-col) inside .ao-grid,
+   and rotates the BEORN palette by nth-of-type. Bullets inherit the card's
+   palette colour. */
+.md-card {
   display: flex;
   flex-direction: column;
   gap: 8px;
   break-inside: avoid;
   page-break-inside: avoid;
-}
-.md-card-grid-card:nth-child(1) {
   color: var(--navy);
 }
-.md-card-grid-card:nth-child(2) {
+/* Inside an ao-grid, default to 4-up (span 3 of 12) and rotate palette. */
+.ao-grid > .md-card {
+  grid-column: span 3;
+}
+.ao-grid > .md-card:nth-of-type(7n + 1) {
+  color: var(--navy);
+}
+.ao-grid > .md-card:nth-of-type(7n + 2) {
   color: var(--blue);
 }
-.md-card-grid-card:nth-child(3) {
+.ao-grid > .md-card:nth-of-type(7n + 3) {
   color: var(--teal);
 }
-.md-card-grid-card:nth-child(4) {
+.ao-grid > .md-card:nth-of-type(7n + 4) {
   color: var(--purple);
 }
-.md-card-grid-card:nth-child(5) {
+.ao-grid > .md-card:nth-of-type(7n + 5) {
   color: var(--green);
 }
-.md-card-grid-card:nth-child(6) {
+.ao-grid > .md-card:nth-of-type(7n + 6) {
   color: var(--orange);
 }
-.md-card-grid-card:nth-child(7) {
+.ao-grid > .md-card:nth-of-type(7n + 7) {
   color: var(--magenta);
 }
-.md-card-grid-left {
+.md-card-left {
   display: flex;
   flex-direction: column;
   gap: 3px;
 }
-.md-card-grid-num {
+.md-card-num {
   font-family: "Nunito", sans-serif;
   font-size: 28pt;
   font-weight: 900;
@@ -1008,7 +1004,7 @@ figure.md-image figcaption {
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum", "lnum";
 }
-.md-card-grid-title {
+.md-card-title {
   font-family: "Nunito", sans-serif;
   font-size: 10.5pt;
   font-weight: 800;
@@ -1018,7 +1014,7 @@ figure.md-image figcaption {
   border-top: 1.5px solid currentColor;
   letter-spacing: -0.005em;
 }
-.md-card-grid-phase {
+.md-card-phase {
   font-family: "Nunito", sans-serif;
   font-size: 6pt;
   font-weight: 700;
@@ -1029,9 +1025,9 @@ figure.md-image figcaption {
   margin-top: 2px;
   line-height: 1.3;
 }
-/* Markdown-parsed <ul> sits as a direct child of .md-card-grid-card.
+/* Markdown-parsed <ul> sits as a direct child of .md-card.
    Override global list styles for compact bullets in a narrow card. */
-.md-card-grid-card > ul {
+.md-card > ul {
   list-style: none !important;
   margin: 2px 0 0 !important;
   padding: 0 !important;
@@ -1039,7 +1035,7 @@ figure.md-image figcaption {
   flex-direction: column;
   gap: 5px;
 }
-.md-card-grid-card > ul > li {
+.md-card > ul > li {
   position: relative;
   padding-left: 18px !important;
   margin: 0 !important;
@@ -1048,22 +1044,14 @@ figure.md-image figcaption {
   line-height: 1.38;
   color: var(--text);
 }
-.md-card-grid-card > ul > li::before {
+.md-card > ul > li::before {
   font-size: 12px;
 }
 
-/* ── Feature grid (:::feature-grid) ──
-   2-column grid of functional-requirement fiches. Each :::feature:
-   - eyebrow row: requirement level (left, color-coded uppercase label)
-     + coverage status chip (right, filled pill).
-   - title (navy, weighty).
-   - body (description text).
-   - optional image + caption.
-   Left border colored by coverage status for subtle visual grouping.
-   Layout:
-   - .md-feature-col → one grid cell; image (if any) below text.
-   - .md-feature-row → spans both cells; image on the right (~34%). */
-/* Feature grid (:::feature-grid) — "Specification sheet" direction (Beorn design D1).
+/* ── Feature (:::feature) — Standalone fiche de fonctionnalité.
+   Embed in `:::ao-grid` to dispose multiple fiches: layout="row" → full
+   12/12 inside the grid; layout="col" (default) → 6/12.
+   "Specification sheet" direction (Beorn design D1):
    - Tokens: status → subtle tinted bg (0.05α) + semantic dot color.
              level  → text color on the requirement label.
    - row (full-width, non-compact): 92px meta column (Statut / Exigence / Réf)
@@ -1071,7 +1059,7 @@ figure.md-image figcaption {
      1fr + 200px (image fixed right).
    - col (half-width, compact): rail of Statut · Exigence · Réf at top, title with
      bottom hairline, body, image below (16/9) if present. */
-.md-feature-grid {
+.md-feature {
   --mf-fg-1: #0e1722;
   --mf-fg-2: #34404e;
   --mf-fg-3: #6a7787;
@@ -1088,18 +1076,25 @@ figure.md-image figcaption {
   --mf-level-souhaitee: #4354a2;
   --mf-level-information: #0095b5;
   --mf-level-optionnel: #6a7787;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 14px;
-  margin: 0.6rem 0 1rem;
-}
-.md-feature {
   font-family: "Nunito", var(--font-sans, sans-serif);
   color: var(--mf-fg-1);
   border-radius: 6px;
   break-inside: avoid;
   page-break-inside: avoid;
   background: transparent;
+  margin: 0.6rem 0;
+}
+/* Inside ao-grid, layout class controls the column span. */
+.ao-grid > .md-feature.md-feature-row {
+  grid-column: 1 / -1;
+}
+.ao-grid > .md-feature.md-feature-col {
+  grid-column: span 6;
+}
+/* Drop the outer-block margin when the feature is a grid item — the
+   parent ao-grid `gap` already handles spacing. */
+.ao-grid > .md-feature {
+  margin: 0;
 }
 /* Status-tinted backgrounds */
 .md-feature.md-feature-status-conforme {
@@ -1161,7 +1156,6 @@ figure.md-image figcaption {
 
 /* ── Row / non-compact (full-width card, meta column on the left) ── */
 .md-feature-row {
-  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: 92px 1fr;
   gap: 20px;
@@ -1299,7 +1293,7 @@ figure.md-image figcaption {
   aspect-ratio: 4 / 3;
 }
 .md-feature-col .md-feature-media-frame {
-  aspect-ratio: 16 / 9;
+  aspect-ratio: initial;
 }
 .md-feature-media-frame img {
   display: block;

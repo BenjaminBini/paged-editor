@@ -25,7 +25,7 @@ LumApps met en œuvre les mesures techniques et organisationnelles suivantes pou
 | **Continuité**    | Plans de continuité d'activité et de reprise après sinistre, stratégie PRA intégrée et testée régulièrement                                     |
 | **Développement** | Cycle de développement logiciel sécurisé (SDLC) formalisé, programme de bug bounty, tests de sécurité réguliers                                 |
 
-/newpage
+:::newpage
 
 ### Certifications
 

@@ -15,7 +15,9 @@ describe("container-registry", () => {
 
   it("includes all block containers currently dispatched by section-pipeline", () => {
     const expected = [
-      "card-grid",
+      "ao-grid",
+      "card",
+      "feature",
       "heatmap",
       "numbered-grid",
       "quote",

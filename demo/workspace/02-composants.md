@@ -8,7 +8,8 @@ Six variantes de blocs contextuels. Le corps accepte du Markdown complet.
 **Information** — Contexte neutre, donnée complémentaire ou rappel de procédure.
 :::
 
-/spacer[20px]
+
+:::spacer 20px
 
 :::warning
 **Attention** — Avertissement modéré nécessitant vigilance avant d'agir.
@@ -30,7 +31,9 @@ Six variantes de blocs contextuels. Le corps accepte du Markdown complet.
 **Conseil** — Bonne pratique ou astuce opérationnelle à retenir.
 :::
 
+
 ## Stat tiles
+
 
 Tuiles chiffres : une ligne par tuile, syntaxe `VALEUR | LIBELLÉ | NOTE (optionnel)`.
 
@@ -54,7 +57,7 @@ Durabilité | Green IT, écoconception, bilan carbone annuel publié
 Transparence | Reporting temps réel, accès aux dashboards de suivi
 :::
 
-/newpage
+:::newpage
 
 ## Citation
 
@@ -92,55 +95,72 @@ Validation fonctionnelle avec les référents métier, correction des anomalies 
 Basculement en production avec surveillance renforcée et support prioritaire pendant 72 h.
 :::
 
-/newpage
+:::newpage
 
 ## Prestations détaillées
 
-Conteneur `:::card-grid` avec sous-headers `:::card TITRE | PHASE`.
+Cartes standalone `:::card title="…" phase="…" num="…"` embarquées dans une `:::ao-grid` pour la disposition en grille (4-up + rotation de palette via `nth-of-type`).
 
-:::card-grid
-:::card Audit & Initialisation | Phase 1
+:::ao-grid
+:::card title="Audit & Initialisation" phase="Phase 1" num="01"
+
 - Inventaire des applications en scope
 - Cartographie des flux et des dépendances
 - Plan de charge prévisionnel validé
 
-:::card Maintenance corrective | En continu
+:::
+
+:::card title="Maintenance corrective" phase="En continu" num="02"
+
 - Analyse et correction des anomalies (P1/P2/P3)
 - Gestion du backlog de bugs et suivi SLA
 - Reporting mensuel de disponibilité
 
-:::card Projets agiles | Sprints de 2 semaines
+:::
+
+:::card title="Projets agiles" phase="Sprints de 2 semaines" num="03"
+
 - Backlog produit copiloté avec le métier
 - Démos et rétrospectives à chaque sprint
 - Livraisons continues en environnement de recette
 
-:::card Sécurité & Conformité | Trimestriel
+:::
+
+:::card title="Sécurité & Conformité" phase="Trimestriel" num="04"
+
 - Audits de sécurité applicative (OWASP)
 - Veille CVE et application des patches critiques
 - Mise à jour de la documentation PSSI
+
+:::
 :::
 
 ## Fiches fonctionnelles
 
-Conteneur `:::feature-grid` avec sous-headers `:::feature title="…" requirement="…" status="…" level="…" ref="…" image="…" caption="…" layout="row|col" coverageSource="…" coverageSourceHref="…"`.
+Fiches standalone :::feature title="…" requirement="…" status="…" level="…" ref="…" image="…" caption="…" layout="row|col" coverageSource="…" coverageSourceHref="…"` embarquées dans `:::ao-grid` pour la disposition (row = pleine largeur, col = demi-largeur).
 
-Statut (badge) : `conforme`, `parametrage` ee· `preciser`. Niveau (pied) : `obligatoire` · `souhaitee` · `information`. `requirement` = énoncé brut repris de la grille JSON, affiché pleine largeur sous le titre. `coverageSource` = libellé de la source de couverture (LumApps doc, BEORN ref, …), affiché en pied avec lien optionnel via `coverageSourceHref`. Layout `row` (texte + image côte-à-côte, carte pleine largeur) n'est appliqué qu'avec `image=` ; sinon la carte retombe en `col` (demi-largeur).
+Statut (badge) : `conforme`, `parametrage` · `preciser`. Niveau (pied) : `obligatoire` · `souhaitee` · `information`. `requirement` = énoncé brut repris de la grille JSON, affiché pleine largeur sous le titre. `coverageSource` = libellé de la source de couverture (LumApps doc, BEORN ref, …), affiché en pied avec lien optionnel via `coverageSourceHref`.
 
-:::feature-grid
+:::ao-grid
 :::feature title="Éditeur WYSIWYG" requirement="La plateforme doit fournir un éditeur WYSIWYG riche permettant aux contributeurs non techniques de produire du contenu mis en forme sans connaissance HTML." status="conforme" level="obligatoire" ref="FN-12" coverageSource="LumApps Help — Rich text editor" coverageSourceHref="https://docs.lumapps.com/docs/help-content-rte"
 Barre d'outils complète (gras, italique, listes, liens, tables) et styles de paragraphes natifs. Copier-coller depuis Word géré.
+:::
 
 :::feature title="Versioning des articles" requirement="Chaque article doit conserver l'historique de ses versions successives et permettre la restauration d'une version antérieure par un utilisateur autorisé." status="conforme" level="obligatoire" ref="FN-18" coverageSource="LumApps Help — Content version history" coverageSourceHref="https://docs.lumapps.com/docs/help-content-version-history-restore"
-Onglet *Versions* automatique à chaque save/publish/archive. Restauration d'une version antérieure via la permission dédiée.
+Onglet _Versions_ automatique à chaque save/publish/archive. Restauration d'une version antérieure via la permission dédiée.
+:::
 
-:::feature title="Brouillons d'articles" requirement="Les contributeurs doivent pouvoir enregistrer un article en brouillon, non visible des lecteurs finaux, et le reprendre ultérieurement avant publication." status="conforme" level="obligatoire" ref="FN-21" image="assets/cover.svg" caption="Exemple — brouillon en back-office" layout="row" coverageSource="LumApps Help — Save as draft" coverageSourceHref="https://docs.lumapps.com/docs/help-content-draft-publish-schedule"
-Fonction *Save as draft* native sur tous les types de contenu. Statut explicite, visible par les seuls éditeurs. Également disponible sur les posts d'espaces (draft, publish, schedule).
+:::feature title="Brouillons d'articles" requirement="Les contributeurs doivent pouvoir enregistrer un article en brouillon, non visible des lecteurs finaux, et le reprendre ultérieurement avant publication." status="conforme" level="obligatoire" ref="FN-21" caption="Exemple — brouillon en back-office" layout="row" coverageSource="LumApps Help — Save as draft" coverageSourceHref="https://docs.lumapps.com/docs/help-content-draft-publish-schedule"
+Fonction _Save as draft_ native sur tous les types de contenu. Statut explicite, visible par les seuls éditeurs. Également disponible sur les posts d'espaces (draft, publish, schedule).
+:::
 
 :::feature title="Transfert en masse" requirement="L'administrateur doit pouvoir transférer en masse la propriété éditoriale d'articles d'un contributeur vers un autre (ex. départ collaborateur)." status="preciser" level="obligatoire" ref="FN-27" coverageSource="BEORN — Mémo intégration LumApps §4.2"
 Les actions groupées sont limitées à la suppression multi-sélection. Le transfert d'auteur en masse passe par script d'administration ou API.
+:::
 
 :::feature title="Digest hebdomadaire" requirement="La plateforme doit envoyer un digest hebdomadaire personnalisé reprenant les nouveaux contenus pertinents pour chaque collaborateur." status="parametrage" level="souhaitee" ref="FN-34" coverageSource="LumApps Help — Newsletters & Journeys" coverageSourceHref="https://docs.lumapps.com/docs/help-newsletters-journeys-content-selection"
-Module *Newsletters* natif avec *Content selection* et *Journeys* pour automatiser les envois récurrents. La politique éditoriale reste à paramétrer côté administrateur.
+Module _Newsletters_ natif avec _Content selection_ et _Journeys_ pour automatiser les envois récurrents. La politique éditoriale reste à paramétrer côté administrateur.
+:::
 :::
 
 ## Heatmap
@@ -154,7 +174,9 @@ Phases de colonnes : `:mise` (mise en place), `:expl` (exploitation), `:fin` (fi
 :::heatmap
 columns: T1:mise, T2:mise, T3:expl, T4:expl, T5:expl, T6:expl, T7:expl, T8:fin
 milestones: Démarrage@0, Recette@2:Semaine 6, Go-Live@3:Jalon contractuel, Bilan@8
+
 ---
+
 Initialisation | X X . . . . . .
 Maintenance corrective | . X X X X X X X
 Projets agiles | . . X X X X X .
@@ -163,13 +185,13 @@ Reporting | . o . o . o . o
 Bilan final | . . . . . . . X
 :::
 
-/newpage
+:::newpage
 
 ## Grille multi-colonnes
 
-Bloc fencé ` ```ao-grid ` avec sous-headers `:::col-N` (N = largeur sur 12 colonnes).
+Conteneur `:::ao-grid` avec sous-headers `:::col-N` (N = largeur sur 12 colonnes) ou `:::col` (largeur auto, partage équitable des colonnes restantes).
 
-```ao-grid
+:::ao-grid
 :::col-7
 
 ### Colonne principale (7/12)
@@ -193,7 +215,46 @@ La grille `ao-grid` divise la ligne en 12 colonnes. Chaque `:::col-N` ouvre une 
 :::tip
 Les colonnes peuvent contenir des alertes et des composants imbriqués.
 :::
-```
+
+:::
+
+:::spacer 20px
+
+Sans largeur explicite, les colonnes se partagent les 12/12 à parts égales :
+
+:::ao-grid
+:::col
+
+**Auto 1/3** — première colonne sans largeur déclarée.
+
+:::col
+
+**Auto 1/3** — deuxième colonne, même largeur.
+
+:::col
+
+**Auto 1/3** — troisième colonne, même largeur.
+
+:::
+
+:::spacer 20px
+
+Mixte : largeur explicite + largeur auto sur les colonnes restantes.
+
+:::ao-grid
+:::col-6
+
+**Fixe 6/12** — moitié gauche sur largeur explicite.
+
+:::col
+
+**Auto 3/12** — partage les 6 colonnes restantes.
+
+:::col
+
+**Auto 3/12** — partage les 6 colonnes restantes.
+
+:::
 
 ## Diagramme Mermaid
 
