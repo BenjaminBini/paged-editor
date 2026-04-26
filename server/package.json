@@ -1,6 +1,6 @@
 {
   "name": "@benjaminbini/paged-editor-server",
-  "version": "1.9.17",
+  "version": "1.9.18",
   "description": "File server middleware for paged-editor — Express and Hono routers",
   "repository": {
     "type": "git",
