@@ -35,12 +35,11 @@ import {
 } from "./rendering/block-entries-store.js";
 
 const A4_WIDTH_PX: number = 794;
-const previewWrapper: HTMLElement = document.getElementById("preview-wrapper")!;
 
-// Pool of per-tab preview surfaces inside the wrapper.  Switching tabs only
-// toggles `display`; the rendered DOM stays alive so re-activation is
-// instant and scroll position is preserved naturally per tab.
-const previewPool: PreviewPool = new PreviewPool(previewWrapper, previewContainer);
+// Pool of per-tab `.preview-tab > .preview-wrapper > .preview-surface`
+// chains inside `#preview-container`.  Each pane owns its own scroll
+// container so display:none/block toggles preserve scrollTop natively.
+const previewPool: PreviewPool = new PreviewPool(previewContainer);
 
 // Stable identifiers used as pool keys — covers + TOC are virtual and don't
 // have a workspace path.
@@ -96,21 +95,29 @@ let _lastBlockEntries: BlockEntry[] = [];
 let _lastStyleErrors: StyleError[] = [];
 let _isPatching: boolean = false;
 
+// Active tab's scroll container (.preview-tab) — falls back to the host so
+// these helpers don't NPE during the first render before any pane exists.
+function activeScroller(): HTMLElement {
+  return previewPool.getActiveScroller() ?? previewContainer;
+}
+
 function capturePreviewScrollState(): { scrollTop: number; ratio: number } {
-  const maxScrollTop = Math.max(0, previewContainer.scrollHeight - previewContainer.clientHeight);
+  const scroller = activeScroller();
+  const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
   return {
-    scrollTop: previewContainer.scrollTop,
-    ratio: maxScrollTop > 0 ? previewContainer.scrollTop / maxScrollTop : 0,
+    scrollTop: scroller.scrollTop,
+    ratio: maxScrollTop > 0 ? scroller.scrollTop / maxScrollTop : 0,
   };
 }
 
 function restorePreviewScrollState(state: { scrollTop: number; ratio: number } | null): void {
   if (!state) return;
-  const maxScrollTop = Math.max(0, previewContainer.scrollHeight - previewContainer.clientHeight);
+  const scroller = activeScroller();
+  const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
   const nextScrollTop = maxScrollTop > 0
     ? Math.min(maxScrollTop, Math.round(state.ratio * maxScrollTop))
     : 0;
-  previewContainer.scrollTop = nextScrollTop;
+  scroller.scrollTop = nextScrollTop;
 }
 
 function computeFrontmatterOffset(md: string): number {
@@ -127,14 +134,16 @@ function measurePreviewSurface(): { contentWidth: number; contentHeight: number 
 }
 
 function scaleSurface(): void {
+  const wrapper = previewPool.getActiveWrapper();
+  if (!wrapper) return;
   const { contentWidth, contentHeight } = measurePreviewSurface();
-  const containerW = Math.max(0, previewContainer.clientWidth - 40);
+  const containerW = Math.max(0, activeScroller().clientWidth - 40);
   const fitScale = contentWidth > 0 ? Math.min(1, containerW / contentWidth) : 1;
   const scale = fitScale * _userZoom;
 
   previewSurface().style.transform = `scale(${scale})`;
-  previewWrapper.style.width = `${Math.ceil(contentWidth * scale)}px`;
-  previewWrapper.style.height = `${Math.ceil(contentHeight * scale)}px`;
+  wrapper.style.width = `${Math.ceil(contentWidth * scale)}px`;
+  wrapper.style.height = `${Math.ceil(contentHeight * scale)}px`;
 }
 
 // ── Incremental patch utilities ─────────────────────────────────────
@@ -143,7 +152,7 @@ function scaleSurface(): void {
 function getVisiblePageRange(): { first: number; last: number } {
   const pages = previewSurface().querySelectorAll(".pagedjs_page");
   if (!pages.length) return { first: -1, last: -1 };
-  const containerRect = previewContainer.getBoundingClientRect();
+  const containerRect = activeScroller().getBoundingClientRect();
   let first = -1;
   let last = -1;
   for (const page of pages) {
@@ -537,6 +546,21 @@ export function poolKeyForToc(): string {
   return TOC_KEY;
 }
 
+// Subscribe to active-scroller changes so the scroll-sync controller can
+// rebind its scroll listener and read scrollTop from the right element.
+// Returns an unsubscribe function.
+export function onPreviewScrollerChange(
+  fn: (scroller: HTMLElement | null) => void,
+): () => void {
+  return previewPool.onScrollerChange(fn);
+}
+
+// Current active scroll container (the visible `.preview-tab`), or `null` if
+// nothing has been activated yet.
+export function getActivePreviewScroller(): HTMLElement | null {
+  return previewPool.getActiveScroller();
+}
+
 export function getPreviewFrame(): HTMLDivElement {
   return previewSurface();
 }
@@ -551,7 +575,7 @@ export function getStyleErrors(): StyleError[] {
 
 export function getPreviewScale(): number {
   const { contentWidth } = measurePreviewSurface();
-  const containerW = Math.max(0, previewContainer.clientWidth - 40);
+  const containerW = Math.max(0, activeScroller().clientWidth - 40);
   return contentWidth > 0 ? Math.min(1, containerW / contentWidth) * _userZoom : _userZoom;
 }
 

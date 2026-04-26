@@ -53,10 +53,22 @@
   color: #475569;
 }
 #preview-container {
-  flex: 1; overflow-y: auto; padding: 20px;
-  display: flex; flex-direction: column; align-items: center;
+  flex: 1;
+  position: relative;
+  overflow: hidden;
 }
-#preview-wrapper {
+/* One pane per open tab — its own scroll container so display:none/block
+   toggles preserve scrollTop natively per tab. */
+.preview-tab {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.preview-wrapper {
   flex-shrink: 0;
   margin: 0 auto;
   overflow: hidden;

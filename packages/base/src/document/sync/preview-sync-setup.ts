@@ -2,12 +2,22 @@
 
 import { cm, previewContainer as _previewContainer } from "../../editor/codemirror-editor.js";
 const previewContainer: HTMLElement = _previewContainer!;
-import { getPreviewFrame, handlePreviewLayoutChange } from "../render-scheduler.js";
+import {
+  getPreviewFrame,
+  handlePreviewLayoutChange,
+  onPreviewScrollerChange,
+  getActivePreviewScroller,
+} from "../render-scheduler.js";
 import { ScrollSyncController } from "./scroll-sync-controller.js";
 
 let controller: ScrollSyncController | null = null;
 let scrollSyncReady: boolean = false;
 let clickBindingReady: boolean = false;
+// Track the scroller we currently have a "scroll" listener bound to so we
+// can detach it before binding to a new one (per-tab `.preview-tab` scrolls
+// independently — switching tabs swaps the active scroller).
+let boundScroller: HTMLElement | null = null;
+let boundScrollHandler: (() => void) | null = null;
 
 function ensureController(): ScrollSyncController {
   if (controller) return controller;
@@ -15,10 +25,34 @@ function ensureController(): ScrollSyncController {
   controller = new ScrollSyncController({
     editorApi: cm,
     getPreviewPages: getPreviewFrame,
-    previewFrame: previewContainer,
+    // Initial frame: the active pane if there's one, otherwise the host
+    // (acts as a sentinel until a tab is activated).
+    previewFrame: getActivePreviewScroller() ?? previewContainer,
+  });
+
+  // Keep `previewFrame` pointing at the visible scroller as the user
+  // switches tabs.  Pool fires immediately with the current value if any.
+  onPreviewScrollerChange((scroller) => {
+    if (!controller) return;
+    controller.previewFrame = scroller ?? previewContainer;
+    // Re-bind the scroll listener once the sync has been wired up.  Before
+    // setupScrollSync() runs there's nothing to bind.
+    if (scrollSyncReady) bindPreviewScrollListener();
   });
 
   return controller;
+}
+
+function bindPreviewScrollListener(): void {
+  if (!controller) return;
+  if (boundScroller && boundScrollHandler) {
+    boundScroller.removeEventListener("scroll", boundScrollHandler);
+  }
+  const next = getActivePreviewScroller() ?? previewContainer;
+  const handler = () => controller!.handlePreviewScroll();
+  next.addEventListener("scroll", handler, { passive: true });
+  boundScroller = next;
+  boundScrollHandler = handler;
 }
 
 export function rebuildAnchorMap(): void {
@@ -78,7 +112,5 @@ export function setupScrollSync(): void {
   cm.on("scroll", () => {
     syncController.handleEditorScroll();
   });
-  previewContainer.addEventListener("scroll", () => {
-    syncController.handlePreviewScroll();
-  }, { passive: true });
+  bindPreviewScrollListener();
 }
