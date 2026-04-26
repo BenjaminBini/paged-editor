@@ -16,7 +16,6 @@ interface TabPreview {
   renderer: PreviewRenderer;
   lastRenderedHtml: string | null;
   lastTotalPages: number;
-  scrollTop: number;
 }
 
 export class PreviewPool {
@@ -90,22 +89,20 @@ export class PreviewPool {
       renderer,
       lastRenderedHtml: null,
       lastTotalPages: 0,
-      scrollTop: 0,
     };
     this.pool.set(key, tp);
     return tp;
   }
 
-  // Toggle visibility to the given tab.  Stashes the outgoing tab's scroll
-  // position; restores the incoming tab's scroll on next frame so the
-  // surface measurements have settled before the assignment lands.
+  // Toggle visibility to the given tab.  We don't touch scrollTop — the
+  // browser's scroll position lives on the surface (or its scroll container)
+  // and is preserved across `display: none/block` toggles per element.
   setActive(key: string): void {
     if (this.activeKey === key) return;
 
     if (this.activeKey) {
       const cur = this.pool.get(this.activeKey);
       if (cur) {
-        cur.scrollTop = this.container.scrollTop;
         const surface = cur.renderer.previewPages as HTMLElement;
         surface.style.display = "none";
       }
@@ -115,10 +112,6 @@ export class PreviewPool {
     const surface = next.renderer.previewPages as HTMLElement;
     surface.style.display = "";
     this.activeKey = key;
-
-    requestAnimationFrame(() => {
-      this.container.scrollTop = next.scrollTop;
-    });
   }
 
   // Render markup into the per-tab surface.  Returns the renderer's stats so
@@ -144,7 +137,6 @@ export class PreviewPool {
     tp.renderer.clear();
     tp.lastRenderedHtml = null;
     tp.lastTotalPages = 0;
-    tp.scrollTop = 0;
   }
 
   // Dispose a tab's preview (called from tab close).  No-op if not pooled.
