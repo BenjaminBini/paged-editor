@@ -27,13 +27,21 @@ function snapPreviewScrollOnNextRender(target: number): void {
   const handler = (): void => {
     offEvent("section-ready", handler);
     if (!_tabPreviewContainer) return;
-    // Re-suppress the scroll-sync around the snap itself — the
-    // `previewContainer.scrollTop = …` write fires a `scroll` event which
-    // would otherwise drive `followScrollTop("editor")` and animate the
-    // editor pane back from its already-snapped position.
-    suppressScrollSync(200);
-    const max = Math.max(0, _tabPreviewContainer.scrollHeight - _tabPreviewContainer.clientHeight);
-    _tabPreviewContainer.scrollTop = Math.min(target, max);
+    // Suppress sync long enough to cover app-orchestrator's deferred
+    // rebuildAnchorMap (350ms) which would otherwise call
+    // setScrollTop("preview", mapEditorToPreview(...)) and overwrite us.
+    suppressScrollSync(900);
+    const container = _tabPreviewContainer;
+    const apply = (): void => {
+      const max = Math.max(0, container.scrollHeight - container.clientHeight);
+      container.scrollTop = Math.min(target, max);
+    };
+    apply();
+    // Re-apply after rebuildAnchorMap (350ms) and scalePreview (300ms) have
+    // run.  Their syncFromCurrentSource may have nudged the scroll back to
+    // the editor-mapped position; we want the tab's remembered position to
+    // win.
+    setTimeout(apply, 400);
   };
   onEvent("section-ready", handler);
 }
