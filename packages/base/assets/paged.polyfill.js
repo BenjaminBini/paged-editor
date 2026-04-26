@@ -3599,12 +3599,14 @@
 					}
 				}
 
-				// Get the columns widths and make them attributes so removal of
-				// overflow doesn't do strange things - they may be affecting
-				// widths on this page.
+				// LOCAL PATCH: pin the computed width as an inline style.  The
+				// upstream code sets `childNode.width` directly, which throws
+				// "setting getter-only property" on elements whose `width` is a
+				// read-only DOM property (most non-replaced elements in Firefox)
+				// and aborts the layout run.
 				Array.from(check.parentElement.children).forEach((childNode) => {
 					let style = getComputedStyle(childNode);
-					childNode.width = style.width;
+					try { childNode.style.width = style.width; } catch (e) { /* ignore */ }
 				});
 
 				if (
