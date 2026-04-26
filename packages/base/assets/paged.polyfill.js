@@ -4765,7 +4765,12 @@
 
 			if (content) {
 				this.recordRulesToDisable();
-				this.disableRules(content);
+				// LOCAL PATCH: content may be a raw HTML string (Previewer.preview
+				// accepts either Element or string).  disableRules expects a DOM
+				// node with querySelectorAll.
+				if (typeof content.querySelectorAll === "function") {
+					this.disableRules(content);
+				}
 			}
 
 			parsed = new ContentParser(content);
@@ -4801,7 +4806,9 @@
 
 			this.emit("rendered", this.pages);
 
-			this.enableRules(content);
+			if (content && typeof content.querySelectorAll === "function") {
+				this.enableRules(content);
+			}
 
 			return this;
 		}

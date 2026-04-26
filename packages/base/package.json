@@ -1,6 +1,6 @@
 {
   "name": "@benjaminbini/paged-editor-base",
-  "version": "1.9.7",
+  "version": "1.9.8",
   "description": "Shared static assets for paged-editor (index.html, js/**, css/**, assets/) with Node.js server helper",
   "repository": {
     "type": "git",
