@@ -30841,8 +30841,16 @@
 
 		onRule(ruleNode, ruleItem, rulelist) {
 			let selector = csstree.generate(ruleNode.prelude);
-			if (selector.match(/\+/)) {
-				
+			// LOCAL PATCH: the Following handler is designed for the adjacent
+			// sibling combinator (`a + b`).  The original regex `/\+/` also
+			// matched the `+` *inside* `:nth-of-type(7n + 1)` formulas, which
+			// caused the handler to remove the rule from the AST and led to
+			// "item doesn't belong to list" later when the walker re-visited.
+			// Strip parenthesised groups before testing so nth-formula `+` is
+			// ignored.
+			const __plusOutsideParens = selector.replace(/\([^)]*\)/g, "");
+			if (/\+/.test(__plusOutsideParens)) {
+
 				let declarations = csstree.generate(ruleNode.block);
 				declarations = declarations.replace(/[{}]/g,"");
 

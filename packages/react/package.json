@@ -1,6 +1,6 @@
 {
   "name": "@benjaminbini/paged-editor-react",
-  "version": "1.9.4",
+  "version": "1.9.5",
   "description": "React component for paged-editor markdown editor with preview",
   "repository": {
     "type": "git",
