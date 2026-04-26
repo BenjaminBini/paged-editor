@@ -479,14 +479,17 @@ function renderFeatureContainer(
   const refCode = attrs.ref || "";
   const image = attrs.image || "";
   const caption = attrs.caption || "";
-  // Coverage source (LumApps doc, BEORN ref, …) — *not* the requirement source.
-  const coverageSource = attrs.coverageSource || attrs.source || "";
-  const coverageSourceHref =
+  // Coverage sources — pipe-separated for multiple. Single attrs are backward-compat aliases.
+  const rawSources = attrs.sources || attrs.coverageSource || attrs.source || "";
+  const rawSourcesHref =
+    attrs.sourcesHref ||
     attrs.coverageSourceHref ||
     attrs.coverageSourceUrl ||
     attrs.sourceHref ||
     attrs.sourceUrl ||
     "";
+  const sourceLabels = rawSources ? rawSources.split("|").map((s: string) => s.trim()).filter(Boolean) : [];
+  const sourceHrefs = rawSourcesHref ? rawSourcesHref.split("|").map((s: string) => s.trim()) : [];
   const wantsRow = (attrs.layout || "").toLowerCase() === "row";
   // row → full-width card, meta column on the left (design "non-compact");
   // col → half-width card, inline meta rail at top (design "compact").
@@ -556,15 +559,17 @@ function renderFeatureContainer(
     mediaHtml = `<figure class="md-feature-media"><div class="md-feature-media-frame"><img src="${escapeHtml(href)}" alt="${escapeHtml(title)}"></div>${captionHtml}</figure>`;
   }
 
-  // Show full source text/URL — no truncation. CSS word-break handles
-  // overflow without expanding card width.
-  const sourceLabelHtml = coverageSource
-    ? coverageSourceHref
-      ? `<a class="md-feature-source" href="${escapeHtml(coverageSourceHref)}">${marked.parseInline(coverageSource)}</a>`
-      : `<span class="md-feature-source">${marked.parseInline(coverageSource)}</span>`
-    : "";
-  const sourceHtml = coverageSource
-    ? `<div class="md-feature-source-line">${sourceLabelHtml}</div>`
+  // Render each source label; zip with hrefs (missing href = no link).
+  const sourceItemsHtml = sourceLabels
+    .map((label: string, i: number) => {
+      const href = sourceHrefs[i] || "";
+      return href
+        ? `<a class="md-feature-source" href="${escapeHtml(href)}">${marked.parseInline(label)}</a>`
+        : `<span class="md-feature-source">${marked.parseInline(label)}</span>`;
+    })
+    .join('<span class="md-feature-source-sep">, </span>');
+  const sourceHtml = sourceLabels.length
+    ? `<div class="md-feature-source-line">${sourceItemsHtml}</div>`
     : "";
 
   const statusClass = statusKey ? ` md-feature-status-${statusKey}` : "";

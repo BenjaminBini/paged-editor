@@ -1079,12 +1079,8 @@ figure.md-image figcaption {
   font-family: "Nunito", var(--font-sans, sans-serif);
   color: var(--mf-fg-1);
   border-radius: 6px;
-  /* Features carry long requirement/body text from the source grid — when a
-     single card exceeds a page Paged.js can't honour avoid and emits
-     "Unable to layout item".  Let the chunker split features across pages
-     instead.  Inner blocks (title + meta rail) keep their own avoid below. */
-  break-inside: auto;
-  page-break-inside: auto;
+  break-inside: avoid;
+  page-break-inside: avoid;
   background: transparent;
   margin: 0.6rem 0;
 }
@@ -1357,6 +1353,9 @@ a.md-feature-source:hover {
    the URL is rendered as an actual DOM sibling (.md-feature-source-url). */
 a.md-feature-source::after {
   content: none;
+}
+.md-feature-source-sep {
+  color: var(--mf-fg-3);
 }
 
 /* ── Heatmap (:::heatmap) ──

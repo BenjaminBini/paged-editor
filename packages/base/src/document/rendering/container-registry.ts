@@ -105,8 +105,8 @@ const BLOCK_SPECS: readonly ContainerSpec[] = [
       { name: "ref", required: false, description: "Code de référence (ex. C-401, M-112)." },
       { name: "image", required: false, description: "Chemin de l'illustration (relatif à assetBaseHref)." },
       { name: "caption", required: false, description: "Légende sous l'image." },
-      { name: "coverageSource", required: false, description: "Libellé de la source de couverture (LumApps doc, BEORN expertise, …) issu de coverageSources[] dans la grille JSON. Affiché en pied de carte. Alias : `source`." },
-      { name: "coverageSourceHref", required: false, description: "URL cible si la source de couverture doit être cliquable. Alias : `sourceHref` / `sourceUrl`." },
+      { name: "sources", required: false, description: "Libellés de sources séparés par `|` (ex. `sources=\"LumApps doc|BEORN expertise\"`). Alias singulier : `coverageSource` / `source`." },
+      { name: "sourcesHref", required: false, description: "URLs cibles séparées par `|`, positionnées par index avec `sources` (laisser vide pour une source sans lien). Alias singulier : `coverageSourceHref` / `sourceHref`." },
       { name: "layout", required: false, description: "row (pleine largeur, méta en colonne gauche, image 200 px à droite) ou col (demi-largeur, méta en rail haut, image 16/9 en bas). Défaut col." },
     ],
     example:
