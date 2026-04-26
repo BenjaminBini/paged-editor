@@ -4671,8 +4671,13 @@
 		recordRulesToDisable() {
 			for (var i in document.styleSheets) {
 				let sheet = document.styleSheets[i];
-				for (var j in sheet.cssRules) {
-					let rule = sheet.cssRules.item(j);
+				// LOCAL PATCH: cross-origin stylesheets (e.g. Google Fonts via
+				// CDN) throw SecurityError when cssRules is read.  Skip them.
+				let rules;
+				try { rules = sheet.cssRules; } catch (e) { continue; }
+				if (!rules) continue;
+				for (var j in rules) {
+					let rule = rules.item(j);
 					if (rule && rule.style) {
 						for (var k in this.rulesToDisable) {
 							let skip = false;
