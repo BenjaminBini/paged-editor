@@ -1079,8 +1079,12 @@ figure.md-image figcaption {
   font-family: "Nunito", var(--font-sans, sans-serif);
   color: var(--mf-fg-1);
   border-radius: 6px;
-  break-inside: avoid;
-  page-break-inside: avoid;
+  /* Features carry long requirement/body text from the source grid — when a
+     single card exceeds a page Paged.js can't honour avoid and emits
+     "Unable to layout item".  Let the chunker split features across pages
+     instead.  Inner blocks (title + meta rail) keep their own avoid below. */
+  break-inside: auto;
+  page-break-inside: auto;
   background: transparent;
   margin: 0.6rem 0;
 }
