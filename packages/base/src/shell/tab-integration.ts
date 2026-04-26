@@ -14,6 +14,29 @@ import {
   updateCoverPreview,
   renderCoverFromProject,
 } from "../document/render-scheduler.js";
+import { suppressScrollSync } from "../document/sync/preview-sync-setup.js";
+import { on as onEvent, off as offEvent } from "../infrastructure/event-bus.js";
+import { previewContainer as _previewContainer } from "../editor/codemirror-editor.js";
+const _tabPreviewContainer: HTMLElement | null = _previewContainer ?? null;
+
+// Snap the preview scroll to the active tab's remembered position once the
+// next render finishes.  Newly-opened tabs have `previewScrollTop` undefined
+// → snap to 0 (top).
+function snapPreviewScrollOnNextRender(target: number): void {
+  if (!_tabPreviewContainer) return;
+  const handler = (): void => {
+    offEvent("section-ready", handler);
+    if (!_tabPreviewContainer) return;
+    // Re-suppress the scroll-sync around the snap itself — the
+    // `previewContainer.scrollTop = …` write fires a `scroll` event which
+    // would otherwise drive `followScrollTop("editor")` and animate the
+    // editor pane back from its already-snapped position.
+    suppressScrollSync(200);
+    const max = Math.max(0, _tabPreviewContainer.scrollHeight - _tabPreviewContainer.clientHeight);
+    _tabPreviewContainer.scrollTop = Math.min(target, max);
+  };
+  onEvent("section-ready", handler);
+}
 import {
   refreshTableWidgets,
   setTableRangesDirty,
@@ -141,6 +164,12 @@ export function wireTabCallbacks({
   detachCmListeners: () => void;
 }): void {
   onTabSwitch((tab: any) => {
+    // Snap (don't animate) the preview to the new tab's remembered position.
+    // Suppress the editor↔preview scroll-sync briefly so CodeMirror's snapshot
+    // restore doesn't drive `followScrollTop` into an animation, then jump to
+    // the tab's stored preview scroll once the render completes.
+    suppressScrollSync(600);
+    snapPreviewScrollOnNextRender(typeof tab.previewScrollTop === "number" ? tab.previewScrollTop : 0);
     hideLoading();
     reattachCmListeners();
     updateTitle(tab.name, tab.dirty);

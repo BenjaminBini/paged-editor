@@ -38,6 +38,18 @@ export function unlockEditorScroll(): void {
   ensureController().editorScrollLocked = false;
 }
 
+// Suppress editor↔preview scroll-sync events for the next `durationMs`.  Used
+// by tab switches: CodeMirror's snapshot restore fires a scroll event that
+// would otherwise drive `followScrollTop` and animate the preview to the new
+// position; we want the new tab to snap instead.
+export function suppressScrollSync(durationMs: number = 500): void {
+  const controller = ensureController();
+  const until = performance.now() + durationMs;
+  controller.ignoredScrollUntil.editor = until;
+  controller.ignoredScrollUntil.preview = until;
+  controller.cancelAllFollowAnimations();
+}
+
 export function setupPreviewClick(): void {
   if (clickBindingReady) return;
   clickBindingReady = true;
