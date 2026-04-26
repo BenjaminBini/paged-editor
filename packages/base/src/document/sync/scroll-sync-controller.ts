@@ -67,6 +67,12 @@ export class ScrollSyncController {
 
     this.cancelFollowAnimation("editor");
     this.lastScrollSource = "editor";
+    // Rebuild the anchor map from current measurements before mapping.  CM6
+    // estimates off-screen line heights using doc-wide averages — accurate
+    // when no wrap, very wrong when wrap is enabled.  Scrolling forces CM6
+    // to measure the new viewport's lines; rebuilding here folds those
+    // fresh measurements into the next mapping.
+    this.refreshRelation();
     const progress = this.getScrollProgress("editor");
 
     if (this.isNearStart(progress)) {
@@ -90,6 +96,9 @@ export class ScrollSyncController {
 
     this.cancelFollowAnimation("preview");
     this.lastScrollSource = "preview";
+    // Same rationale as handleEditorScroll — keep the anchor map in sync
+    // with the latest measurements as the user scrolls.
+    this.refreshRelation();
     const progress = this.getScrollProgress("preview");
 
     if (this.isNearStart(progress)) {
