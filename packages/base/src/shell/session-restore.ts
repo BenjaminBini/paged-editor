@@ -2,7 +2,7 @@
 
 import * as platform from "../infrastructure/platform-adapter.js";
 import { readFile, getFileModTime, openFolderByPath, closeFolder, getFileEntries } from "../workspace/files/file-manager.js";
-import { openTab, findTabByPath } from "../workspace/tabs/tab-bar-controller.js";
+import { openTab, findTabByPath, switchToTab } from "../workspace/tabs/tab-bar-controller.js";
 import { openFilePath, openFolderByPathAndLoad } from "../workspace/files/file-operations.js";
 import {
   COVER_TAB_KIND,
@@ -33,6 +33,9 @@ export async function tryRestore(): Promise<boolean> {
       const entries = getFileEntries();
 
       if (openTabNames.length > 0) {
+        // Phase 1: silent batch — populate the tab bar without firing the
+        // tab-switch listener so no preview render runs per tab.  We pick
+        // the active tab and trigger ONE switch at the end of the batch.
         for (const tabInfo of openTabNames) {
           if (tabInfo?.kind === COVER_TAB_KIND) {
             const projectPath = getProjectJsonPath(state.lastFolder);
@@ -42,7 +45,7 @@ export async function tryRestore(): Promise<boolean> {
             try {
               modTime = await getFileModTime(projectPath);
             } catch {}
-            openTab(projectPath, tabInfo.name || "Cover", content, modTime, { kind: COVER_TAB_KIND });
+            openTab(projectPath, tabInfo.name || "Cover", content, modTime, { kind: COVER_TAB_KIND, activate: false });
             continue;
           }
           if (tabInfo?.kind === TOC_TAB_KIND) {
@@ -52,6 +55,7 @@ export async function tryRestore(): Promise<boolean> {
               kind: TOC_TAB_KIND,
               readOnly: true,
               editorDisabled: true,
+              activate: false,
             });
           }
           const name = typeof tabInfo === "string" ? tabInfo : tabInfo.name;
@@ -60,34 +64,33 @@ export async function tryRestore(): Promise<boolean> {
             || entries.find((e) => e.name === name);
           if (entry) {
             const [content, modTime] = await Promise.all([readFile(entry.path), getFileModTime(entry.path)]);
-            openTab(entry.path, entry.name, content, modTime);
+            openTab(entry.path, entry.name, content, modTime, { activate: false });
           }
         }
+        // Phase 2: resolve the persisted active tab and switch to it ONCE.
+        // This is the single tab-switch event of the whole restore — fires
+        // the _onSwitch listener which runs the only render of the load.
+        let activeIdx = -1;
         if (activeTabName) {
           if (typeof activeTabName === "object" && activeTabName.kind === COVER_TAB_KIND) {
             const coverPath = getProjectJsonPath(state.lastFolder);
-            if (coverPath) {
-              const idx = findTabByPath(coverPath);
-              if (idx >= 0) openTab(coverPath, activeTabName.name || "Cover", undefined, undefined);
-            }
+            if (coverPath) activeIdx = findTabByPath(coverPath);
           } else if (typeof activeTabName === "object" && activeTabName.kind === TOC_TAB_KIND) {
             const tocPath = getTocVirtualPath(state.lastFolder);
-            if (tocPath) {
-              const idx = findTabByPath(tocPath);
-              if (idx >= 0) openTab(tocPath, activeTabName.name || "TOC", undefined, undefined);
-            }
+            if (tocPath) activeIdx = findTabByPath(tocPath);
           } else {
             const activePath = typeof activeTabName === "object"
               ? activeTabName.path || activeTabName.name
               : activeTabName;
             const entry = entries.find((e) => e.path === activePath)
               || entries.find((e) => e.name === activePath);
-            if (entry) {
-              const idx = findTabByPath(entry.path);
-              if (idx >= 0) openTab(entry.path, entry.name, undefined, undefined);
-            }
+            if (entry) activeIdx = findTabByPath(entry.path);
           }
         }
+        // Fall back to the first restored tab if the persisted active tab
+        // can no longer be located (e.g. file deleted between sessions).
+        if (activeIdx < 0) activeIdx = 0;
+        switchToTab(activeIdx);
       } else if (state.lastFile) {
         const entry = entries.find((e) => e.name === state.lastFile);
         if (entry) {

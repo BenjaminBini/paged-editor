@@ -475,9 +475,15 @@ export class PreviewRenderer {
       this._disposePreviewer(previous);
 
       // Reset the off-screen positioning so the staged surface drops into place
-      // exactly where the previous one was.
+      // exactly where the previous one was.  Carry forward the live surface's
+      // current `transform: scale(...)` so the swap is seamless — without
+      // this, the new surface paints unscaled for one frame until the
+      // caller's next scaleSurface() call, which the user perceives as a
+      // flicker on every render.
+      const liveTransform = (live as HTMLElement).style.transform;
       staging.style.cssText = "";
       staging.className = live.className;
+      if (liveTransform) (staging as HTMLElement).style.transform = liveTransform;
       live.replaceWith(staging);
       swapped = true;
       this.previewPages = staging;

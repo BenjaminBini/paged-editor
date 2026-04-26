@@ -45,15 +45,26 @@ function storeActiveEditorState(): void {
   tabs.value[activeTabIdx.value].editorState = captureEditorSnapshot();
 }
 
-export function openTab(path: string, name: string, content: string | undefined, modTime: number | undefined, options: { kind?: string; readOnly?: boolean; editorDisabled?: boolean } = {}): number {
+export function openTab(
+  path: string,
+  name: string,
+  content: string | undefined,
+  modTime: number | undefined,
+  options: { kind?: string; readOnly?: boolean; editorDisabled?: boolean; activate?: boolean } = {},
+): number {
+  // `activate: false` appends (or returns) the tab without firing the
+  // tab-switch listener — used by session-restore to populate the tab bar
+  // without triggering a render per tab. The caller is responsible for
+  // calling switchToTab() once when it knows the final active tab.
+  const activate = options.activate !== false;
   if (typeof window !== "undefined" && (window as any).__pagedRenderDebug !== false) {
     const t = typeof performance !== "undefined" ? performance.now().toFixed(1) : "?";
     // eslint-disable-next-line no-console
-    console.log(`[render +${t}ms] openTab path=${path} name=${name} kind=${options.kind || "file"} contentDefined=${content !== undefined}`);
+    console.log(`[render +${t}ms] openTab path=${path} name=${name} kind=${options.kind || "file"} contentDefined=${content !== undefined} activate=${activate}`);
   }
   const existing = tabs.value.findIndex((t) => t.path && t.path === path);
   if (existing >= 0) {
-    switchToTab(existing);
+    if (activate) switchToTab(existing);
     return existing;
   }
 
@@ -75,7 +86,7 @@ export function openTab(path: string, name: string, content: string | undefined,
 
   tabs.value = [...tabs.value, tab];
   const idx = tabs.value.length - 1;
-  switchToTab(idx);
+  if (activate) switchToTab(idx);
   return idx;
 }
 
