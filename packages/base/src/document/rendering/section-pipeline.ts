@@ -488,17 +488,35 @@ function renderFeatureContainer(
   const refCode = attrs.ref || "";
   const image = attrs.image || "";
   const caption = attrs.caption || "";
-  // Coverage sources — pipe-separated for multiple. Single attrs are backward-compat aliases.
-  const rawSources = attrs.sources || attrs.coverageSource || attrs.source || "";
-  const rawSourcesHref =
-    attrs.sourcesHref ||
-    attrs.coverageSourceHref ||
-    attrs.coverageSourceUrl ||
-    attrs.sourceHref ||
-    attrs.sourceUrl ||
-    "";
-  const sourceLabels = rawSources ? rawSources.split("|").map((s: string) => s.trim()).filter(Boolean) : [];
-  const sourceHrefs = rawSourcesHref ? rawSourcesHref.split("|").map((s: string) => s.trim()) : [];
+  // Coverage sources. Priority:
+  //   1. coverageSources — JSON array of {label,url} written by ao-analyser
+  //   2. sources         — pipe-separated labels (manual authoring)
+  //   3. coverageSource  — single label (backward-compat fallback)
+  let sourceLabels: string[] = [];
+  let sourceHrefs: string[] = [];
+  if (attrs.coverageSources) {
+    try {
+      const parsed: Array<{ label?: string; url?: string }> = JSON.parse(attrs.coverageSources);
+      if (Array.isArray(parsed)) {
+        sourceLabels = parsed.map((s) => s.label || "").filter(Boolean);
+        sourceHrefs = parsed.map((s) => s.url || "");
+      }
+    } catch {
+      // malformed JSON — fall through to pipe-separated path
+    }
+  }
+  if (sourceLabels.length === 0) {
+    const rawSources = attrs.sources || attrs.coverageSource || attrs.source || "";
+    const rawSourcesHref =
+      attrs.sourcesHref ||
+      attrs.coverageSourceHref ||
+      attrs.coverageSourceUrl ||
+      attrs.sourceHref ||
+      attrs.sourceUrl ||
+      "";
+    sourceLabels = rawSources ? rawSources.split("|").map((s: string) => s.trim()).filter(Boolean) : [];
+    sourceHrefs = rawSourcesHref ? rawSourcesHref.split("|").map((s: string) => s.trim()) : [];
+  }
   const wantsRow = (attrs.layout || "").toLowerCase() === "row";
   // row → full-width card, meta column on the left (design "non-compact");
   // col → half-width card, inline meta rail at top (design "compact").
