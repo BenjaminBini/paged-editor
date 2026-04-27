@@ -137,28 +137,30 @@ Cartes standalone `:::card title="…" phase="…" num="…"` embarquées dans u
 
 ## Fiches fonctionnelles
 
-Fiches standalone :::feature title="…" requirement="…" status="…" level="…" ref="…" image="…" caption="…" layout="row|col" coverageSource="…" coverageSourceHref="…"` embarquées dans `:::ao-grid` pour la disposition (row = pleine largeur, col = demi-largeur).
+Fiches standalone `:::feature` embarquées dans `:::ao-grid` pour la disposition (`layout="row"` = pleine largeur, `layout="col"` = demi-largeur).
 
-Statut (badge) : `conforme`, `parametrage` · `preciser`. Niveau (pied) : `obligatoire` · `souhaitee` · `information`. `requirement` = énoncé brut repris de la grille JSON, affiché pleine largeur sous le titre. `coverageSource` = libellé de la source de couverture (LumApps doc, BEORN ref, …), affiché en pied avec lien optionnel via `coverageSourceHref`.
+Statuts : `conforme` · `conforme_standard` · `conforme_dev` · `partiel_standard` · `partiel_dev` · `non_conforme` · `parametrage` · `a-verifier` · `preciser`. Niveaux : `obligatoire` · `souhaitee` · `information` · `optionnel`.
+
+Sources multiples via `sources="Label A|Label B"` + `sourcesHref="url-a|url-b"` (pipe-séparés). Le format JSON `coverageSources='[{"label":"…","url":"…"}]'` est aussi supporté (généré automatiquement par l'ao-analyser).
 
 :::ao-grid
-:::feature title="Éditeur WYSIWYG" requirement="La plateforme doit fournir un éditeur WYSIWYG riche permettant aux contributeurs non techniques de produire du contenu mis en forme sans connaissance HTML." status="conforme" level="obligatoire" ref="FN-12" coverageSource="LumApps Help — Rich text editor" coverageSourceHref="https://docs.lumapps.com/docs/help-content-rte"
+:::feature title="Éditeur WYSIWYG" requirement="La plateforme doit fournir un éditeur WYSIWYG riche permettant aux contributeurs non techniques de produire du contenu mis en forme sans connaissance HTML." status="conforme_standard" level="obligatoire" ref="FN-12" sources="LumApps Help — Rich text editor|LumApps Help — Styles de paragraphes" sourcesHref="https://docs.lumapps.com/docs/help-content-rte|https://docs.lumapps.com/docs/help-content-paragraph-styles"
 Barre d'outils complète (gras, italique, listes, liens, tables) et styles de paragraphes natifs. Copier-coller depuis Word géré.
 :::
 
-:::feature title="Versioning des articles" requirement="Chaque article doit conserver l'historique de ses versions successives et permettre la restauration d'une version antérieure par un utilisateur autorisé." status="conforme" level="obligatoire" ref="FN-18" coverageSource="LumApps Help — Content version history" coverageSourceHref="https://docs.lumapps.com/docs/help-content-version-history-restore"
+:::feature title="Versioning des articles" requirement="Chaque article doit conserver l'historique de ses versions successives et permettre la restauration d'une version antérieure par un utilisateur autorisé." status="conforme_standard" level="obligatoire" ref="FN-18" sources="LumApps Help — Content version history|LumApps Help — Restore version" sourcesHref="https://docs.lumapps.com/docs/help-content-version-history-restore|https://docs.lumapps.com/docs/help-content-restore"
 Onglet _Versions_ automatique à chaque save/publish/archive. Restauration d'une version antérieure via la permission dédiée.
 :::
 
-:::feature title="Brouillons d'articles" requirement="Les contributeurs doivent pouvoir enregistrer un article en brouillon, non visible des lecteurs finaux, et le reprendre ultérieurement avant publication." status="conforme" level="obligatoire" ref="FN-21" caption="Exemple — brouillon en back-office" layout="row" coverageSource="LumApps Help — Save as draft" coverageSourceHref="https://docs.lumapps.com/docs/help-content-draft-publish-schedule"
+:::feature title="Brouillons d'articles" requirement="Les contributeurs doivent pouvoir enregistrer un article en brouillon, non visible des lecteurs finaux, et le reprendre ultérieurement avant publication." status="conforme_standard" level="obligatoire" ref="FN-21" caption="Exemple — brouillon en back-office" layout="row" sources="LumApps Help — Save as draft|LumApps Help — Schedule publication|BEORN expertise" sourcesHref="https://docs.lumapps.com/docs/help-content-draft-publish-schedule|https://docs.lumapps.com/docs/help-content-schedule|"
 Fonction _Save as draft_ native sur tous les types de contenu. Statut explicite, visible par les seuls éditeurs. Également disponible sur les posts d'espaces (draft, publish, schedule).
 :::
 
-:::feature title="Transfert en masse" requirement="L'administrateur doit pouvoir transférer en masse la propriété éditoriale d'articles d'un contributeur vers un autre (ex. départ collaborateur)." status="preciser" level="obligatoire" ref="FN-27" coverageSource="BEORN — Mémo intégration LumApps §4.2"
+:::feature title="Transfert en masse" requirement="L'administrateur doit pouvoir transférer en masse la propriété éditoriale d'articles d'un contributeur vers un autre (ex. départ collaborateur)." status="partiel_dev" level="obligatoire" ref="FN-27" sources="BEORN — Mémo intégration LumApps §4.2|LumApps API Reference" sourcesHref="|https://docs.lumapps.com/docs/api-content-transfer"
 Les actions groupées sont limitées à la suppression multi-sélection. Le transfert d'auteur en masse passe par script d'administration ou API.
 :::
 
-:::feature title="Digest hebdomadaire" requirement="La plateforme doit envoyer un digest hebdomadaire personnalisé reprenant les nouveaux contenus pertinents pour chaque collaborateur." status="parametrage" level="souhaitee" ref="FN-34" coverageSource="LumApps Help — Newsletters & Journeys" coverageSourceHref="https://docs.lumapps.com/docs/help-newsletters-journeys-content-selection"
+:::feature title="Digest hebdomadaire" requirement="La plateforme doit envoyer un digest hebdomadaire personnalisé reprenant les nouveaux contenus pertinents pour chaque collaborateur." status="conforme_dev" level="souhaitee" ref="FN-34" sources="LumApps Help — Newsletters & Journeys|LumApps Help — Content selection" sourcesHref="https://docs.lumapps.com/docs/help-newsletters-journeys-content-selection|https://docs.lumapps.com/docs/help-content-selection"
 Module _Newsletters_ natif avec _Content selection_ et _Journeys_ pour automatiser les envois récurrents. La politique éditoriale reste à paramétrer côté administrateur.
 :::
 :::
