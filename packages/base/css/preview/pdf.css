@@ -1068,6 +1068,10 @@ figure.md-image figcaption {
   --mf-rule-soft: rgba(14, 23, 34, 0.08);
   --mf-arrow: #c43e62;
   --mf-status-conforme: #2f9e6b;
+  --mf-status-conforme-standard: #1a8f5a;
+  --mf-status-conforme-dev: #2d7dd2;
+  --mf-status-partiel-standard: #c48c00;
+  --mf-status-partiel-dev: #c46a00;
   --mf-status-non-conforme: #c43e62;
   --mf-status-parametrage: #e88433;
   --mf-status-a-verifier: #6a7787;
@@ -1100,6 +1104,18 @@ figure.md-image figcaption {
 .md-feature.md-feature-status-conforme {
   background: rgba(47, 158, 107, 0.05);
 }
+.md-feature.md-feature-status-conforme-standard {
+  background: rgba(26, 143, 90, 0.06);
+}
+.md-feature.md-feature-status-conforme-dev {
+  background: rgba(45, 125, 210, 0.06);
+}
+.md-feature.md-feature-status-partiel-standard {
+  background: rgba(196, 140, 0, 0.06);
+}
+.md-feature.md-feature-status-partiel-dev {
+  background: rgba(196, 106, 0, 0.06);
+}
 .md-feature.md-feature-status-non-conforme {
   background: rgba(196, 62, 98, 0.055);
 }
@@ -1126,6 +1142,18 @@ figure.md-image figcaption {
 }
 .md-feature-dot-conforme {
   background: var(--mf-status-conforme);
+}
+.md-feature-dot-conforme-standard {
+  background: var(--mf-status-conforme-standard);
+}
+.md-feature-dot-conforme-dev {
+  background: var(--mf-status-conforme-dev);
+}
+.md-feature-dot-partiel-standard {
+  background: var(--mf-status-partiel-standard);
+}
+.md-feature-dot-partiel-dev {
+  background: var(--mf-status-partiel-dev);
 }
 .md-feature-dot-non-conforme {
   background: var(--mf-status-non-conforme);

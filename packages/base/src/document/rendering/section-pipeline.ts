@@ -419,6 +419,10 @@ function renderCardContainer(
 // Level  → Obligatoire (red) / Souhaitée (blue) / Information (grey).
 const FEATURE_STATUS_LABELS: Record<string, string> = {
   conforme: "CONFORME",
+  "conforme-standard": "CONFORME STD",
+  "conforme-dev": "CONFORME DEV",
+  "partiel-standard": "PARTIEL STD",
+  "partiel-dev": "PARTIEL DEV",
   "non-conforme": "NON CONFORME",
   parametrage: "PARAMÉTRAGE",
   "a-verifier": "À VÉRIFIER",
@@ -435,9 +439,14 @@ function normalizeFeatureStatus(value: string): string {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
-    .replace(/\s+/g, "");
+    .replace(/[\s_]/g, "");
   if (!v) return "";
   if (v.startsWith("nonconform")) return "non-conforme";
+  // More-specific conforme variants must come before the plain "conform" prefix.
+  if (v.startsWith("conformestandard") || v === "conformestd") return "conforme-standard";
+  if (v.startsWith("conformedev")) return "conforme-dev";
+  if (v.startsWith("partielstandard") || v === "partielstd") return "partiel-standard";
+  if (v.startsWith("partieldev")) return "partiel-dev";
   if (v.startsWith("conform")) return "conforme";
   if (v.startsWith("param") || v === "setup" || v === "config")
     return "parametrage";

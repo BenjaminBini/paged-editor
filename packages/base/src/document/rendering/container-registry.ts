@@ -100,7 +100,7 @@ const BLOCK_SPECS: readonly ContainerSpec[] = [
     attributes: [
       { name: "title", required: true, description: "Titre de la fiche." },
       { name: "requirement", required: false, description: "Énoncé de l'exigence (repris tel quel de la grille JSON source). Affiché pleine largeur sous le titre." },
-      { name: "status", required: false, description: "Badge de couverture : conforme | non-conforme | parametrage | a-verifier | preciser." },
+      { name: "status", required: false, description: "Badge de couverture : conforme | conforme_standard | conforme_dev | partiel_standard | partiel_dev | non_conforme | parametrage | a-verifier | preciser." },
       { name: "level", required: false, description: "Niveau d'exigence : obligatoire | souhaitee | information | optionnel." },
       { name: "ref", required: false, description: "Code de référence (ex. C-401, M-112)." },
       { name: "image", required: false, description: "Chemin de l'illustration (relatif à assetBaseHref)." },
