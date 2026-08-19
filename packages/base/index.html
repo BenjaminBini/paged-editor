@@ -9,13 +9,13 @@
       rel="stylesheet"
     />
 
-    <!-- External libs (non-module, loaded as globals) -->
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- Browser libs, served from assets so no public CDN is required -->
+    <script src="assets/marked.umd.js"></script>
     <script>
       window.PagedConfig = { auto: false };
     </script>
     <script src="assets/paged.polyfill.js"></script>
-    <script src="https://unpkg.com/dompurify@3.3.3/dist/purify.min.js"></script>
+    <script src="assets/purify.min.js"></script>
     <!-- Modular CSS -->
     <link rel="stylesheet" href="css/app/reset.css" />
     <link rel="stylesheet" href="css/app/layout.css" />
